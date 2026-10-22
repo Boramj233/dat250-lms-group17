@@ -1,5 +1,4 @@
-# dat250-lms-yuxuantest
-
+# dat250-lms-Group17
 
 
 ## Getting started
@@ -91,3 +90,64 @@ For open source projects, say how it is licensed.
 
 ## Project status
 If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+
+
+
+## Development Setup
+
+### Prerequisites
+
+- Java 25 (Eclipse Temurin)
+- Node.js 26
+- Git
+
+The project uses Gradle Wrapper, so a separate Gradle
+installation is not required.
+
+### Project Structure
+
+- `backend/` - Spring Boot REST API
+- `frontend/` - React + TypeScript + Vite
+- `gradle/` - Gradle Wrapper configuration
+
+### Build the Application
+
+From the repository root:
+
+```bash
+./gradlew :backend:build
+```
+
+This automatically installs frontend dependencies,
+builds React, and packages the Spring Boot application.
+
+### Run the Application
+
+```bash
+./gradlew :backend:bootRun
+```
+
+Open http://localhost:8080
+
+### Frontend Development
+
+For hot reloading, keep the backend running and
+start Vite in a second terminal:
+
+```bash
+cd frontend
+npm run dev
+```
+
+Open http://localhost:5173
+
+Vite proxies `/api` requests to Spring Boot
+running on port 8080.
+
+### Tests
+
+```bash
+./gradlew :backend:test
+cd frontend
+npm run build
+```
