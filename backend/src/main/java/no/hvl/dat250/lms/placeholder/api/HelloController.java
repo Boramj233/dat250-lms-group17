@@ -1,4 +1,4 @@
-package no.hvl.dat250.lms.controllers;
+package no.hvl.dat250.lms.placeholder.api;
 
 import java.util.Map;
 import org.springframework.web.bind.annotation.GetMapping;
