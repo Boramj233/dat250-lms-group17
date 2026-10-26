@@ -34,9 +34,16 @@ tasks.withType<Test> {
 	useJUnitPlatform()
 }
 
+// Windows runs npm through its command script; other systems use npm directly.
+val npmCommand = if (System.getProperty("os.name").startsWith("Windows", ignoreCase = true)) {
+    listOf("cmd", "/c", "npm.cmd")
+} else {
+    listOf("npm")
+}
+
 val installFrontend by tasks.registering(Exec::class) {
     workingDir = rootProject.file("frontend")
-    commandLine("npm", "ci")
+    commandLine(npmCommand + listOf("ci"))
 
     inputs.files(
         rootProject.file("frontend/package.json"),
@@ -49,7 +56,7 @@ val buildFrontend by tasks.registering(Exec::class) {
     dependsOn(installFrontend)
 
     workingDir = rootProject.file("frontend")
-    commandLine("npm", "run", "build")
+    commandLine(npmCommand + listOf("run", "build"))
 
     inputs.dir(rootProject.file("frontend/src"))
     inputs.files(
