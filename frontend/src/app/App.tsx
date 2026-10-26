@@ -1,6 +1,5 @@
-// export default App
-
 import { useEffect, useState } from 'react'
+import './App.css'
 
 function App() {
   const [message, setMessage] = useState('Loading...')
@@ -18,10 +17,10 @@ function App() {
   }, [])
 
   return (
-    <div>
+    <main className="app">
       <h1>DAT250 LMS</h1>
       <p>Message from Spring Boot: {message}</p>
-    </div>
+    </main>
   )
 }
 
