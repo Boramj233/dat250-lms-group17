@@ -2,15 +2,19 @@
 /* Mobile values by default. */
 :root {
   --color-background: var(--white);
-  --color-surface: var(--gray-100);
-  --color-text: var(--gray-900);
-  --color-border: var(--gray-300);
-  --color-primary: var(--blue-600);
-  --color-primary-hover: var(--blue-700);
+  --color-surface: var(--hvl-blue-gray);
+  --color-text: var(--hvl-dark-blue);
+  --color-border: var(--hvl-gray);
+  --color-primary: var(--hvl-dark-blue);
+  --color-primary-hover: var(--hvl-dark-blue-shade);
   --color-on-primary: var(--white);
+  --color-accent: var(--hvl-teal);
+  --color-on-accent: var(--hvl-dark-blue);
 
   /* Typography */
-  --font-body: var(--font-family-sans);
+  --font-body: var(--font-family-serif);
+  --font-heading: var(--font-family-sans);
+  --font-ui: var(--font-family-sans);
   --text-body: var(--font-size-md);
   --text-small: var(--font-size-sm);
   --text-heading: var(--font-size-lg);

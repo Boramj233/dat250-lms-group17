@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import './App.css'
+import AppLayout from './layout/AppLayout'
 
 function App() {
   const [message, setMessage] = useState('Loading...')
@@ -17,10 +17,10 @@ function App() {
   }, [])
 
   return (
-    <main className="app">
-      <h1>DAT250 LMS</h1>
+    <AppLayout>
+      <h1>Velkommen</h1>
       <p>Message from Spring Boot: {message}</p>
-    </main>
+    </AppLayout>
   )
 }
 

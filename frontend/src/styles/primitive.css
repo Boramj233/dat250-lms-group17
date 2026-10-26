@@ -1,16 +1,27 @@
 ﻿/* Base values. Tokens named by purpose are defined in semantic.css. */
 :root {
-  /* Colors */
+  /* HVL profile manual (2017), page 16: published HEX values. */
   --white: #ffffff;
-  --gray-100: #f3f4f6;
-  --gray-300: #d1d5db;
-  --gray-900: #111827;
-  --blue-600: #2563eb;
-  --blue-700: #1d4ed8;
+  --hvl-teal: #00afba;
+  --hvl-green: #96de99;
+  --hvl-cyan: #64d0df;
+  --hvl-coral: #eb6851;
+  --hvl-yellow: #f9de45;
+  --hvl-blue: #008aaf;
+  --hvl-dark-blue: #004357;
+  --hvl-gray: #707b7b;
+  --hvl-warm-gray: #d2cdc8;
+  --hvl-blue-gray: #c9d5da;
 
-  /* Typography */
-  --font-family-sans: Arial, sans-serif;
+  /* App-specific hover shade, derived from HVL dark blue. */
+  --hvl-dark-blue-shade: #003646;
 
+  /* Profile fonts: page 14. Arial/Georgia substitutes: page 15.
+     Profile fonts require installation or separately supplied webfont files. */
+  --font-family-sans: 'NB Akademie Std', Arial, sans-serif;
+  --font-family-serif: 'Lyon Text', Georgia, serif;
+
+  /* App typography scale; not prescribed by the manual. */
   --font-size-sm: 0.875rem;
   --font-size-md: 1rem;
   --font-size-lg: 1.5rem;
@@ -21,7 +32,7 @@
 
   --line-height-normal: 1.5;
 
-  /* Spacing */
+  /* App spacing; not prescribed by the manual. */
   --space-2: 0.25rem;
   --space-3: 0.5rem;
   --space-5: 1rem;

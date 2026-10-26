@@ -19,6 +19,15 @@ body {
   min-height: 100svh;
 }
 
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--font-heading);
+}
+
 h1 {
   font-size: var(--text-heading);
   font-weight: var(--font-weight-bold);
@@ -29,6 +38,7 @@ input,
 select,
 textarea {
   font: inherit;
+  font-family: var(--font-ui);
 }
 
 img {
