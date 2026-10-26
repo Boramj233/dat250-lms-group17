@@ -1,0 +1,34 @@
+﻿/* Tokens named by purpose. */
+/* Mobile values by default. */
+:root {
+  --color-background: var(--white);
+  --color-surface: var(--gray-100);
+  --color-text: var(--gray-900);
+  --color-border: var(--gray-300);
+  --color-primary: var(--blue-600);
+  --color-primary-hover: var(--blue-700);
+  --color-on-primary: var(--white);
+
+  /* Typography */
+  --font-body: var(--font-family-sans);
+  --text-body: var(--font-size-md);
+  --text-small: var(--font-size-sm);
+  --text-heading: var(--font-size-lg);
+
+  --spacing-content: var(--space-5);
+  --radius-control: var(--radius-sm);
+
+  /* Topbar */
+  --topbar-height-mobile: var(--size-14);
+  --topbar-height-desktop: var(--size-16);
+  --topbar-height: var(--topbar-height-mobile);
+}
+
+/* Larger screens: more spacing and larger headings. */
+@media (min-width: 48rem) {
+  :root {
+    --text-heading: var(--font-size-xl);
+    --spacing-content: var(--space-7);
+    --topbar-height: var(--topbar-height-desktop);
+  }
+}
