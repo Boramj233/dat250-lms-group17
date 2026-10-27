@@ -41,7 +41,7 @@ val npmCommand = if (System.getProperty("os.name").startsWith("Windows", ignoreC
     listOf("npm")
 }
 
-val installFrontend by tasks.registering(Exec::class) {
+val installFrontend = tasks.register<Exec>("installFrontend") {
     workingDir = rootProject.file("frontend")
     commandLine(npmCommand + listOf("ci"))
 
@@ -52,7 +52,7 @@ val installFrontend by tasks.registering(Exec::class) {
     outputs.dir(rootProject.file("frontend/node_modules"))
 }
 
-val buildFrontend by tasks.registering(Exec::class) {
+val buildFrontend = tasks.register<Exec>("buildFrontend") {
     dependsOn(installFrontend)
 
     workingDir = rootProject.file("frontend")
