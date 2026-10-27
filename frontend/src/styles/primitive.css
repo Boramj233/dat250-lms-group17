@@ -1,0 +1,53 @@
+﻿/* Base values. Tokens named by purpose are defined in semantic.css. */
+:root {
+  /* HVL profile manual (2017), page 16: published HEX values. */
+  --white: #ffffff;
+  --hvl-teal: #00afba;
+  --hvl-green: #96de99;
+  --hvl-cyan: #64d0df;
+  --hvl-coral: #eb6851;
+  --hvl-yellow: #f9de45;
+  --hvl-blue: #008aaf;
+  --hvl-dark-blue: #004357;
+  --hvl-gray: #707b7b;
+  --hvl-warm-gray: #d2cdc8;
+  --hvl-blue-gray: #c9d5da;
+
+  /* App-specific hover shade, derived from HVL dark blue. */
+  --hvl-dark-blue-shade: #003646;
+
+  /* Profile fonts: page 14. Arial/Georgia substitutes: page 15.
+     Profile fonts require installation or separately supplied webfont files. */
+  --font-family-sans: 'NB Akademie Std', Arial, sans-serif;
+  --font-family-serif: 'Lyon Text', Georgia, serif;
+
+  /* App typography scale; not prescribed by the manual. */
+  --font-size-sm: 0.875rem;
+  --font-size-md: 1rem;
+  --font-size-lg: 1.5rem;
+  --font-size-xl: 2rem;
+
+  --font-weight-regular: 400;
+  --font-weight-bold: 700;
+
+  --line-height-normal: 1.5;
+
+  /* App spacing; not prescribed by the manual. */
+  --space-2: 0.25rem;
+  --space-3: 0.5rem;
+  --space-5: 1rem;
+  --space-7: 1.5rem;
+  --space-9: 2rem;
+
+  /* Sizes */
+  --size-14: 3.5rem;
+  --size-16: 4rem;
+  --size-control-md: 2.5rem;
+  --size-icon-md: 1.125rem;
+
+  /* Border radii and widths */
+  --radius-sm: 0.25rem;
+  --radius-md: 0.375rem;
+  --border-width-sm: 1px;
+  --focus-ring-width: 2px;
+}

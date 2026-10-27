@@ -27,15 +27,23 @@ dependencies {
 	testImplementation("org.springframework.boot:spring-boot-starter-validation-test")
 	testImplementation("org.springframework.boot:spring-boot-starter-webmvc-test")
 	testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+    testImplementation("com.tngtech.archunit:archunit-junit5:1.4.1")
 }
 
 tasks.withType<Test> {
 	useJUnitPlatform()
 }
 
-val installFrontend by tasks.registering(Exec::class) {
+// Windows runs npm through its command script; other systems use npm directly.
+val npmCommand = if (System.getProperty("os.name").startsWith("Windows", ignoreCase = true)) {
+    listOf("cmd", "/c", "npm.cmd")
+} else {
+    listOf("npm")
+}
+
+val installFrontend = tasks.register<Exec>("installFrontend") {
     workingDir = rootProject.file("frontend")
-    commandLine("npm", "ci")
+    commandLine(npmCommand + listOf("ci"))
 
     inputs.files(
         rootProject.file("frontend/package.json"),
@@ -44,11 +52,11 @@ val installFrontend by tasks.registering(Exec::class) {
     outputs.dir(rootProject.file("frontend/node_modules"))
 }
 
-val buildFrontend by tasks.registering(Exec::class) {
+val buildFrontend = tasks.register<Exec>("buildFrontend") {
     dependsOn(installFrontend)
 
     workingDir = rootProject.file("frontend")
-    commandLine("npm", "run", "build")
+    commandLine(npmCommand + listOf("run", "build"))
 
     inputs.dir(rootProject.file("frontend/src"))
     inputs.files(
