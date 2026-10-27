@@ -13,8 +13,6 @@ stages:
 frontend-build:
   stage: frontend
   image: node:26-bookworm-slim
-  tags:
-    - docker
   script:
     - cd frontend
     - npm ci
@@ -28,8 +26,6 @@ frontend-build:
 backend-build-test:
   stage: backend
   image: eclipse-temurin:25-jdk
-  tags:
-    - docker
   needs:
     - job: frontend-build
       artifacts: true
