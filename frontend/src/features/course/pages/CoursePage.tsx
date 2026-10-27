@@ -6,9 +6,9 @@ export default function CoursePage() {
 
   return (
     <>
-      <Link to={paths.courses}>Tilbake til mine kurs</Link>
-      <h1>Kurs: {courseId}</h1>
-      <p>Her kommer innholdet i kurset.</p>
+      <Link to={paths.courses}>Back to my courses</Link>
+      <h1>Course: {courseId}</h1>
+      <p>Course content will appear here.</p>
     </>
   )
 }

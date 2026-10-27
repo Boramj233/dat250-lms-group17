@@ -7,9 +7,9 @@ export default function AppLayout() {
     <div className="app-layout">
       <header className="topbar">
         <Link className="brand" to={paths.home}>DAT250 LMS</Link>
-        <nav className="main-nav" aria-label="Hovednavigasjon">
-          <NavLink to={paths.courses}>Mine kurs</NavLink>
-          <NavLink to={paths.login}>Logg inn</NavLink>
+        <nav className="main-nav" aria-label="Main navigation">
+          <NavLink to={paths.courses}>My courses</NavLink>
+          <NavLink to={paths.login}>Log in</NavLink>
         </nav>
       </header>
 
