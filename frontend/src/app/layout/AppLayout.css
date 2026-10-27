@@ -6,13 +6,53 @@
 
 .topbar {
   font-family: var(--font-ui);
-  height: var(--topbar-height);
+  min-height: var(--topbar-height);
   flex-shrink: 0;
   display: flex;
   align-items: center;
-  padding-inline: var(--spacing-content);
+  flex-wrap: wrap;
+  gap: var(--space-3) var(--space-7);
+  padding: var(--space-3) var(--spacing-content);
   background: var(--color-surface);
   border-bottom: var(--border-width-sm) solid var(--color-border);
+}
+
+.brand {
+  color: var(--color-text);
+  font-weight: var(--font-weight-bold);
+  text-decoration: none;
+}
+
+.main-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-left: auto;
+}
+
+.main-nav a {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--size-control-md);
+  padding: var(--space-3) var(--space-5);
+  border-radius: var(--radius-control);
+  color: var(--color-text);
+  text-decoration: none;
+}
+
+.main-nav a:hover {
+  text-decoration: underline;
+}
+
+.main-nav a.active {
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  font-weight: var(--font-weight-bold);
+}
+
+.topbar a:focus-visible {
+  outline: var(--focus-ring-width) solid var(--color-primary);
+  outline-offset: var(--space-2);
 }
 
 .page-content {
