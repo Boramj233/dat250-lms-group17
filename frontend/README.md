@@ -17,8 +17,8 @@ Keep component CSS next to its component. Use existing style tokens where possib
 
 Run `npm install` and `npm run dev` from this directory to start the frontend.
 
-- `/` redirects to `/courses`.
-- `/courses` shows the course list with a temporary example course.
+- `/` shows a temporary home page until its content is decided.
+- `/courses` lists enrolled courses and lets users choose their sidebar visibility and order.
 - `/courses/:courseId` shows a placeholder for the selected course.
 - `/login` shows a placeholder for login, outside the shared layout.
 - Unknown URLs show the not-found page inside the shared layout.
@@ -31,6 +31,8 @@ renders the selected page through `Outlet`.
 To add a page, create it under the relevant feature, export it from the feature's
 `index.ts`, add its path and route, and add a navigation link if needed.
 There are currently no authentication checks; all course URLs are accessible.
+Course enrollment uses temporary data in `src/features/course/data/demoEnrolledCourses.ts`.
+Sidebar preferences are saved in this browser's local storage, not to a user account.
 
 When deploying, configure the web server to serve `index.html` for frontend routes
 so that direct links and refreshing a course page work with `BrowserRouter`.

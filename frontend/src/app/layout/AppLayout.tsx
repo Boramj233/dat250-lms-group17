@@ -1,19 +1,33 @@
-import { Link, NavLink, Outlet } from 'react-router'
-import { paths } from '../paths'
+import { useEffect, useState } from 'react'
+import { Outlet } from 'react-router'
+import Sidebar from './Sidebar'
+import Topbar from './Topbar'
 import './AppLayout.css'
 
 export default function AppLayout() {
+  const [sidebarOpen, setSidebarOpen] = useState(false)
+
+  useEffect(() => {
+    const desktop = window.matchMedia('(min-width: 48rem)')
+    const closeSidebar = () => setSidebarOpen(false)
+
+    desktop.addEventListener('change', closeSidebar)
+    return () => desktop.removeEventListener('change', closeSidebar)
+  }, [])
+
   return (
     <div className="app-layout">
-      <header className="topbar">
-        <Link className="brand" to={paths.home}>DAT250 LMS</Link>
-        <nav className="main-nav" aria-label="Main navigation">
-          <NavLink to={paths.courses}>My courses</NavLink>
-          <NavLink to={paths.login}>Log in</NavLink>
-        </nav>
-      </header>
+      <Topbar
+        sidebarOpen={sidebarOpen}
+        onToggleSidebar={() => setSidebarOpen(open => !open)}
+      />
 
-      <main className="page-content"><Outlet /></main>
+      <div className="app-body">
+        <Sidebar isOpen={sidebarOpen} onNavigate={() => setSidebarOpen(false)} />
+        <main className="page-content">
+          <Outlet />
+        </main>
+      </div>
     </div>
   )
 }

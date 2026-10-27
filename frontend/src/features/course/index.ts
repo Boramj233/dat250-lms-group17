@@ -1,2 +1,5 @@
 export { default as CourseListPage } from './pages/CourseListPage'
 export { default as CoursePage } from './pages/CoursePage'
+export { demoEnrolledCourses } from './data/demoEnrolledCourses'
+export { CoursePreferencesProvider } from './preferences/CoursePreferencesProvider'
+export { useCoursePreferences } from './preferences/useCoursePreferences'
