@@ -1,1 +1,11 @@
-// returns a specific course by its id
+import { useQuery } from "@tanstack/react-query";
+import { getCourse } from "../../api/courseQueries";
+import { courseKeys } from "../../queryKeys";
+import type { CourseId } from "../../types";
+
+export function useCourse(courseId: CourseId) {
+  return useQuery({
+    queryKey: courseKeys.course(courseId),
+    queryFn: () => getCourse(courseId),
+  });
+}

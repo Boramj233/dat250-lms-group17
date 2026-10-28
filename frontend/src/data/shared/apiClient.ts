@@ -5,6 +5,8 @@ export async function apiClient<T>(
   endpoint: string,
   options?: RequestInit
 ): Promise<T> {
+  // TODO: Add authentication once the backend scheme is defined: send a bearer
+  // token in the Authorization header or configure credentials for session cookies.
   const response = await fetch(`${BASE_URL}${endpoint}`, {
     ...options,
     headers: {
@@ -16,6 +18,10 @@ export async function apiClient<T>(
     throw new Error(
       `HTTP error! Status: ${response.status}`
     );
+  }
+
+  if (response.status === 204) {
+    return undefined as T;
   }
 
   return response.json() as Promise<T>;
