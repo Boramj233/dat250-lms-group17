@@ -1,38 +1,42 @@
 ﻿# Frontend architecture
 
-React and TypeScript, organized by domain to align with the backend.
+React and TypeScript, organized by the frontend route hierarchy.
 
-- `src/app/`: application entry point, root component, routing, and shared layout.
-- `src/features/`: domain-specific code (`auth`, `course`, `module`, `content`, `submission`). Each feature contains:
-  - `pages/`: full pages.
-  - `components/`: components used within the feature.
-  - `api/`: backend calls for the feature.
-- `src/shared/`: components and API utilities used across features.
+- `src/app/`: application entry point, root component, routing, and global layout.
+- `src/pages/`: pages grouped by their routes, with supporting code next to the pages that use it.
+- `src/shared/`: components and API utilities used across route areas.
 - `src/styles/`: primitive tokens, semantic tokens, and global styles.
 - `src/assets/`: images and other imported assets.
 
-Keep component CSS next to its component. Use existing style tokens where possible. Empty folders guide placement; only add files when needed.
+Keep component CSS next to its component and use existing style tokens where possible.
+
+```text
+src/pages/
+  home/HomePage.tsx
+  login/LoginPage.tsx
+  not-found/NotFoundPage.tsx
+```
+
+Place components used by one page next to that page in a `components/` folder.
+Use `src/shared/components/` for components shared across unrelated route areas.
+Folder placement organizes the source; `src/app/routes.tsx` defines routing.
 
 ## Navigation
 
 Run `npm install` and `npm run dev` from this directory to start the frontend.
 
-- `/` shows a temporary home page until its content is decided.
-- `/courses` lists enrolled courses and lets users choose their sidebar visibility and order.
-- `/courses/:courseId` shows a placeholder for the selected course.
-- `/login` shows a placeholder for login, outside the shared layout.
+- `/` shows a temporary home page.
+- `/login` shows a placeholder for login inside the shared layout.
 - Unknown URLs show the not-found page inside the shared layout.
 
 Define URL patterns in `src/app/paths.ts` and register pages in `src/app/routes.tsx`.
-Use `Link` for navigation, `NavLink` for menu items that indicate the active route,
-and `coursePath(courseId)` when linking to a specific course. The shared layout
-renders the selected page through `Outlet`.
+Use `Link` for navigation and `NavLink` for menu items that indicate the active route.
+The global `AppLayout` provides the topbar, responsive sidebar, and main content
+area, rendering the selected page through `Outlet`.
 
-To add a page, create it under the relevant feature, export it from the feature's
-`index.ts`, add its path and route, and add a navigation link if needed.
-There are currently no authentication checks; all course URLs are accessible.
-Course enrollment uses temporary data in `src/features/course/data/demoEnrolledCourses.ts`.
-Sidebar preferences are saved in this browser's local storage, not to a user account.
+To add a page, create it under the relevant route folder in `src/pages/`,
+import it in `src/app/routes.tsx`, and add its path and route.
+There are currently no authentication checks.
 
 When deploying, configure the web server to serve `index.html` for frontend routes
-so that direct links and refreshing a course page work with `BrowserRouter`.
+so that direct links and refreshing a page work with `BrowserRouter`.
