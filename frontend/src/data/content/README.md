@@ -1,9 +1,9 @@
 # Content API contract (proposed)
 
 These endpoints and DTOs are frontend assumptions until the backend is implemented.
-The first supported content type is `TEXT`. `Content` currently aliases
-`TextContent`; extend it into a discriminated union when assignment, quiz, and
-coding exercise fields and behavior are defined. They are not implemented here.
+The supported content types are `TEXT` and `QUIZ`. `Content` is a union of
+`TextContent` and `QuizContent`. Assignment and coding exercise types are not yet
+implemented.
 
 `ContentSummary` contains `id`, `moduleId`, `title`, zero-based `position`, and
 `type`. `TextContent` also contains `body`, treated as plain text. Render it as text
@@ -13,12 +13,24 @@ in React; do not insert it as raw HTML. Module lists return summaries without bo
 | --- | --- | --- | --- |
 | GET | `/api/modules/{moduleId}/content` | — | `ContentSummary[]` |
 | GET | `/api/content/{contentId}` | — | `Content` |
-| POST | `/api/modules/{moduleId}/content` | `{ type: "TEXT", title, position, body }` | `Content` |
+| POST | `/api/modules/{moduleId}/content` | Text or quiz fields from `CreateContentInput` | `Content` |
 | PATCH | `/api/content/{contentId}` | Updated `title`, `position`, and/or `body` | `Content` |
 | DELETE | `/api/content/{contentId}` | — | `204 No Content` |
 | PATCH | `/api/content/{contentId}/move` | `{ moduleId, position }` | `Content` |
 | GET | `/api/users/{userId}/content/{contentId}/completion` | — | `ContentCompletion` |
 | PUT | `/api/users/{userId}/content/{contentId}/completion` | `{ completed }` | `ContentCompletion` |
+
+Create quizzes through `useCreateContent` with `type: "QUIZ"` and teacher-only
+question definitions, including correct answers. Use `useUpdateQuiz` to edit
+questions and settings, and `useQuizDefinition` for the teacher's editor. The
+student-facing `useQuiz`, `useContent`, and attempt responses must exclude answer
+keys and grading rules; the backend must enforce this distinction.
+
+Quiz attempts, answers, hints, and submission use the API functions in
+`../quizzes/api`. Quiz submission registers the interaction and refreshes module
+progress; students do not manually mark quizzes complete using the text-completion
+operation. Await pending answer saves before submitting an attempt. Released
+results are part of `QuizAttempt`; a missing result means unavailable or unreleased.
 
 The backend returns module content sorted by position and maintains ordering after
 creation, deletion, position changes, and moves. Moves are within one course and

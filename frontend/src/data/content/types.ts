@@ -1,8 +1,9 @@
 import type { ContentId, CourseId, ModuleId, UserId } from "../shared/types";
+import type { Quiz, QuizQuestionDefinition } from "../quizzes/types";
 
-// Start with text. Add assignment, quiz, and coding exercise variants when their
+// Add assignment and coding exercise variants when their
 // fields and backend contracts are defined.
-export type ContentType = "TEXT";
+export type ContentType = "TEXT" | "QUIZ";
 
 export interface ContentSummary {
   id: ContentId;
@@ -17,15 +18,24 @@ export interface TextContent extends ContentSummary {
   body: string;
 }
 
-export type Content = TextContent;
+export interface QuizContent extends ContentSummary, Omit<Quiz, "id" | "title"> {
+  type: "QUIZ";
+}
 
-export interface CreateContentInput {
+export type Content = TextContent | QuizContent;
+
+export interface CreateTextContentInput {
   moduleId: ModuleId;
   type: "TEXT";
   title: string;
   position: number;
   body: string;
 }
+
+export interface CreateQuizContentInput extends Omit<QuizContent, "id" | "questions"> {
+  questions: QuizQuestionDefinition[];
+}
+export type CreateContentInput = CreateTextContentInput | CreateQuizContentInput;
 
 export interface UpdateContentInput {
   moduleId: ModuleId;
