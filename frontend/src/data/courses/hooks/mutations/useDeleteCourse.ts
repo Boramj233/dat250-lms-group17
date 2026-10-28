@@ -1,3 +1,5 @@
+// Deletes a course, clears its cached details and enrollments, and marks course lists as outdated.
+
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { deleteCourse } from "../../api/courseMutations";
 import { courseKeys } from "../../queryKeys";

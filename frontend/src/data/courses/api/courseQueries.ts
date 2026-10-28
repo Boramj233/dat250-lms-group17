@@ -1,12 +1,11 @@
 //collection of all api calls that fetch data related to courses
 
 import { apiClient } from "../../shared/apiClient";
+import type { CourseId, UserId } from "../../shared/types";
 import type {
   Course,
   CourseEnrollment,
-  CourseId,
   EnrolledCourse,
-  UserId,
 } from "../types";
 
 export function getAllCourses(): Promise<Course[]> {

@@ -1,3 +1,5 @@
+// Updates course information and marks its cached details and course lists as outdated.
+
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { updateCourse } from "../../api/courseMutations";
 import { courseKeys } from "../../queryKeys";

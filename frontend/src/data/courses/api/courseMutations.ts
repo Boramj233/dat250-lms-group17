@@ -1,8 +1,8 @@
 import { apiClient } from "../../shared/apiClient";
+import type { CourseId } from "../../shared/types";
 import type {
   Course,
   CourseEnrollmentInput,
-  CourseId,
   CreateCourseInput,
   UpdateCourseInput,
   UpdateCourseRoleInput,

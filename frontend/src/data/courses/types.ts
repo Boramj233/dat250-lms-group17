@@ -1,5 +1,4 @@
-export type CourseId = string | number;
-export type UserId = string | number;
+import type { CourseId, UserId } from "../shared/types";
 
 export interface Course {
   id: CourseId;

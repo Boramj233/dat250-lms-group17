@@ -1,4 +1,5 @@
-// Returns all courses regardless of enrollment.
+// Fetches and caches all courses, regardless of enrollment.
+
 import { useQuery } from "@tanstack/react-query";
 import { getAllCourses } from "../../api/courseQueries";
 import { courseKeys } from "../../queryKeys";

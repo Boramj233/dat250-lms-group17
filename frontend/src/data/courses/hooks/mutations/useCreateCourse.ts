@@ -1,3 +1,5 @@
+// Creates a course and marks cached course data as outdated.
+
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { createCourse } from "../../api/courseMutations";
 import { courseKeys } from "../../queryKeys";
