@@ -1,8 +1,8 @@
 import { Route, Routes } from 'react-router'
-import LoginPage from '../features/auth/LoginPage'
+import LoginPage from '../ui/pages/LoginPage'
 import AppLayout from '../ui/layout/AppLayout'
-import HomePage from '../ui/pages/home/HomePage'
-import NotFoundPage from '../features/error/NotFoundPage'
+import HomePage from '../ui/pages/HomePage'
+import NotFoundPage from '../ui/pages/NotFoundPage'
 import { paths } from './paths'
 
 export default function AppRoutes() {
