@@ -5,10 +5,15 @@ import org.springframework.data.repository.CrudRepository;
 
 import java.util.Optional;
 
+/**
+ * Provides user lookups and inherits persistence operations such as save and delete.
+ */
 public interface UserRepository extends CrudRepository<User, Long> {
 
+    /** Returns the matching user, or an empty Optional if the username is unknown. */
     public Optional<User> findByUsername(String username);
 
+    /** Returns the matching user, or an empty Optional if the email is unknown. */
     public Optional<User> findByEmail(String email);
 
 }
