@@ -3,10 +3,12 @@ package no.hvl.dat250.lms.user.service;
 import jakarta.validation.ConstraintViolationException;
 import jakarta.validation.Validator;
 import no.hvl.dat250.lms.user.api.dto.UpdateUserRequest;
+import no.hvl.dat250.lms.user.api.dto.UserLookupResponse;
 import no.hvl.dat250.lms.user.repository.UserRepository;
 import no.hvl.dat250.lms.user.domain.User;
 import no.hvl.dat250.lms.user.domain.Access;
 import java.util.Optional;
+import java.util.Arrays;
 import org.springframework.security.authentication.AuthenticationCredentialsNotFoundException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -15,6 +17,9 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 
 /** Creates users and provides profile operations and Spring Security user lookups. */
 @Service
@@ -54,7 +59,12 @@ public class UserService implements UserDetailsService {
     }
 
     /** Reads current stored access so an outdated session cannot retain admin privileges. */
-    private void requireAdministrator() {
+    private User requireAdministrator() {
+        return requireAccess(Access.ADMIN);
+    }
+
+    /** Authorizes against current persisted global access, never the session's old role. */
+    private User requireAccess(Access... allowedAccess) {
         var authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !authentication.isAuthenticated()
                 || !(authentication.getPrincipal() instanceof User principal)
@@ -62,10 +72,74 @@ public class UserService implements UserDetailsService {
             throw new AuthenticationCredentialsNotFoundException("Authentication required");
         }
         User actor = userRepository.findById(principal.getUserId())
-                .orElseThrow(() -> new AccessDeniedException("Administrator access required"));
-        if (actor.getAccess() != Access.ADMIN) {
-            throw new AccessDeniedException("Administrator access required");
+                .orElseThrow(() -> new AccessDeniedException("Operation not permitted"));
+        if (!Arrays.asList(allowedAccess).contains(actor.getAccess())) {
+            throw new AccessDeniedException("Operation not permitted");
         }
+        return actor;
+    }
+
+    /** Lists/searches users for administrators, with bounded pages sorted by ID. */
+    @Transactional(readOnly = true)
+    public Page<User> listUsers(String search, int page, int size) {
+        requireAdministrator();
+        return findUsers(search, page, size);
+    }
+
+    /** Restricted account lookup for enrollment; this does not create accounts or enroll users. */
+    @Transactional(readOnly = true)
+    public Page<UserLookupResponse> searchUsersForEnrollment(String search, int page, int size) {
+        requireAccess(Access.ADMIN, Access.COURSE_MANAGER);
+        if (search == null || search.isBlank()) {
+            throw new IllegalArgumentException("A non-blank search is required");
+        }
+        return findUsers(search, page, size).map(UserLookupResponse::from);
+    }
+
+    /** Shared bounded search; public callers authorize before invoking this helper. */
+    private Page<User> findUsers(String search, int page, int size) {
+        if (page < 0 || size < 1 || size > 100) {
+            throw new IllegalArgumentException("Page must be non-negative and size must be between 1 and 100");
+        }
+        String query = search == null ? "" : search.strip();
+        if (query.length() > 255) {
+            throw new IllegalArgumentException("Search must be at most 255 characters");
+        }
+        var pageable = PageRequest.of(page, size, Sort.by("userId"));
+        if (query.isEmpty()) {
+            return userRepository.findAll(pageable);
+        }
+        Long searchedId = null;
+        try {
+            searchedId = Long.valueOf(query);
+        } catch (NumberFormatException ignored) {
+            // Non-numeric searches only match name/email fields.
+        }
+        return userRepository
+                .findByFirstNameContainingIgnoreCaseOrLastNameContainingIgnoreCaseOrEmailContainingIgnoreCaseOrUserId(
+                        query, query, query, searchedId, pageable);
+    }
+
+    /** Returns another user's profile only after checking administrator access. */
+    @Transactional(readOnly = true)
+    public User getUserForAdministrator(Long userId) {
+        requireAdministrator();
+        return userRepository.findByUserId(userId).orElseThrow(UserNotFoundException::new);
+    }
+
+    /** Administrators may assign global access, but cannot remove their own ADMIN access. */
+    @Transactional
+    public User updateAccess(Long userId, Access access) {
+        User actor = requireAdministrator();
+        if (access == null) {
+            throw new IllegalArgumentException("Access is required");
+        }
+        if (actor.getUserId().equals(userId) && access != Access.ADMIN) {
+            throw new AccessDeniedException("Cannot remove your own administrator access");
+        }
+        User target = userRepository.findByUserId(userId).orElseThrow(UserNotFoundException::new);
+        target.setAccess(access);
+        return userRepository.save(target);
     }
 
     /** Returns the user with the given ID, or an empty Optional if not found. */

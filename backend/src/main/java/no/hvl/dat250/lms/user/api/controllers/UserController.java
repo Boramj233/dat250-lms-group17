@@ -3,6 +3,7 @@ package no.hvl.dat250.lms.user.api.controllers;
 import jakarta.validation.Valid;
 import no.hvl.dat250.lms.user.api.dto.UpdateUserRequest;
 import no.hvl.dat250.lms.user.api.dto.UserResponse;
+import no.hvl.dat250.lms.user.api.dto.UserLookupPageResponse;
 import no.hvl.dat250.lms.user.domain.User;
 import no.hvl.dat250.lms.user.service.UserService;
 import org.springframework.http.HttpStatus;
@@ -11,6 +12,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -24,6 +26,14 @@ public class UserController {
 
     public UserController(UserService userService) {
         this.userService = userService;
+    }
+
+    /** Finds existing accounts for course managers/admins without exposing administrative fields. */
+    @GetMapping("/search")
+    public UserLookupPageResponse searchUsers(@RequestParam String search,
+                                              @RequestParam(defaultValue = "0") int page,
+                                              @RequestParam(defaultValue = "20") int size) {
+        return UserLookupPageResponse.from(userService.searchUsersForEnrollment(search, page, size));
     }
 
     /**

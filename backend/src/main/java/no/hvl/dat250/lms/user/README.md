@@ -1,5 +1,55 @@
 # User profiles
 
+## Account lookup for enrollment
+
+`GET /api/users/search?search=Sara&page=0&size=20` is available to users whose
+current stored access is COURSE_MANAGER or ADMIN. Search text is required,
+non-blank, and at most 255 characters. It uses the same case-insensitive name/email
+and exact numeric ID search as the administrator list, with zero-based pages,
+size 1–100, and ascending user ID order.
+
+The response contains `users`, `page`, `size`, `totalElements`, and `totalPages`.
+Each user contains only `userId`, `firstName`, `lastName`, and `email`. Global
+access, password-change requirements, and password hashes are excluded, including
+when an administrator uses this endpoint. No matches returns an empty page.
+
+STANDARD users are rejected with 403 and anonymous requests with 401. Current
+stored access is checked on every call, so deleted/demoted course managers cannot
+retain lookup access through an old session. Invalid search/pagination returns 400.
+
+This endpoint only finds existing accounts. Account creation and global access
+changes remain ADMIN-only. Course enrollment and authorization to manage a
+particular course must be implemented in the course/enrollment domains. Global
+Access does not determine a user's student/teacher role within a course.
+
+## Administrator API
+
+Every operation below requires current stored `Access.ADMIN`, checked in the
+service. Profile responses never include password hashes.
+
+| Method | Endpoint | Purpose |
+| --- | --- | --- |
+| GET | `/api/admin/users?search=&page=0&size=20` | List/search users |
+| GET | `/api/admin/users/{userId}` | Read one user |
+| PATCH | `/api/admin/users/{userId}/access` | Set global access |
+
+List responses contain `users`, `page`, `size`, `totalElements`, and `totalPages`.
+Pages start at zero; size must be 1–100. Results are ordered by `userId`.
+Search (max 255 characters) matches first name, last name, or email substrings
+without case sensitivity, and also matches an exact numeric user ID. Blank search
+lists all users. `%` and `_` are treated as literal search characters.
+
+Access changes take `{"access":"COURSE_MANAGER"}`; allowed values are STANDARD,
+COURSE_MANAGER, and ADMIN. Administrators cannot remove their own ADMIN access.
+Other users' access can be assigned by an administrator; this does not change
+course roles. Rejected operations do not change stored access.
+
+Responses: 400 for invalid parameters/access, 401 for missing authentication,
+403 for insufficient access or self-demotion, and 404 for unknown target users.
+Session-based writes require CSRF tokens. Auth must still implement the separate
+first-login password-change restriction described below. No admin frontend or
+creation HTTP endpoint is included yet; creation still uses the service method.
+
 `UserService.createUser(firstName, lastName, passwordHash)` validates and saves a
 new user with STANDARD access and `mustChangePassword = true`, returning the user
 with generated ID and email. The method requires an authenticated `User` in the
@@ -48,8 +98,8 @@ The service validates input too, so
 direct service calls cannot bypass profile validation.
 
 Account registration, password hashing/change, login/logout, and session lifecycle
-belong to the auth implementation. Global access-management policy is still to
-be defined; this profile endpoint does not assign global access or course roles.
+belong to the auth implementation. Ordinary profile updates do not assign global
+access or course roles; only the administrator access endpoint assigns global access.
 
 The user model persists the first-login requirement and exposes it in profile
 responses. Profile updates cannot clear it. `User.changePassword(encodedHash)`

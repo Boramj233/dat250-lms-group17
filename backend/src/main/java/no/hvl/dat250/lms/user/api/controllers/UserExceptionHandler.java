@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 /** Maps user failures without exposing stored credentials or database messages. */
-@RestControllerAdvice(assignableTypes = UserController.class)
+@RestControllerAdvice(assignableTypes = {UserController.class, AdminUserController.class})
 public class UserExceptionHandler {
     @ExceptionHandler(AuthenticationCredentialsNotFoundException.class)
     public ProblemDetail unauthenticated() {
@@ -19,7 +19,7 @@ public class UserExceptionHandler {
 
     @ExceptionHandler(AccessDeniedException.class)
     public ProblemDetail forbidden() {
-        return ProblemDetail.forStatusAndDetail(HttpStatus.FORBIDDEN, "Administrator access required");
+        return ProblemDetail.forStatusAndDetail(HttpStatus.FORBIDDEN, "Operation not permitted");
     }
 
     @ExceptionHandler(UserNotFoundException.class)
@@ -30,5 +30,10 @@ public class UserExceptionHandler {
     @ExceptionHandler(ConstraintViolationException.class)
     public ProblemDetail invalidProfile() {
         return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, "Invalid profile details");
+    }
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ProblemDetail invalidRequest() {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, "Invalid request parameters");
     }
 }
