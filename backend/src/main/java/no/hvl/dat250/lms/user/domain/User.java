@@ -11,12 +11,6 @@ import java.util.List;
 @Table(name = "users")
 public class User implements UserDetails {
 
-
-    public enum Roles {
-        NORMAL,
-        PRIVILEGED;
-    }
-
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -30,7 +24,7 @@ public class User implements UserDetails {
     private String password;
 
     @Enumerated(EnumType.STRING)
-    private Roles role;
+    private Access access;
 
     public User() {}
 
@@ -38,7 +32,7 @@ public class User implements UserDetails {
         this.username = username;
         this.email = email;
         this.password = password;
-        this.role = Roles.NORMAL;
+        this.access = Access.STANDARD;
     }
 
     @Override
@@ -54,7 +48,7 @@ public class User implements UserDetails {
 
     public String getEmail() { return this.email; }
 
-    public Roles getRole() { return this.role; }
+    public Access getAccess() { return this.access; }
 
-    public void setRole(Roles role) { this.role = role; }
+    public void setAccess(Access access) { this.access = access; }
 }
