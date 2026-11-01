@@ -84,6 +84,12 @@ public class UserService implements UserDetailsService {
         return principal.getUserId();
     }
 
+    /** Reloads the authenticated account, including current credentials, for trusted internal callers. */
+    @Transactional(readOnly = true)
+    public User getCurrentUser() {
+        return userRepository.findById(requireCurrentUserId()).orElseThrow(UserNotFoundException::new);
+    }
+
     /**
      * Persists an auth-verified password change for the currently authenticated user.
      * Auth must verify the old plaintext password, reject reuse, and encode the new

@@ -97,15 +97,18 @@ Invalid profiles return 400, missing authentication 401, and deleted users 404.
 The service validates input too, so
 direct service calls cannot bypass profile validation.
 
-Account registration, password hashing/change, login/logout, and session lifecycle
-belong to the auth implementation. Ordinary profile updates do not assign global
+Account registration and full login/logout/session lifecycle remain auth concerns.
+The user password endpoint below implements credential verification and encoding
+in `UserPasswordService`, which future auth flows may reuse.
+Ordinary profile updates do not assign global
 access or course roles; only the administrator access endpoint assigns global access.
 
 The user model persists the first-login requirement and exposes it in profile
 responses. Profile updates cannot clear it. `User.changePassword(encodedHash)`
 replaces the hash and clears the flag together; it is an internal domain operation,
-not an HTTP endpoint. The auth service must first verify the current plaintext
-password, reject password reuse, and encode the new password. It then calls
+not an HTTP endpoint. `UserPasswordService` (or a future auth service) must first
+verify the current plaintext password, reject password reuse, and encode the new
+password. It then calls
 `UserService.changePassword(verifiedCurrentPasswordHash, newPasswordHash)` with
 the stored hash it verified and the newly encoded hash. The service selects the
 account from the authenticated identity, validates the new hash as non-blank and
@@ -113,7 +116,7 @@ at most 255 characters, and updates the hash and first-login flag together in
 one transaction. It accepts no target user ID. If the verified hash is no longer
 current (or the account was deleted), the update is rejected without overwriting
 credentials. Identical encoded hashes are rejected as well; checking plaintext
-password reuse remains auth's responsibility.
+password reuse remains the verifying service's responsibility.
 
 This is an internal persistence operation, not a password-change HTTP endpoint;
 neither hash argument should come directly from an HTTP request. Hashing and
@@ -121,6 +124,28 @@ verification are not performed here. The conditional database update clears the
 JPA persistence context, but detached session principals still contain old values.
 Auth must invalidate or refresh sessions after success and enforce the first-login
 restriction against current persisted state.
+
+## Change own password
+
+`PUT /api/users/me/password` accepts plaintext credentials, not hashes:
+
+```json
+{"currentPassword": "old-password123", "newPassword": "new-password456"}
+```
+
+Requires authentication and a valid CSRF token for session-based requests.
+The current password is checked against the current stored hash, not the session's
+copy. The new password must be non-blank, at least 8 characters, at most 72 UTF-8
+bytes (the default bcrypt limit), and different from the current password.
+The shared `PasswordEncoder` defaults to a delegating encoder writing bcrypt hashes.
+
+On success, the hash and `mustChangePassword = false` are persisted together,
+the current session is invalidated, and the endpoint returns 204 with no body.
+The user must authenticate again with the new password. Other active sessions
+are not revoked by this endpoint; global session revocation belongs to auth.
+Invalid request/password policy returns 400, wrong current password 403,
+missing authentication 401, and a deleted account 404. Stale concurrent password
+updates are rejected with 403. Passwords and hashes are never returned.
 
 Auth/security must still restrict accounts with `mustChangePassword = true` to
 password change and logout. That restriction is not implemented by this feature;

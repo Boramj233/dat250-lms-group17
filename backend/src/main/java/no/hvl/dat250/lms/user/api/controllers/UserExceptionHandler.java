@@ -6,12 +6,24 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.security.authentication.AuthenticationCredentialsNotFoundException;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 /** Maps user failures without exposing stored credentials or database messages. */
 @RestControllerAdvice(assignableTypes = {UserController.class, AdminUserController.class})
 public class UserExceptionHandler {
+    @ExceptionHandler(BadCredentialsException.class)
+    public ProblemDetail incorrectPassword() {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.FORBIDDEN, "Current password is incorrect");
+    }
+
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ProblemDetail invalidBody() {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, "Invalid request body");
+    }
+
     @ExceptionHandler(AuthenticationCredentialsNotFoundException.class)
     public ProblemDetail unauthenticated() {
         return ProblemDetail.forStatusAndDetail(HttpStatus.UNAUTHORIZED, "Authentication required");
