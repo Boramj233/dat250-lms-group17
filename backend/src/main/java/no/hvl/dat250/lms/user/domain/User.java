@@ -21,18 +21,20 @@ public class User implements UserDetails {
     @Column(unique = true, nullable = false)
     private String email;
 
-    private String password;
+    @Column(name = "password", nullable = false)
+    private String passwordHash;
 
     @Enumerated(EnumType.STRING)
-    private Access access;
+    @Column(nullable = false)
+    private Access access = Access.STANDARD;
 
     public User() {}
 
-    public User(String username, String email, String password) {
+    // The caller must hash the password before constructing a user.
+    public User(String username, String email, String passwordHash) {
         this.username = username;
         this.email = email;
-        this.password = password;
-        this.access = Access.STANDARD;
+        this.passwordHash = passwordHash;
     }
 
     @Override
@@ -41,10 +43,12 @@ public class User implements UserDetails {
     }
 
     @Override
-    public String getPassword() { return this.password; }
+    public String getPassword() { return this.passwordHash; }
 
     @Override
     public String getUsername() { return this.username; }
+
+    public Long getId() { return this.id; }
 
     public String getEmail() { return this.email; }
 
