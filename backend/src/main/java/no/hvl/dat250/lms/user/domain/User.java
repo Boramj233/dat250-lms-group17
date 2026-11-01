@@ -1,6 +1,8 @@
 package no.hvl.dat250.lms.user.domain;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
@@ -15,13 +17,22 @@ import java.util.List;
 public class User implements UserDetails {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "user_id_generator")
+    @SequenceGenerator(name = "user_id_generator", sequenceName = "user_id_seq", allocationSize = 1)
+    @Column(name = "user_id", updatable = false)
+    private Long userId;
 
-    @Column(unique = true, nullable = false)
-    private String username;
+    @NotBlank
+    @Size(max = 255)
+    @Column(name = "first_name", nullable = false, length = 255)
+    private String firstName;
 
-    @Column(unique = true, nullable = false)
+    @NotBlank
+    @Size(max = 255)
+    @Column(name = "last_name", nullable = false, length = 255)
+    private String lastName;
+
+    @Column(unique = true, nullable = false, updatable = false)
     private String email;
 
     @Column(name = "password", nullable = false)
@@ -32,19 +43,25 @@ public class User implements UserDetails {
     private Access access = Access.STANDARD;
 
     /** Creates an empty user for JPA. */
-    public User() {}
+    protected User() {}
 
     /**
      * Creates a user with STANDARD access. The caller must hash the password first.
      *
-     * @param username the user's username
-     * @param email the user's email address
      * @param passwordHash the already encoded password
+     * @param firstName the required first name
+     * @param lastName the required last name
      */
-    public User(String username, String email, String passwordHash) {
-        this.username = username;
-        this.email = email;
+    public User(String passwordHash, String firstName, String lastName) {
         this.passwordHash = passwordHash;
+        this.firstName = firstName;
+        this.lastName = lastName;
+    }
+
+    /** Sequence-generated IDs are available here, before the first INSERT. */
+    @PrePersist
+    private void generateEmail() {
+        this.email = this.userId + "@epost.com";
     }
 
     /**
@@ -59,15 +76,27 @@ public class User implements UserDetails {
     @Override
     public String getPassword() { return this.passwordHash; }
 
-    /** Returns the user's username. */
+    /** Returns the email login identifier required by Spring Security's UserDetails contract. */
     @Override
-    public String getUsername() { return this.username; }
+    public String getUsername() { return this.email; }
 
     /** Returns the database-generated ID, or null before persistence. */
-    public Long getId() { return this.id; }
+    public Long getUserId() { return this.userId; }
 
-    /** Returns the user's email address. */
+    /** Returns the generated email address, or null before persistence. */
     public String getEmail() { return this.email; }
+
+    /** Returns the first name. */
+    public String getFirstName() { return this.firstName; }
+
+    /** Returns the last name. */
+    public String getLastName() { return this.lastName; }
+
+    /** Updates editable profile fields; the service must validate them first. */
+    public void updateProfile(String firstName, String lastName) {
+        this.firstName = firstName;
+        this.lastName = lastName;
+    }
 
     /** Returns the user's global access level. */
     public Access getAccess() { return this.access; }

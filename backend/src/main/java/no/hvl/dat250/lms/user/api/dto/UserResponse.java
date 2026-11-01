@@ -6,15 +6,17 @@ import no.hvl.dat250.lms.user.domain.User;
 /**
  * User information returned by the API, excluding the password hash.
  *
- * @param id the user's ID
- * @param username the user's username
+ * @param userId the user's generated primary key
  * @param email the user's email address
+ * @param firstName the user's first name
+ * @param lastName the user's last name
  * @param access the user's global access level
  */
 public record UserResponse(
-        Long id,
-        String username,
+        Long userId,
         String email,
+        String firstName,
+        String lastName,
         Access access
 ) {
     /**
@@ -25,9 +27,10 @@ public record UserResponse(
      */
     public static UserResponse from(User user) {
         return new UserResponse(
-                user.getId(),
-                user.getUsername(),
+                user.getUserId(),
                 user.getEmail(),
+                user.getFirstName(),
+                user.getLastName(),
                 user.getAccess()
         );
     }

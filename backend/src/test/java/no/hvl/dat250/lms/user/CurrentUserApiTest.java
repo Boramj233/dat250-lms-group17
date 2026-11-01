@@ -34,19 +34,22 @@ class CurrentUserApiTest {
 
     @Test
     void returnsAuthenticatedUsersProfileWithoutPassword() throws Exception {
-        User user = users.save(new User("sara", "sara@example.com", "{noop}test-password"));
+        User user = users.save(new User("{noop}test-password", "Sara", "Nordmann"));
         // A second account must not affect which profile is returned.
-        users.save(new User("other", "other@example.com", "{noop}other-password"));
+        users.save(new User("{noop}other-password", "Sara", "Nordmann"));
         String credentials = Base64.getEncoder().encodeToString(
-                "sara@example.com:test-password".getBytes(StandardCharsets.UTF_8));
+                (user.getEmail() + ":test-password").getBytes(StandardCharsets.UTF_8));
 
         mvc.perform(get("/api/users/me").accept(MediaType.APPLICATION_JSON)
                         .header("Authorization", "Basic " + credentials))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$", aMapWithSize(4)))
-                .andExpect(jsonPath("$.id").value(user.getId()))
-                .andExpect(jsonPath("$.username").value("sara"))
-                .andExpect(jsonPath("$.email").value("sara@example.com"))
+                .andExpect(jsonPath("$", aMapWithSize(5)))
+                .andExpect(jsonPath("$.username").doesNotExist())
+                .andExpect(jsonPath("$.id").doesNotExist())
+                .andExpect(jsonPath("$.userId").value(user.getUserId()))
+                .andExpect(jsonPath("$.firstName").value("Sara"))
+                .andExpect(jsonPath("$.lastName").value("Nordmann"))
+                .andExpect(jsonPath("$.email").value(user.getUserId() + "@epost.com"))
                 .andExpect(jsonPath("$.access").value("STANDARD"))
                 .andExpect(content().string(not(containsString("test-password"))));
     }
@@ -59,9 +62,9 @@ class CurrentUserApiTest {
 
     @Test
     void rejectsIncorrectCredentials() throws Exception {
-        users.save(new User("sara", "sara@example.com", "{noop}test-password"));
+        User user = users.save(new User("{noop}test-password", "Sara", "Nordmann"));
         String credentials = Base64.getEncoder().encodeToString(
-                "sara@example.com:wrong-password".getBytes(StandardCharsets.UTF_8));
+                (user.getEmail() + ":wrong-password").getBytes(StandardCharsets.UTF_8));
         mvc.perform(get("/api/users/me").accept(MediaType.APPLICATION_JSON)
                         .header("Authorization", "Basic " + credentials))
                 .andExpect(status().isUnauthorized());
@@ -69,13 +72,13 @@ class CurrentUserApiTest {
 
     @Test
     void returnsNotFoundWhenSessionUserHasBeenDeleted() throws Exception {
-        User user = users.save(new User("sara", "sara@example.com", "{noop}test-password"));
+        User user = users.save(new User("{noop}test-password", "Sara", "Nordmann"));
         var authentication = UsernamePasswordAuthenticationToken.authenticated(
                 user, null, user.getAuthorities());
         MockHttpSession session = new MockHttpSession();
         session.setAttribute(HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY,
                 new SecurityContextImpl(authentication));
-        users.deleteById(user.getId());
+        users.deleteById(user.getUserId());
 
         mvc.perform(get("/api/users/me").session(session).accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isNotFound());

@@ -1,11 +1,15 @@
 package no.hvl.dat250.lms.user.api.controllers;
 
+import jakarta.validation.Valid;
+import no.hvl.dat250.lms.user.api.dto.UpdateUserRequest;
 import no.hvl.dat250.lms.user.api.dto.UserResponse;
 import no.hvl.dat250.lms.user.domain.User;
 import no.hvl.dat250.lms.user.service.UserService;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
@@ -32,11 +36,21 @@ public class UserController {
      */
     @GetMapping("/me")
     public UserResponse getCurrentUser(@AuthenticationPrincipal User principal) {
-        if (principal == null || principal.getId() == null) {
+        if (principal == null || principal.getUserId() == null) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
         }
-        return userService.findById(principal.getId())
+        return userService.findById(principal.getUserId())
                 .map(UserResponse::from)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+    }
+
+    /** Replaces the authenticated user's names. User ID and email are immutable. */
+    @PutMapping("/me")
+    public UserResponse updateCurrentUser(@AuthenticationPrincipal User principal,
+                                          @Valid @RequestBody UpdateUserRequest request) {
+        if (principal == null || principal.getUserId() == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
+        }
+        return UserResponse.from(userService.updateProfile(principal.getUserId(), request));
     }
 }

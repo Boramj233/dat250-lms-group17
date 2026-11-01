@@ -10,8 +10,8 @@ import java.util.Optional;
  */
 public interface UserRepository extends CrudRepository<User, Long> {
 
-    /** Returns the matching user, or an empty Optional if the username is unknown. */
-    public Optional<User> findByUsername(String username);
+    /** Returns the matching user, or an empty Optional if the user ID is unknown. */
+    public Optional<User> findByUserId(Long userId);
 
     /** Returns the matching user, or an empty Optional if the email is unknown. */
     public Optional<User> findByEmail(String email);
