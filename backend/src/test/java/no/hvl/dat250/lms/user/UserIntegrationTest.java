@@ -8,7 +8,6 @@ import no.hvl.dat250.lms.user.service.UserService;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
@@ -17,7 +16,6 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.junit.jupiter.api.AfterEach;
 
-import static org.junit.jupiter.api.Assertions.fail;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import jakarta.validation.ConstraintViolationException;
@@ -76,15 +74,6 @@ class UserIntegrationTest {
         assertEquals(user.getUserId() + "@epost.com", stored.getEmail());
         assertEquals("encoded-password", stored.getPassword());
         assertEquals(access, stored.getAccess());
-    }
-
-    @Test
-    @Disabled("Not implemented yet")
-    void userApiHandlesValidInvalidAndUnknownUsers() {
-        // With MockMvc, test allowed creation/retrieval, invalid data, duplicate
-        // email, and an unknown ID against the agreed HTTP contract.
-        // Use authorized actors where required; rejected writes must save nothing.
-        fail("Not implemented yet");
     }
 
     @ParameterizedTest
@@ -193,21 +182,4 @@ class UserIntegrationTest {
         org.junit.jupiter.api.Assertions.assertTrue(user.isMustChangePassword());
     }
 
-    @Test
-    @Disabled("Not implemented yet")
-    void userResponsesNeverExposePasswordHashes() {
-        // Verify user detail, list, creation, and error responses do not contain
-        // passwords or stored hashes, including for authorized callers.
-        fail("Not implemented yet");
-    }
-
-    @Test
-    @Disabled("Not implemented yet")
-    void userApiEnforcesProfileAndAccessPermissions() {
-        // Define profile read/write and global access-management policies.
-        // With real security filters, test authorized and unauthorized callers,
-        // modified target IDs, and attempts to submit Access in profile requests.
-        // Verify rejected changes leave stored profiles and Access unchanged.
-        fail("Not implemented yet");
-    }
 }

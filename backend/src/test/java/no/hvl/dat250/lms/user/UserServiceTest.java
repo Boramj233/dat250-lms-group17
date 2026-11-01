@@ -11,7 +11,6 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -131,34 +130,4 @@ class UserServiceTest {
         verify(users, never()).save(any());
     }
 
-    @Test
-    @Disabled("Not implemented yet")
-    void existingUserCanBeRetrieved() {
-        // Retrieve the requested user by ID and verify the returned profile data.
-        fail("Not implemented yet");
-    }
-
-    @Test
-    @Disabled("Not implemented yet")
-    void unknownUserIsHandledExplicitly() {
-        // Request an unknown user ID and verify the agreed not-found outcome.
-        fail("Not implemented yet");
-    }
-
-    @Test
-    @Disabled("Not implemented yet")
-    void profileChangesDoNotGrantGlobalAccess() {
-        // An ordinary profile update must not allow elevation to COURSE_MANAGER
-        // or ADMIN. Keep global access changes separate from editable profile data.
-        fail("Not implemented yet");
-    }
-
-    @Test
-    @Disabled("Not implemented yet")
-    void globalAccessChangesRequireExplicitAuthorization() {
-        // Define who may assign STANDARD, COURSE_MANAGER, and ADMIN, then test
-        // permitted and rejected actors. Do not infer this policy from course roles.
-        // Rejected changes must leave the user's current Access unchanged.
-        fail("Not implemented yet");
-    }
 }
