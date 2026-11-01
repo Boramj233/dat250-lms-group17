@@ -16,6 +16,7 @@ import org.springframework.http.MediaType;
 import org.springframework.mock.web.*;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextImpl;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import org.springframework.security.web.csrf.*;
 import org.springframework.test.context.ActiveProfiles;
@@ -36,6 +37,7 @@ class AdminUserApiTest {
     @Autowired private MockMvc mvc;
     @Autowired private UserRepository users;
     @Autowired private EntityManager entities;
+    @Autowired private PasswordEncoder passwords;
     private User admin;
     private User user;
     private User other;
@@ -311,6 +313,107 @@ class AdminUserApiTest {
         for (String size : new String[]{"0", "101"}) {
             mvc.perform(as(other, get("/api/users/search").param("search", "Sara").param("size", size)))
                     .andExpect(status().isBadRequest());
+        }
+    }
+
+    private String validCreationBody() {
+        return """
+                {"firstName":"Kari","lastName":"Hansen","temporaryPassword":"temporary-123"}
+                """;
+    }
+
+    @Test
+    void administratorCreatesStandardUserWithHashedTemporaryPasswordAndGeneratedEmail() throws Exception {
+        mvc.perform(as(admin, post("/api/admin/users")).content(validCreationBody()))
+                .andExpect(status().isCreated())
+                .andExpect(header().string("Location", matchesPattern("/api/admin/users/[0-9]+")))
+                .andExpect(jsonPath("$", aMapWithSize(6)))
+                .andExpect(jsonPath("$.userId").isNumber())
+                .andExpect(jsonPath("$.firstName").value("Kari"))
+                .andExpect(jsonPath("$.lastName").value("Hansen"))
+                .andExpect(jsonPath("$.access").value("STANDARD"))
+                .andExpect(jsonPath("$.mustChangePassword").value(true))
+                .andExpect(content().string(not(containsString("temporary-123"))))
+                .andExpect(content().string(not(containsString("passwordHash"))));
+        entities.flush();
+        entities.clear();
+        assertEquals(4, users.count());
+        User created = users.findAll().stream().filter(u -> u.getFirstName().equals("Kari")).findFirst().orElseThrow();
+        assertEquals(created.getUserId() + "@epost.com", created.getEmail());
+        assertEquals(Access.STANDARD, created.getAccess());
+        assertTrue(created.isMustChangePassword());
+        assertNotEquals("temporary-123", created.getPassword());
+        assertTrue(passwords.matches("temporary-123", created.getPassword()));
+
+        String credentials = java.util.Base64.getEncoder().encodeToString(
+                (created.getEmail() + ":temporary-123").getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        mvc.perform(get("/api/users/me").accept(MediaType.APPLICATION_JSON)
+                        .header("Authorization", "Basic " + credentials))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.userId").value(created.getUserId()))
+                .andExpect(jsonPath("$.mustChangePassword").value(true));
+    }
+
+    @ParameterizedTest
+    @EnumSource(value = Access.class, names = {"STANDARD", "COURSE_MANAGER"})
+    void nonAdministratorsCannotCreateAccounts(Access access) throws Exception {
+        user.setAccess(access);
+        mvc.perform(as(user, post("/api/admin/users")).content(validCreationBody()))
+                .andExpect(status().isForbidden());
+        assertEquals(3, users.count());
+    }
+
+    @Test
+    void anonymousAndCsrfLessCreationAreRejected() throws Exception {
+        mvc.perform(as(null, post("/api/admin/users")).content(validCreationBody()))
+                .andExpect(status().isUnauthorized());
+        mvc.perform(as(admin, post("/api/admin/users")).with(request -> {
+                    request.removeHeader("X-CSRF-TOKEN");
+                    return request;
+                }).content(validCreationBody()))
+                .andExpect(status().isForbidden());
+        assertEquals(3, users.count());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"{}",
+            "{\"firstName\":\"Kari\",\"lastName\":\"Hansen\"}",
+            "{\"firstName\":\"\",\"lastName\":\"Hansen\",\"temporaryPassword\":\"temporary-123\"}",
+            "{\"firstName\":\"Kari\",\"lastName\":null,\"temporaryPassword\":\"temporary-123\"}",
+            "{\"firstName\":\"Kari\",\"lastName\":\"Hansen\",\"temporaryPassword\":\"short\"}",
+            "{\"firstName\":\"Kari\",\"lastName\":\"Hansen\",\"temporaryPassword\":\"        \"}"})
+    void invalidCreationRequestsSaveNothingAndDoNotEchoPasswords(String body) throws Exception {
+        mvc.perform(as(admin, post("/api/admin/users")).content(body))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().string(not(containsString("temporary-123"))));
+        assertEquals(3, users.count());
+    }
+
+    @Test
+    void cannotSetIdentityAccessOrPasswordRequirementDuringCreation() throws Exception {
+        mvc.perform(as(admin, post("/api/admin/users")).content("""
+                {"firstName":"Kari","lastName":"Hansen","temporaryPassword":"temporary-123",
+                 "userId":99999,"email":"custom@example.com","access":"ADMIN","mustChangePassword":false}
+                """))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.access").value("STANDARD"))
+                .andExpect(jsonPath("$.mustChangePassword").value(true));
+        entities.flush();
+        entities.clear();
+        User created = users.findAll().stream().filter(u -> u.getFirstName().equals("Kari")).findFirst().orElseThrow();
+        assertNotEquals(99999L, created.getUserId());
+        assertEquals(created.getUserId() + "@epost.com", created.getEmail());
+    }
+
+    @Test
+    void oversizedCreationFieldsAndMultibytePasswordAreRejected() throws Exception {
+        for (String body : new String[]{
+                "{\"firstName\":\"" + "a".repeat(256) + "\",\"lastName\":\"Hansen\",\"temporaryPassword\":\"temporary-123\"}",
+                "{\"firstName\":\"Kari\",\"lastName\":\"" + "a".repeat(256) + "\",\"temporaryPassword\":\"temporary-123\"}",
+                "{\"firstName\":\"Kari\",\"lastName\":\"Hansen\",\"temporaryPassword\":\"" + "a".repeat(73) + "\"}",
+                "{\"firstName\":\"Kari\",\"lastName\":\"Hansen\",\"temporaryPassword\":\"" + "\u00f8".repeat(37) + "\"}"}) {
+            mvc.perform(as(admin, post("/api/admin/users")).content(body)).andExpect(status().isBadRequest());
+            assertEquals(3, users.count());
         }
     }
 }

@@ -29,6 +29,7 @@ service. Profile responses never include password hashes.
 
 | Method | Endpoint | Purpose |
 | --- | --- | --- |
+| POST | `/api/admin/users` | Create an account with a temporary password |
 | GET | `/api/admin/users?search=&page=0&size=20` | List/search users |
 | GET | `/api/admin/users/{userId}` | Read one user |
 | PATCH | `/api/admin/users/{userId}/access` | Set global access |
@@ -47,8 +48,25 @@ course roles. Rejected operations do not change stored access.
 Responses: 400 for invalid parameters/access, 401 for missing authentication,
 403 for insufficient access or self-demotion, and 404 for unknown target users.
 Session-based writes require CSRF tokens. Auth must still implement the separate
-first-login password-change restriction described below. No admin frontend or
-creation HTTP endpoint is included yet; creation still uses the service method.
+first-login password-change restriction described below. No admin frontend is
+included yet.
+
+Creation accepts:
+
+```json
+{"firstName":"Sara","lastName":"Nordmann","temporaryPassword":"temporary-123"}
+```
+
+Names must be non-blank and at most 255 characters. The temporary password must
+be non-blank, at least 8 characters, and at most 72 UTF-8 bytes. The administrator
+supplies it; password generation/delivery is not implemented. `UserPasswordService`
+checks administrator access and hashes the password before passing it to the
+creation service, which checks access again. No plaintext password is stored.
+Success returns 201, a Location header pointing to `/api/admin/users/{userId}`,
+and a UserResponse. The account always starts with STANDARD access and
+`mustChangePassword = true`; supplied identity/access/flag fields cannot override
+these defaults. No password or hash is returned. Anonymous callers get 401,
+non-admins (including course managers) get 403, and invalid requests get 400.
 
 `UserService.createUser(firstName, lastName, passwordHash)` validates and saves a
 new user with STANDARD access and `mustChangePassword = true`, returning the user
@@ -58,9 +76,9 @@ Spring Security context and reloads the actor from the database to require
 managers, deleted users, and former admins are not allowed to create accounts.
 Names and the encoded password must be non-blank and at most 255 characters.
 The trusted caller must hash the password before calling this method; the user
-service does not hash passwords or verify encoding formats. No creation HTTP
-endpoint is exposed yet. Return a `UserResponse` rather than the entity from any
-future registration endpoint to keep the stored hash out of API responses.
+service does not hash passwords or verify encoding formats. The HTTP endpoint
+uses `UserPasswordService` to encode the temporary password and returns
+`UserResponse` to keep stored hashes out of responses.
 
 `GET /api/users/me` returns the authenticated user's stored profile.
 `PUT /api/users/me` replaces the required first/last names:
@@ -97,7 +115,8 @@ Invalid profiles return 400, missing authentication 401, and deleted users 404.
 The service validates input too, so
 direct service calls cannot bypass profile validation.
 
-Account registration and full login/logout/session lifecycle remain auth concerns.
+Public self-registration is not exposed; account creation is administrator-only.
+Full login/logout/session lifecycle remain auth concerns.
 The user password endpoint below implements credential verification and encoding
 in `UserPasswordService`, which future auth flows may reuse.
 Ordinary profile updates do not assign global
