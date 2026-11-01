@@ -1,5 +1,17 @@
 # User profiles
 
+`UserService.createUser(firstName, lastName, passwordHash)` validates and saves a
+new user with STANDARD access and `mustChangePassword = true`, returning the user
+with generated ID and email. The method requires an authenticated `User` in the
+Spring Security context and reloads the actor from the database to require
+`Access.ADMIN`. Missing authentication is rejected; ordinary users, course
+managers, deleted users, and former admins are not allowed to create accounts.
+Names and the encoded password must be non-blank and at most 255 characters.
+The trusted caller must hash the password before calling this method; the user
+service does not hash passwords or verify encoding formats. No creation HTTP
+endpoint is exposed yet. Return a `UserResponse` rather than the entity from any
+future registration endpoint to keep the stored hash out of API responses.
+
 `GET /api/users/me` returns the authenticated user's stored profile.
 `PUT /api/users/me` replaces the required first/last names:
 
@@ -24,7 +36,8 @@ in the `@PrePersist` callback that sets email before the first INSERT. New Java
 objects have neither ID nor email until persisted. Account creation supplies
 only the encoded password, first name, and last name to the constructor.
 
-Successful requests return `userId`, `email`, `firstName`, `lastName`, and `access`, never password
+Successful requests return `userId`, `email`, `firstName`, `lastName`, `access`,
+and `mustChangePassword`, never password
 hashes. Updates select the user exclusively from the authenticated principal.
 Additional JSON fields, including email, are ignored and cannot change ID, access,
 or credentials. The endpoint
@@ -37,3 +50,15 @@ direct service calls cannot bypass profile validation.
 Account registration, password hashing/change, login/logout, and session lifecycle
 belong to the auth implementation. Global access-management policy is still to
 be defined; this profile endpoint does not assign global access or course roles.
+
+The user model persists the first-login requirement and exposes it in profile
+responses. Profile updates cannot clear it. `User.changePassword(encodedHash)`
+replaces the hash and clears the flag together; it is an internal domain operation,
+not an HTTP endpoint. The future auth service must first verify the current
+password, reject password reuse, encode the new password, and persist the change
+through a user-service operation in a transaction.
+
+Auth/security must still restrict accounts with `mustChangePassword = true` to
+password change and logout. That restriction is not implemented by this feature;
+the flag does not prevent authentication. The first administrator must be
+provisioned through trusted setup, not an unauthenticated creation endpoint.

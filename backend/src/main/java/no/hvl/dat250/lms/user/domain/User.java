@@ -35,8 +35,13 @@ public class User implements UserDetails {
     @Column(unique = true, nullable = false, updatable = false)
     private String email;
 
+    @NotBlank
+    @Size(max = 255)
     @Column(name = "password", nullable = false)
     private String passwordHash;
+
+    @Column(name = "must_change_password", nullable = false)
+    private boolean mustChangePassword = true;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -75,6 +80,22 @@ public class User implements UserDetails {
     /** Returns the password hash, as required by Spring Security. */
     @Override
     public String getPassword() { return this.passwordHash; }
+
+    /** New accounts must replace their temporary password before normal use. */
+    public boolean isMustChangePassword() { return this.mustChangePassword; }
+
+    /**
+     * Replaces the hash and clears the first-login requirement together.
+     * A trusted auth service must authorize the change, verify the old password,
+     * reject reuse, and encode the new password before calling this method.
+     */
+    public void changePassword(String newPasswordHash) {
+        if (newPasswordHash == null || newPasswordHash.isBlank() || newPasswordHash.length() > 255) {
+            throw new IllegalArgumentException("Invalid encoded password");
+        }
+        this.passwordHash = newPasswordHash;
+        this.mustChangePassword = false;
+    }
 
     /** Returns the email login identifier required by Spring Security's UserDetails contract. */
     @Override

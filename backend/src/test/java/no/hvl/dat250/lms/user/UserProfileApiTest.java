@@ -64,7 +64,7 @@ class UserProfileApiTest {
                 {"firstName":"Kari","lastName":"Hansen"}
                 """))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$", aMapWithSize(5)))
+                .andExpect(jsonPath("$", aMapWithSize(6)))
                 .andExpect(jsonPath("$.username").doesNotExist())
                 .andExpect(jsonPath("$.id").doesNotExist())
                 .andExpect(jsonPath("$.userId").value(user.getUserId()))
@@ -72,6 +72,7 @@ class UserProfileApiTest {
                 .andExpect(jsonPath("$.lastName").value("Hansen"))
                 .andExpect(jsonPath("$.email").value(user.getUserId() + "@epost.com"))
                 .andExpect(jsonPath("$.access").value("STANDARD"))
+                .andExpect(jsonPath("$.mustChangePassword").value(true))
                 .andExpect(content().string(not(containsString("encoded-secret"))));
         entities.flush();
         entities.clear();
@@ -138,7 +139,8 @@ class UserProfileApiTest {
         User other = users.save(new User("other-secret", "Sara", "Nordmann"));
         mvc.perform(updateAs(user).content("""
                 {"email":"updated@example.com","firstName":"Sara","lastName":"Nordmann",
-                 "access":"ADMIN","password":"new-secret","passwordHash":"new-hash","userId":%d}
+                 "access":"ADMIN","password":"new-secret","passwordHash":"new-hash",
+                 "mustChangePassword":false,"userId":%d}
                 """.formatted(other.getUserId())))
                 .andExpect(status().isOk());
         entities.flush();
@@ -146,6 +148,7 @@ class UserProfileApiTest {
         User stored = users.findById(user.getUserId()).orElseThrow();
         assertEquals(Access.STANDARD, stored.getAccess());
         assertEquals(user.getUserId(), stored.getUserId());
+        assertTrue(stored.isMustChangePassword());
         assertEquals("secret", stored.getPassword());
         assertEquals(user.getUserId() + "@epost.com", stored.getEmail());
         assertEquals(other.getUserId() + "@epost.com", users.findById(other.getUserId()).orElseThrow().getEmail());

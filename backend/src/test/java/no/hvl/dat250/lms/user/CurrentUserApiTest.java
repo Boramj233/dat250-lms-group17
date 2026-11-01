@@ -43,7 +43,7 @@ class CurrentUserApiTest {
         mvc.perform(get("/api/users/me").accept(MediaType.APPLICATION_JSON)
                         .header("Authorization", "Basic " + credentials))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$", aMapWithSize(5)))
+                .andExpect(jsonPath("$", aMapWithSize(6)))
                 .andExpect(jsonPath("$.username").doesNotExist())
                 .andExpect(jsonPath("$.id").doesNotExist())
                 .andExpect(jsonPath("$.userId").value(user.getUserId()))
@@ -51,6 +51,7 @@ class CurrentUserApiTest {
                 .andExpect(jsonPath("$.lastName").value("Nordmann"))
                 .andExpect(jsonPath("$.email").value(user.getUserId() + "@epost.com"))
                 .andExpect(jsonPath("$.access").value("STANDARD"))
+                .andExpect(jsonPath("$.mustChangePassword").value(true))
                 .andExpect(content().string(not(containsString("test-password"))));
     }
 

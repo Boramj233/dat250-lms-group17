@@ -4,6 +4,7 @@ import jakarta.persistence.EntityManager;
 import no.hvl.dat250.lms.user.domain.Access;
 import no.hvl.dat250.lms.user.domain.User;
 import no.hvl.dat250.lms.user.repository.UserRepository;
+import no.hvl.dat250.lms.user.service.UserService;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,6 +13,9 @@ import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.junit.jupiter.api.AfterEach;
 
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -26,6 +30,34 @@ import org.junit.jupiter.params.provider.ValueSource;
 class UserIntegrationTest {
     @Autowired private UserRepository users;
     @Autowired private EntityManager entities;
+    @Autowired private UserService service;
+
+    @AfterEach
+    void clearAuthentication() { SecurityContextHolder.clearContext(); }
+
+    @Test
+    void serviceCreatesUserWithGeneratedIdentityAndStandardAccess() {
+        User administrator = new User("encoded-admin-password", "System", "Administrator");
+        administrator.setAccess(Access.ADMIN);
+        users.save(administrator);
+        SecurityContextHolder.getContext().setAuthentication(
+                UsernamePasswordAuthenticationToken.authenticated(administrator, null, administrator.getAuthorities()));
+        User created = service.createUser("Sara", "Nordmann", "encoded-password");
+        Long userId = created.getUserId();
+        org.junit.jupiter.api.Assertions.assertNotNull(userId);
+        assertEquals(userId + "@epost.com", created.getEmail());
+        entities.flush();
+        entities.clear();
+
+        User stored = users.findByUserId(userId).orElseThrow();
+        assertEquals("Sara", stored.getFirstName());
+        assertEquals("Nordmann", stored.getLastName());
+        assertEquals("encoded-password", stored.getPassword());
+        assertEquals(Access.STANDARD, stored.getAccess());
+        org.junit.jupiter.api.Assertions.assertTrue(stored.isMustChangePassword());
+        assertEquals(userId + "@epost.com", stored.getEmail());
+        assertEquals(userId, users.findByEmail(stored.getEmail()).orElseThrow().getUserId());
+    }
 
     @ParameterizedTest
     @EnumSource(Access.class)
@@ -95,6 +127,29 @@ class UserIntegrationTest {
         assertEquals(userId, users.findByEmail(userId + "@epost.com").orElseThrow().getUserId());
         assertEquals("Kari", stored.getFirstName());
         assertEquals("Hansen", stored.getLastName());
+    }
+
+    @Test
+    void passwordHashAndFirstLoginFlagAreReplacedTogether() {
+        User user = users.save(new User("temporary-hash", "Sara", "Nordmann"));
+        org.junit.jupiter.api.Assertions.assertTrue(user.isMustChangePassword());
+        user.changePassword("new-encoded-password");
+        entities.flush();
+        entities.clear();
+        User stored = users.findById(user.getUserId()).orElseThrow();
+        assertEquals("new-encoded-password", stored.getPassword());
+        org.junit.jupiter.api.Assertions.assertFalse(stored.isMustChangePassword());
+        assertEquals(user.getEmail(), stored.getEmail());
+    }
+
+    @ParameterizedTest
+    @NullSource
+    @ValueSource(strings = {"", "   "})
+    void invalidReplacementHashDoesNotClearFirstLoginRequirement(String hash) {
+        User user = new User("temporary-hash", "Sara", "Nordmann");
+        assertThrows(IllegalArgumentException.class, () -> user.changePassword(hash));
+        assertEquals("temporary-hash", user.getPassword());
+        org.junit.jupiter.api.Assertions.assertTrue(user.isMustChangePassword());
     }
 
     @Test

@@ -11,13 +11,15 @@ import no.hvl.dat250.lms.user.domain.User;
  * @param firstName the user's first name
  * @param lastName the user's last name
  * @param access the user's global access level
+ * @param mustChangePassword whether auth must require a password change
  */
 public record UserResponse(
         Long userId,
         String email,
         String firstName,
         String lastName,
-        Access access
+        Access access,
+        boolean mustChangePassword
 ) {
     /**
      * Copies the public profile fields from a user into a response.
@@ -31,7 +33,8 @@ public record UserResponse(
                 user.getEmail(),
                 user.getFirstName(),
                 user.getLastName(),
-                user.getAccess()
+                user.getAccess(),
+                user.isMustChangePassword()
         );
     }
 }
