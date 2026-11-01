@@ -143,6 +143,47 @@ class UserIntegrationTest {
     }
 
     @ParameterizedTest
+    @EnumSource(Access.class)
+    void servicePersistsPasswordChangeForOwnAccountAndPreservesOtherFields(Access access) {
+        User user = new User("temporary-hash", "Sara", "Nordmann");
+        user.setAccess(access);
+        users.save(user);
+        User other = users.save(new User("other-hash", "Ola", "Hansen"));
+        SecurityContextHolder.getContext().setAuthentication(
+                UsernamePasswordAuthenticationToken.authenticated(user, null, user.getAuthorities()));
+
+        service.changePassword("temporary-hash", "new-encoded-password");
+        entities.flush();
+        entities.clear();
+
+        User stored = users.findByUserId(user.getUserId()).orElseThrow();
+        assertEquals("new-encoded-password", stored.getPassword());
+        org.junit.jupiter.api.Assertions.assertFalse(stored.isMustChangePassword());
+        assertEquals(user.getEmail(), stored.getEmail());
+        assertEquals("Sara", stored.getFirstName());
+        assertEquals("Nordmann", stored.getLastName());
+        assertEquals(access, stored.getAccess());
+        User storedOther = users.findByUserId(other.getUserId()).orElseThrow();
+        assertEquals("other-hash", storedOther.getPassword());
+        org.junit.jupiter.api.Assertions.assertTrue(storedOther.isMustChangePassword());
+    }
+
+    @Test
+    void oldVerifiedHashCannotOverwriteANewerPasswordChange() {
+        User user = users.save(new User("old-hash", "Sara", "Nordmann"));
+        SecurityContextHolder.getContext().setAuthentication(
+                UsernamePasswordAuthenticationToken.authenticated(user, null, user.getAuthorities()));
+        service.changePassword("old-hash", "first-new-hash");
+
+        assertThrows(org.springframework.security.access.AccessDeniedException.class,
+                () -> service.changePassword("old-hash", "second-new-hash"));
+
+        User stored = users.findByUserId(user.getUserId()).orElseThrow();
+        assertEquals("first-new-hash", stored.getPassword());
+        org.junit.jupiter.api.Assertions.assertFalse(stored.isMustChangePassword());
+    }
+
+    @ParameterizedTest
     @NullSource
     @ValueSource(strings = {"", "   "})
     void invalidReplacementHashDoesNotClearFirstLoginRequirement(String hash) {

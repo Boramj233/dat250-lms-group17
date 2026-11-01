@@ -104,9 +104,23 @@ access or course roles; only the administrator access endpoint assigns global ac
 The user model persists the first-login requirement and exposes it in profile
 responses. Profile updates cannot clear it. `User.changePassword(encodedHash)`
 replaces the hash and clears the flag together; it is an internal domain operation,
-not an HTTP endpoint. The future auth service must first verify the current
-password, reject password reuse, encode the new password, and persist the change
-through a user-service operation in a transaction.
+not an HTTP endpoint. The auth service must first verify the current plaintext
+password, reject password reuse, and encode the new password. It then calls
+`UserService.changePassword(verifiedCurrentPasswordHash, newPasswordHash)` with
+the stored hash it verified and the newly encoded hash. The service selects the
+account from the authenticated identity, validates the new hash as non-blank and
+at most 255 characters, and updates the hash and first-login flag together in
+one transaction. It accepts no target user ID. If the verified hash is no longer
+current (or the account was deleted), the update is rejected without overwriting
+credentials. Identical encoded hashes are rejected as well; checking plaintext
+password reuse remains auth's responsibility.
+
+This is an internal persistence operation, not a password-change HTTP endpoint;
+neither hash argument should come directly from an HTTP request. Hashing and
+verification are not performed here. The conditional database update clears the
+JPA persistence context, but detached session principals still contain old values.
+Auth must invalidate or refresh sessions after success and enforce the first-login
+restriction against current persisted state.
 
 Auth/security must still restrict accounts with `mustChangePassword = true` to
 password change and logout. That restriction is not implemented by this feature;

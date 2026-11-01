@@ -65,18 +65,50 @@ public class UserService implements UserDetailsService {
 
     /** Authorizes against current persisted global access, never the session's old role. */
     private User requireAccess(Access... allowedAccess) {
+        Long currentUserId = requireCurrentUserId();
+        User actor = userRepository.findById(currentUserId)
+                .orElseThrow(() -> new AccessDeniedException("Operation not permitted"));
+        if (!Arrays.asList(allowedAccess).contains(actor.getAccess())) {
+            throw new AccessDeniedException("Operation not permitted");
+        }
+        return actor;
+    }
+
+    private Long requireCurrentUserId() {
         var authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !authentication.isAuthenticated()
                 || !(authentication.getPrincipal() instanceof User principal)
                 || principal.getUserId() == null) {
             throw new AuthenticationCredentialsNotFoundException("Authentication required");
         }
-        User actor = userRepository.findById(principal.getUserId())
-                .orElseThrow(() -> new AccessDeniedException("Operation not permitted"));
-        if (!Arrays.asList(allowedAccess).contains(actor.getAccess())) {
-            throw new AccessDeniedException("Operation not permitted");
+        return principal.getUserId();
+    }
+
+    /**
+     * Persists an auth-verified password change for the currently authenticated user.
+     * Auth must verify the old plaintext password, reject reuse, and encode the new
+     * password before calling this internal method. Both arguments are stored/encoded
+     * hashes, never plaintext. No target ID is accepted from the caller.
+     *
+     * The expected hash prevents an older verification from overwriting a newer
+     * password change. The new hash and first-login flag are updated atomically.
+     * Auth must invalidate/refresh sessions after success; this does not update a
+     * detached principal or expose a password-change HTTP endpoint.
+     */
+    @Transactional
+    public void changePassword(String verifiedCurrentPasswordHash, String newPasswordHash) {
+        Long userId = requireCurrentUserId();
+        var violations = validator.validateValue(User.class, "passwordHash", newPasswordHash);
+        if (!violations.isEmpty()) {
+            throw new ConstraintViolationException(violations);
         }
-        return actor;
+        if (verifiedCurrentPasswordHash == null || verifiedCurrentPasswordHash.isBlank()
+                || verifiedCurrentPasswordHash.equals(newPasswordHash)) {
+            throw new IllegalArgumentException("A different encoded password and verified current hash are required");
+        }
+        if (userRepository.replacePasswordIfCurrent(userId, verifiedCurrentPasswordHash, newPasswordHash) != 1) {
+            throw new AccessDeniedException("Password change could not be completed");
+        }
     }
 
     /** Lists/searches users for administrators, with bounded pages sorted by ID. */
