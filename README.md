@@ -129,6 +129,12 @@ builds React, and packages the Spring Boot application.
 
 Open http://localhost:8080
 
+### Local Keycloak and RabbitMQ
+
+See [infra/README.md](infra/README.md) for the Docker Compose setup, local
+credentials, demo users, and connection settings. Start the services from this
+directory with `docker compose up -d --wait --wait-timeout 180` after preparing `.env`.
+
 ### Frontend Development
 
 For hot reloading, keep the backend running and
