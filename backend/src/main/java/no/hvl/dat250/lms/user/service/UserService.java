@@ -12,18 +12,15 @@ import java.util.Arrays;
 import org.springframework.security.authentication.AuthenticationCredentialsNotFoundException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.core.userdetails.UserDetailsService;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 
-/** Creates users and provides profile operations and Spring Security user lookups. */
+/** Manages local profiles and application access; identity-provider login belongs to auth. */
 @Service
-public class UserService implements UserDetailsService {
+public class UserService {
 
     private final UserRepository userRepository;
     private final Validator validator;
@@ -35,25 +32,26 @@ public class UserService implements UserDetailsService {
     }
 
     /**
-     * Creates a STANDARD user with a required first-login password change.
+     * Creates a STANDARD local profile for an externally managed account.
      * Only an authenticated user whose stored access is ADMIN may call this method.
-     * ID and email are generated when the user is persisted.
-     * The trusted caller (for example, AuthService) must encode the password first;
-     * this method stores the supplied hash unchanged and does not verify its format.
+     * Only the local ID is generated. Email must match the external identity.
      *
      * @param firstName required first name, at most 255 characters
      * @param lastName required last name, at most 255 characters
-     * @param passwordHash required, already encoded password, at most 255 characters
-     * @return the saved user, including generated ID and email
-     * @throws ConstraintViolationException if names or password hash are invalid
+     * @param email required identity-provider email, at most 255 characters
+     * @return the saved profile with its generated ID
+     * @throws ConstraintViolationException if names or email are invalid
      */
     @Transactional
-    public User createUser(String firstName, String lastName, String passwordHash) {
+    public User createUser(String firstName, String lastName, String email) {
         requireAdministrator();
-        User user = new User(passwordHash, firstName, lastName);
+        User user = new User(email, firstName, lastName);
         var violations = validator.validate(user);
         if (!violations.isEmpty()) {
             throw new ConstraintViolationException(violations);
+        }
+        if (userRepository.findByEmail(email).isPresent()) {
+            throw new UserAlreadyExistsException();
         }
         return userRepository.save(user);
     }
@@ -84,37 +82,10 @@ public class UserService implements UserDetailsService {
         return principal.getUserId();
     }
 
-    /** Reloads the authenticated account, including current credentials, for trusted internal callers. */
+    /** Reloads the authenticated account, for trusted internal callers. */
     @Transactional(readOnly = true)
     public User getCurrentUser() {
         return userRepository.findById(requireCurrentUserId()).orElseThrow(UserNotFoundException::new);
-    }
-
-    /**
-     * Persists an auth-verified password change for the currently authenticated user.
-     * Auth must verify the old plaintext password, reject reuse, and encode the new
-     * password before calling this internal method. Both arguments are stored/encoded
-     * hashes, never plaintext. No target ID is accepted from the caller.
-     *
-     * The expected hash prevents an older verification from overwriting a newer
-     * password change. The new hash and first-login flag are updated atomically.
-     * Auth must invalidate/refresh sessions after success; this does not update a
-     * detached principal or expose a password-change HTTP endpoint.
-     */
-    @Transactional
-    public void changePassword(String verifiedCurrentPasswordHash, String newPasswordHash) {
-        Long userId = requireCurrentUserId();
-        var violations = validator.validateValue(User.class, "passwordHash", newPasswordHash);
-        if (!violations.isEmpty()) {
-            throw new ConstraintViolationException(violations);
-        }
-        if (verifiedCurrentPasswordHash == null || verifiedCurrentPasswordHash.isBlank()
-                || verifiedCurrentPasswordHash.equals(newPasswordHash)) {
-            throw new IllegalArgumentException("A different encoded password and verified current hash are required");
-        }
-        if (userRepository.replacePasswordIfCurrent(userId, verifiedCurrentPasswordHash, newPasswordHash) != 1) {
-            throw new AccessDeniedException("Password change could not be completed");
-        }
     }
 
     /** Lists/searches users for administrators, with bounded pages sorted by ID. */
@@ -186,7 +157,7 @@ public class UserService implements UserDetailsService {
     }
 
     /**
-     * Replaces names without changing userId, email, password, or global access.
+     * Replaces names without changing userId, email, or global access.
      * The caller must obtain the target ID from the authenticated identity.
      */
     @Transactional
@@ -198,22 +169,6 @@ public class UserService implements UserDetailsService {
         User user = userRepository.findById(id).orElseThrow(UserNotFoundException::new);
         user.updateProfile(request.firstName(), request.lastName());
         return userRepository.save(user);
-    }
-
-    /**
-     * Loads an account by email for Spring Security, despite the interface method name.
-     * This lookup does not verify the password.
-     *
-     * @param email the email used to identify the account
-     * @return the stored user details
-     * @throws UsernameNotFoundException if the email is unknown
-     */
-    @Override
-    public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
-
-        return userRepository.findByEmail(email)
-                .orElseThrow(() ->
-                        new UsernameNotFoundException("User not found"));
     }
 
 }

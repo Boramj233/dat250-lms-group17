@@ -38,8 +38,8 @@ class UserProfileServiceTest {
     void setup() { service = new UserService(users, validators.getValidator()); }
 
     @Test
-    void updatesNamesWithoutChangingPasswordOrAccess() {
-        User user = new User("encoded-password", "Sara", "Nordmann");
+    void updatesNamesWithoutChangingEmailOrAccess() {
+        User user = new User("sara@example.com", "Sara", "Nordmann");
         user.setAccess(Access.COURSE_MANAGER);
         when(users.findById(1L)).thenReturn(Optional.of(user));
         when(users.save(user)).thenReturn(user);
@@ -48,7 +48,7 @@ class UserProfileServiceTest {
 
         assertEquals("Kari", updated.getFirstName());
         assertEquals("Hansen", updated.getLastName());
-        assertEquals("encoded-password", updated.getPassword());
+        assertEquals("sara@example.com", updated.getEmail());
         assertEquals(Access.COURSE_MANAGER, updated.getAccess());
         verify(users).save(user);
     }

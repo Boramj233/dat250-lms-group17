@@ -35,32 +35,30 @@ class UserIntegrationTest {
 
     @Test
     void serviceCreatesUserWithGeneratedIdentityAndStandardAccess() {
-        User administrator = new User("encoded-admin-password", "System", "Administrator");
+        User administrator = new User("admin@example.com", "System", "Administrator");
         administrator.setAccess(Access.ADMIN);
         users.save(administrator);
         SecurityContextHolder.getContext().setAuthentication(
-                UsernamePasswordAuthenticationToken.authenticated(administrator, null, administrator.getAuthorities()));
-        User created = service.createUser("Sara", "Nordmann", "encoded-password");
+                UsernamePasswordAuthenticationToken.authenticated(administrator, null, java.util.List.of()));
+        User created = service.createUser("Sara", "Nordmann", "sara@example.com");
         Long userId = created.getUserId();
         org.junit.jupiter.api.Assertions.assertNotNull(userId);
-        assertEquals(userId + "@epost.com", created.getEmail());
+        assertEquals("sara@example.com", created.getEmail());
         entities.flush();
         entities.clear();
 
         User stored = users.findByUserId(userId).orElseThrow();
         assertEquals("Sara", stored.getFirstName());
         assertEquals("Nordmann", stored.getLastName());
-        assertEquals("encoded-password", stored.getPassword());
         assertEquals(Access.STANDARD, stored.getAccess());
-        org.junit.jupiter.api.Assertions.assertTrue(stored.isMustChangePassword());
-        assertEquals(userId + "@epost.com", stored.getEmail());
+        assertEquals("sara@example.com", stored.getEmail());
         assertEquals(userId, users.findByEmail(stored.getEmail()).orElseThrow().getUserId());
     }
 
     @ParameterizedTest
     @EnumSource(Access.class)
     void userProfileAndAccessSurvivePersistence(Access access) {
-        User user = new User("encoded-password", "Sara", "Nordmann");
+        User user = new User("sara@example.com", "Sara", "Nordmann");
         user.setAccess(access);
         users.save(user);
         entities.flush();
@@ -68,11 +66,10 @@ class UserIntegrationTest {
 
         User stored = users.findById(user.getUserId()).orElseThrow();
         assertEquals(user.getUserId(), stored.getUserId());
-        assertEquals(user.getUserId() + "@epost.com", stored.getUsername());
+        assertEquals(user.getEmail(), stored.getName());
         assertEquals("Sara", stored.getFirstName());
         assertEquals("Nordmann", stored.getLastName());
-        assertEquals(user.getUserId() + "@epost.com", stored.getEmail());
-        assertEquals("encoded-password", stored.getPassword());
+        assertEquals(user.getEmail(), stored.getEmail());
         assertEquals(access, stored.getAccess());
     }
 
@@ -80,7 +77,7 @@ class UserIntegrationTest {
     @NullSource
     @ValueSource(strings = {"", "   "})
     void persistenceRejectsMissingFirstName(String firstName) {
-        User user = new User("encoded-password", firstName, "Nordmann");
+        User user = new User("sara@example.com", firstName, "Nordmann");
         assertThrows(ConstraintViolationException.class, () -> {
             users.save(user);
             entities.flush();
@@ -91,7 +88,7 @@ class UserIntegrationTest {
     @NullSource
     @ValueSource(strings = {"", "   "})
     void persistenceRejectsMissingLastName(String lastName) {
-        User user = new User("encoded-password", "Sara", lastName);
+        User user = new User("sara@example.com", "Sara", lastName);
         assertThrows(ConstraintViolationException.class, () -> {
             users.save(user);
             entities.flush();
@@ -100,86 +97,20 @@ class UserIntegrationTest {
 
     @Test
     void generatedUserIdsAreUniqueAndStableAcrossProfileUpdates() {
-        User first = users.save(new User("encoded-password", "Sara", "Nordmann"));
-        User second = users.save(new User("encoded-password", "Sara", "Nordmann"));
+        User first = users.save(new User("sara@example.com", "Sara", "Nordmann"));
+        User second = users.save(new User("other@example.com", "Sara", "Nordmann"));
         Long userId = first.getUserId();
         org.junit.jupiter.api.Assertions.assertNotNull(userId);
         org.junit.jupiter.api.Assertions.assertNotEquals(userId, second.getUserId());
-        assertEquals(userId + "@epost.com", first.getEmail());
-        assertEquals(second.getUserId() + "@epost.com", second.getEmail());
         first.updateProfile("Kari", "Hansen");
         entities.flush();
         entities.clear();
         User stored = users.findById(userId).orElseThrow();
         assertEquals(userId, stored.getUserId());
-        assertEquals(userId + "@epost.com", stored.getEmail());
-        assertEquals(userId, users.findByEmail(userId + "@epost.com").orElseThrow().getUserId());
+        assertEquals(first.getEmail(), stored.getEmail());
+        assertEquals(userId, users.findByEmail(first.getEmail()).orElseThrow().getUserId());
         assertEquals("Kari", stored.getFirstName());
         assertEquals("Hansen", stored.getLastName());
-    }
-
-    @Test
-    void passwordHashAndFirstLoginFlagAreReplacedTogether() {
-        User user = users.save(new User("temporary-hash", "Sara", "Nordmann"));
-        org.junit.jupiter.api.Assertions.assertTrue(user.isMustChangePassword());
-        user.changePassword("new-encoded-password");
-        entities.flush();
-        entities.clear();
-        User stored = users.findById(user.getUserId()).orElseThrow();
-        assertEquals("new-encoded-password", stored.getPassword());
-        org.junit.jupiter.api.Assertions.assertFalse(stored.isMustChangePassword());
-        assertEquals(user.getEmail(), stored.getEmail());
-    }
-
-    @ParameterizedTest
-    @EnumSource(Access.class)
-    void servicePersistsPasswordChangeForOwnAccountAndPreservesOtherFields(Access access) {
-        User user = new User("temporary-hash", "Sara", "Nordmann");
-        user.setAccess(access);
-        users.save(user);
-        User other = users.save(new User("other-hash", "Ola", "Hansen"));
-        SecurityContextHolder.getContext().setAuthentication(
-                UsernamePasswordAuthenticationToken.authenticated(user, null, user.getAuthorities()));
-
-        service.changePassword("temporary-hash", "new-encoded-password");
-        entities.flush();
-        entities.clear();
-
-        User stored = users.findByUserId(user.getUserId()).orElseThrow();
-        assertEquals("new-encoded-password", stored.getPassword());
-        org.junit.jupiter.api.Assertions.assertFalse(stored.isMustChangePassword());
-        assertEquals(user.getEmail(), stored.getEmail());
-        assertEquals("Sara", stored.getFirstName());
-        assertEquals("Nordmann", stored.getLastName());
-        assertEquals(access, stored.getAccess());
-        User storedOther = users.findByUserId(other.getUserId()).orElseThrow();
-        assertEquals("other-hash", storedOther.getPassword());
-        org.junit.jupiter.api.Assertions.assertTrue(storedOther.isMustChangePassword());
-    }
-
-    @Test
-    void oldVerifiedHashCannotOverwriteANewerPasswordChange() {
-        User user = users.save(new User("old-hash", "Sara", "Nordmann"));
-        SecurityContextHolder.getContext().setAuthentication(
-                UsernamePasswordAuthenticationToken.authenticated(user, null, user.getAuthorities()));
-        service.changePassword("old-hash", "first-new-hash");
-
-        assertThrows(org.springframework.security.access.AccessDeniedException.class,
-                () -> service.changePassword("old-hash", "second-new-hash"));
-
-        User stored = users.findByUserId(user.getUserId()).orElseThrow();
-        assertEquals("first-new-hash", stored.getPassword());
-        org.junit.jupiter.api.Assertions.assertFalse(stored.isMustChangePassword());
-    }
-
-    @ParameterizedTest
-    @NullSource
-    @ValueSource(strings = {"", "   "})
-    void invalidReplacementHashDoesNotClearFirstLoginRequirement(String hash) {
-        User user = new User("temporary-hash", "Sara", "Nordmann");
-        assertThrows(IllegalArgumentException.class, () -> user.changePassword(hash));
-        assertEquals("temporary-hash", user.getPassword());
-        org.junit.jupiter.api.Assertions.assertTrue(user.isMustChangePassword());
     }
 
 }

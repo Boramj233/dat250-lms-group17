@@ -2,11 +2,12 @@ package no.hvl.dat250.lms.user.api.controllers;
 
 import jakarta.validation.ConstraintViolationException;
 import no.hvl.dat250.lms.user.service.UserNotFoundException;
+import no.hvl.dat250.lms.user.service.UserAlreadyExistsException;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.security.authentication.AuthenticationCredentialsNotFoundException;
 import org.springframework.security.access.AccessDeniedException;
-import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -14,9 +15,9 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 /** Maps user failures without exposing stored credentials or database messages. */
 @RestControllerAdvice(assignableTypes = {UserController.class, AdminUserController.class})
 public class UserExceptionHandler {
-    @ExceptionHandler(BadCredentialsException.class)
-    public ProblemDetail incorrectPassword() {
-        return ProblemDetail.forStatusAndDetail(HttpStatus.FORBIDDEN, "Current password is incorrect");
+    @ExceptionHandler({UserAlreadyExistsException.class, DataIntegrityViolationException.class})
+    public ProblemDetail duplicateProfile() {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, "Profile data conflicts with an existing user");
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

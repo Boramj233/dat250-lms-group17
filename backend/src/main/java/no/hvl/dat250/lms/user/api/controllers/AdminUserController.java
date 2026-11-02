@@ -6,7 +6,6 @@ import no.hvl.dat250.lms.user.api.dto.UpdateAccessRequest;
 import no.hvl.dat250.lms.user.api.dto.UserPageResponse;
 import no.hvl.dat250.lms.user.api.dto.UserResponse;
 import no.hvl.dat250.lms.user.service.UserService;
-import no.hvl.dat250.lms.user.service.UserPasswordService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.net.URI;
@@ -16,16 +15,14 @@ import java.net.URI;
 @RequestMapping("/api/admin/users")
 public class AdminUserController {
     private final UserService users;
-    private final UserPasswordService passwords;
 
-    public AdminUserController(UserService users, UserPasswordService passwords) {
+    public AdminUserController(UserService users) {
         this.users = users;
-        this.passwords = passwords;
     }
 
     @PostMapping
     public ResponseEntity<UserResponse> createUser(@Valid @RequestBody CreateUserRequest request) {
-        var user = passwords.createUser(request);
+        var user = users.createUser(request.firstName(), request.lastName(), request.email());
         return ResponseEntity.created(URI.create("/api/admin/users/" + user.getUserId()))
                 .body(UserResponse.from(user));
     }

@@ -52,7 +52,7 @@ class UserServiceTest {
     private void authenticateAs(Access storedAccess) {
         User principal = mock(User.class);
         when(principal.getUserId()).thenReturn(1L);
-        User stored = new User("encoded-password", "Admin", "User");
+        User stored = new User("sara@example.com", "Admin", "User");
         stored.setAccess(storedAccess);
         when(users.findById(1L)).thenReturn(Optional.of(stored));
         // Even an ADMIN authority in the session must not override stored access.
@@ -66,13 +66,12 @@ class UserServiceTest {
         authenticateAs(Access.ADMIN);
         when(users.save(any(User.class))).thenAnswer(call -> call.getArgument(0));
 
-        User user = service.createUser("Sara", "Nordmann", "encoded-password");
+        User user = service.createUser("Sara", "Nordmann", "sara@example.com");
 
         assertEquals("Sara", user.getFirstName());
         assertEquals("Nordmann", user.getLastName());
-        assertEquals("encoded-password", user.getPassword());
+        assertEquals("sara@example.com", user.getEmail());
         assertEquals(Access.STANDARD, user.getAccess());
-        assertTrue(user.isMustChangePassword());
         verify(users).save(user);
     }
 
@@ -82,9 +81,9 @@ class UserServiceTest {
     void invalidUserDetailsAreRejected(String invalid) {
         authenticateAs(Access.ADMIN);
         assertThrows(ConstraintViolationException.class,
-                () -> service.createUser(invalid, "Nordmann", "encoded-password"));
+                () -> service.createUser(invalid, "Nordmann", "sara@example.com"));
         assertThrows(ConstraintViolationException.class,
-                () -> service.createUser("Sara", invalid, "encoded-password"));
+                () -> service.createUser("Sara", invalid, "sara@example.com"));
         assertThrows(ConstraintViolationException.class,
                 () -> service.createUser("Sara", "Nordmann", invalid));
         verify(users, never()).save(any());
@@ -95,9 +94,9 @@ class UserServiceTest {
         authenticateAs(Access.ADMIN);
         String oversized = "a".repeat(256);
         assertThrows(ConstraintViolationException.class,
-                () -> service.createUser(oversized, "Nordmann", "encoded-password"));
+                () -> service.createUser(oversized, "Nordmann", "sara@example.com"));
         assertThrows(ConstraintViolationException.class,
-                () -> service.createUser("Sara", oversized, "encoded-password"));
+                () -> service.createUser("Sara", oversized, "sara@example.com"));
         assertThrows(ConstraintViolationException.class,
                 () -> service.createUser("Sara", "Nordmann", oversized));
         verify(users, never()).save(any());
@@ -106,7 +105,7 @@ class UserServiceTest {
     @Test
     void anonymousCallerCannotCreateUsers() {
         assertThrows(AuthenticationCredentialsNotFoundException.class,
-                () -> service.createUser("Sara", "Nordmann", "encoded-password"));
+                () -> service.createUser("Sara", "Nordmann", "sara@example.com"));
         verifyNoInteractions(users);
     }
 
@@ -115,7 +114,7 @@ class UserServiceTest {
     void storedNonAdministratorCannotCreateUsersEvenWithStaleAdminAuthority(Access access) {
         authenticateAs(access);
         assertThrows(AccessDeniedException.class,
-                () -> service.createUser("Sara", "Nordmann", "encoded-password"));
+                () -> service.createUser("Sara", "Nordmann", "sara@example.com"));
         verify(users, never()).save(any());
     }
 
@@ -126,7 +125,17 @@ class UserServiceTest {
         SecurityContextHolder.getContext().setAuthentication(
                 UsernamePasswordAuthenticationToken.authenticated(principal, null, List.of()));
         assertThrows(AccessDeniedException.class,
-                () -> service.createUser("Sara", "Nordmann", "encoded-password"));
+                () -> service.createUser("Sara", "Nordmann", "sara@example.com"));
+        verify(users, never()).save(any());
+    }
+
+    @Test
+    void existingExternalEmailCannotCreateAnotherProfile() {
+        authenticateAs(Access.ADMIN);
+        when(users.findByEmail("sara@example.com"))
+                .thenReturn(Optional.of(new User("sara@example.com", "Sara", "Nordmann")));
+        assertThrows(no.hvl.dat250.lms.user.service.UserAlreadyExistsException.class,
+                () -> service.createUser("Other", "Profile", "sara@example.com"));
         verify(users, never()).save(any());
     }
 

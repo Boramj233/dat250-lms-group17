@@ -1,172 +1,84 @@
-# User profiles
+# Local user profiles
 
-## Account lookup for enrollment
+The user feature stores application profiles and global access. Keycloak owns
+accounts, credentials, password changes, and first-login requirements. There is
+no local password column, password encoder, UserDetailsService, password-change
+endpoint, or mustChangePassword flag.
 
-`GET /api/users/search?search=Sara&page=0&size=20` is available to users whose
-current stored access is COURSE_MANAGER or ADMIN. Search text is required,
-non-blank, and at most 255 characters. It uses the same case-insensitive name/email
-and exact numeric ID search as the administrator list, with zero-based pages,
-size 1–100, and ascending user ID order.
+`User(email, firstName, lastName)` requires a valid, non-blank email and non-blank
+names, all at most 255 characters. The email must match the external identity;
+it is unique and cannot be changed through profile updates. Only `userId` is
+generated locally. It remains the Long primary key backed by `user_id_seq`.
+`User` implements Principal for a mapped local identity, not UserDetails.
 
-The response contains `users`, `page`, `size`, `totalElements`, and `totalPages`.
-Each user contains only `userId`, `firstName`, `lastName`, and `email`. Global
-access, password-change requirements, and password hashes are excluded, including
-when an administrator uses this endpoint. No matches returns an empty page.
+## Authentication integration still required
 
-STANDARD users are rejected with 403 and anonymous requests with 401. Current
-stored access is checked on every call, so deleted/demoted course managers cannot
-retain lookup access through an old session. Invalid search/pagination returns 400.
+The auth feature must validate Keycloak OIDC/token identities and map them to
+local profiles using the verified email claim. The current user controllers and
+service expect the resulting local User as the authenticated principal. They do
+not accept an unverified email from an HTTP header as proof of identity.
+Direct OidcUser/Jwt principal mapping, OAuth login, bearer-token validation,
+token issuance/revocation, and public/static asset rules are not implemented by
+this cleanup. API tests inject local authenticated principals to test profile and
+access policies; they do not prove Keycloak or bearer-token integration.
 
-This endpoint only finds existing accounts. Account creation and global access
-changes remain ADMIN-only. Course enrollment and authorization to manage a
-particular course must be implemented in the course/enrollment domains. Global
-Access does not determine a user's student/teacher role within a course.
+The exercise's optional local-profile creation on first verified OIDC login is
+not implemented yet. The administrator operation below pre-provisions a local
+profile only; it neither creates a Keycloak account nor changes its credentials.
+The first local administrator still requires trusted setup.
 
-## Administrator API
+## Profile endpoints
 
-Every operation below requires current stored `Access.ADMIN`, checked in the
-service. Profile responses never include password hashes.
+`GET /api/users/me` returns userId, email, firstName, lastName, and access.
+`PUT /api/users/me` replaces both required names:
+
+```json
+{"firstName":"Sara","lastName":"Nordmann"}
+```
+
+Profile updates cannot change ID, email, or global access. Additional JSON fields
+are ignored. Invalid names return 400; missing authentication returns 401; a
+removed local profile returns 404. Name changes currently affect local display
+names only; future auth integration must decide whether Keycloak or the local
+profile is authoritative for display names.
+
+## Administrator endpoints
+
+All operations below require current stored Access.ADMIN, checked by the service.
 
 | Method | Endpoint | Purpose |
 | --- | --- | --- |
-| POST | `/api/admin/users` | Create an account with a temporary password |
-| GET | `/api/admin/users?search=&page=0&size=20` | List/search users |
-| GET | `/api/admin/users/{userId}` | Read one user |
-| PATCH | `/api/admin/users/{userId}/access` | Set global access |
+| POST | `/api/admin/users` | Create a local profile for an external identity |
+| GET | `/api/admin/users?search=&page=0&size=20` | List/search local profiles |
+| GET | `/api/admin/users/{userId}` | Read one profile |
+| PATCH | `/api/admin/users/{userId}/access` | Set global application access |
 
-List responses contain `users`, `page`, `size`, `totalElements`, and `totalPages`.
-Pages start at zero; size must be 1–100. Results are ordered by `userId`.
-Search (max 255 characters) matches first name, last name, or email substrings
-without case sensitivity, and also matches an exact numeric user ID. Blank search
-lists all users. `%` and `_` are treated as literal search characters.
+Creation accepts firstName, lastName, and email. It returns 201, a Location
+header, and the profile. It defaults to STANDARD and cannot accept a chosen
+userId or access level. Duplicate emails return 409. No credentials are accepted
+or stored. `UserService.createUser(firstName, lastName, email)` performs the
+administrator check, validation, uniqueness check, and persistence.
 
-Access changes take `{"access":"COURSE_MANAGER"}`; allowed values are STANDARD,
-COURSE_MANAGER, and ADMIN. Administrators cannot remove their own ADMIN access.
-Other users' access can be assigned by an administrator; this does not change
-course roles. Rejected operations do not change stored access.
+Access updates accept {"access":"COURSE_MANAGER"}. Allowed values are STANDARD,
+COURSE_MANAGER, and ADMIN. An administrator cannot remove their own ADMIN access.
+Global access does not represent the student/teacher role in any course.
 
-Responses: 400 for invalid parameters/access, 401 for missing authentication,
-403 for insufficient access or self-demotion, and 404 for unknown target users.
-Session-based writes require CSRF tokens. Auth must still implement the separate
-first-login password-change restriction described below. No admin frontend is
-included yet.
+List responses contain users, page, size, totalElements, and totalPages. Pages
+start at zero; size is 1–100, sorted by userId. Search is at most 255 characters,
+matching name/email substrings without case sensitivity or an exact numeric ID.
+Blank search lists all users; percent and underscore are literal characters.
 
-Creation accepts:
+Invalid requests return 400, missing authentication 401, insufficient access 403,
+and missing target profiles 404. Access is reloaded from the database to reject
+outdated privileges. Current session-based test scaffolding requires CSRF tokens
+for writes; the future stateless bearer API needs its own security configuration.
 
-```json
-{"firstName":"Sara","lastName":"Nordmann","temporaryPassword":"temporary-123"}
-```
+## Restricted lookup for enrollment
 
-Names must be non-blank and at most 255 characters. The temporary password must
-be non-blank, at least 8 characters, and at most 72 UTF-8 bytes. The administrator
-supplies it; password generation/delivery is not implemented. `UserPasswordService`
-checks administrator access and hashes the password before passing it to the
-creation service, which checks access again. No plaintext password is stored.
-Success returns 201, a Location header pointing to `/api/admin/users/{userId}`,
-and a UserResponse. The account always starts with STANDARD access and
-`mustChangePassword = true`; supplied identity/access/flag fields cannot override
-these defaults. No password or hash is returned. Anonymous callers get 401,
-non-admins (including course managers) get 403, and invalid requests get 400.
+`GET /api/users/search?search=Sara&page=0&size=20` requires COURSE_MANAGER or ADMIN
+and non-blank search text. Pagination/search rules match the administrator list.
+The response has pagination metadata and users containing only userId, firstName,
+lastName, and email. No matches returns an empty page.
 
-`UserService.createUser(firstName, lastName, passwordHash)` validates and saves a
-new user with STANDARD access and `mustChangePassword = true`, returning the user
-with generated ID and email. The method requires an authenticated `User` in the
-Spring Security context and reloads the actor from the database to require
-`Access.ADMIN`. Missing authentication is rejected; ordinary users, course
-managers, deleted users, and former admins are not allowed to create accounts.
-Names and the encoded password must be non-blank and at most 255 characters.
-The trusted caller must hash the password before calling this method; the user
-service does not hash passwords or verify encoding formats. The HTTP endpoint
-uses `UserPasswordService` to encode the temporary password and returns
-`UserResponse` to keep stored hashes out of responses.
-
-`GET /api/users/me` returns the authenticated user's stored profile.
-`PUT /api/users/me` replaces the required first/last names:
-
-```json
-{"firstName": "Sara", "lastName": "Nordmann"}
-```
-
-First and last names are required, non-blank, and at most 255 characters each.
-Omitted, null, empty, or whitespace-only names are rejected with 400. Both name
-columns are non-null, and entity validation enforces the same name constraints
-when persisting users. Account creation must supply both names.
-Email is automatically generated as `{userId}@epost.com` when the user is first
-persisted, for example `42@epost.com`. It cannot be supplied by the caller or
-changed later. It is the unique login identifier.
-`userId` is the automatically generated Long primary key
-(database column `user_id`); it cannot be supplied or changed through the profile API.
-There is no separate username field. `UserDetails.getUsername()` returns email
-because Spring Security requires that method for the login identity.
-JPA excludes email from updates (`updatable = false`).
-ID generation uses the `user_id_seq` database sequence, so the ID is available
-in the `@PrePersist` callback that sets email before the first INSERT. New Java
-objects have neither ID nor email until persisted. Account creation supplies
-only the encoded password, first name, and last name to the constructor.
-
-Successful requests return `userId`, `email`, `firstName`, `lastName`, `access`,
-and `mustChangePassword`, never password
-hashes. Updates select the user exclusively from the authenticated principal.
-Additional JSON fields, including email, are ignored and cannot change ID, access,
-or credentials. The endpoint
-uses the application's existing security filters, including CSRF for sessions.
-
-Invalid profiles return 400, missing authentication 401, and deleted users 404.
-The service validates input too, so
-direct service calls cannot bypass profile validation.
-
-Public self-registration is not exposed; account creation is administrator-only.
-Full login/logout/session lifecycle remain auth concerns.
-The user password endpoint below implements credential verification and encoding
-in `UserPasswordService`, which future auth flows may reuse.
-Ordinary profile updates do not assign global
-access or course roles; only the administrator access endpoint assigns global access.
-
-The user model persists the first-login requirement and exposes it in profile
-responses. Profile updates cannot clear it. `User.changePassword(encodedHash)`
-replaces the hash and clears the flag together; it is an internal domain operation,
-not an HTTP endpoint. `UserPasswordService` (or a future auth service) must first
-verify the current plaintext password, reject password reuse, and encode the new
-password. It then calls
-`UserService.changePassword(verifiedCurrentPasswordHash, newPasswordHash)` with
-the stored hash it verified and the newly encoded hash. The service selects the
-account from the authenticated identity, validates the new hash as non-blank and
-at most 255 characters, and updates the hash and first-login flag together in
-one transaction. It accepts no target user ID. If the verified hash is no longer
-current (or the account was deleted), the update is rejected without overwriting
-credentials. Identical encoded hashes are rejected as well; checking plaintext
-password reuse remains the verifying service's responsibility.
-
-This is an internal persistence operation, not a password-change HTTP endpoint;
-neither hash argument should come directly from an HTTP request. Hashing and
-verification are not performed here. The conditional database update clears the
-JPA persistence context, but detached session principals still contain old values.
-Auth must invalidate or refresh sessions after success and enforce the first-login
-restriction against current persisted state.
-
-## Change own password
-
-`PUT /api/users/me/password` accepts plaintext credentials, not hashes:
-
-```json
-{"currentPassword": "old-password123", "newPassword": "new-password456"}
-```
-
-Requires authentication and a valid CSRF token for session-based requests.
-The current password is checked against the current stored hash, not the session's
-copy. The new password must be non-blank, at least 8 characters, at most 72 UTF-8
-bytes (the default bcrypt limit), and different from the current password.
-The shared `PasswordEncoder` defaults to a delegating encoder writing bcrypt hashes.
-
-On success, the hash and `mustChangePassword = false` are persisted together,
-the current session is invalidated, and the endpoint returns 204 with no body.
-The user must authenticate again with the new password. Other active sessions
-are not revoked by this endpoint; global session revocation belongs to auth.
-Invalid request/password policy returns 400, wrong current password 403,
-missing authentication 401, and a deleted account 404. Stale concurrent password
-updates are rejected with 403. Passwords and hashes are never returned.
-
-Auth/security must still restrict accounts with `mustChangePassword = true` to
-password change and logout. That restriction is not implemented by this feature;
-the flag does not prevent authentication. The first administrator must be
-provisioned through trusted setup, not an unauthenticated creation endpoint.
+Course managers cannot create profiles or assign global access. Enrollment and
+course-specific permissions remain the responsibility of course/enrollment.

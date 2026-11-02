@@ -2,19 +2,16 @@ package no.hvl.dat250.lms.user.domain;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.Size;
-import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.userdetails.UserDetails;
-
-import java.util.Collection;
-import java.util.List;
+import java.security.Principal;
 
 /**
- * A persisted user account that also provides user details to Spring Security.
+ * Local application profile. Credentials and login belong to the identity provider.
  */
 @Entity
 @Table(name = "users")
-public class User implements UserDetails {
+public class User implements Principal {
 
     @Id
     @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "user_id_generator")
@@ -32,16 +29,11 @@ public class User implements UserDetails {
     @Column(name = "last_name", nullable = false, length = 255)
     private String lastName;
 
+    @NotBlank
+    @Email
+    @Size(max = 255)
     @Column(unique = true, nullable = false, updatable = false)
     private String email;
-
-    @NotBlank
-    @Size(max = 255)
-    @Column(name = "password", nullable = false)
-    private String passwordHash;
-
-    @Column(name = "must_change_password", nullable = false)
-    private boolean mustChangePassword = true;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -51,60 +43,26 @@ public class User implements UserDetails {
     protected User() {}
 
     /**
-     * Creates a user with STANDARD access. The caller must hash the password first.
+     * Creates a local profile with STANDARD access and the identity provider's email.
      *
-     * @param passwordHash the already encoded password
+     * @param email the email matching the external identity
      * @param firstName the required first name
      * @param lastName the required last name
      */
-    public User(String passwordHash, String firstName, String lastName) {
-        this.passwordHash = passwordHash;
+    public User(String email, String firstName, String lastName) {
+        this.email = email;
         this.firstName = firstName;
         this.lastName = lastName;
     }
 
-    /** Sequence-generated IDs are available here, before the first INSERT. */
-    @PrePersist
-    private void generateEmail() {
-        this.email = this.userId + "@epost.com";
-    }
-
-    /**
-     * Returns no authorities; global Access is not yet mapped to Spring Security roles.
-     */
+    /** Local principal name; auth must map the verified external identity to this profile. */
     @Override
-    public Collection<? extends GrantedAuthority> getAuthorities() {
-        return List.of();
-    }
-
-    /** Returns the password hash, as required by Spring Security. */
-    @Override
-    public String getPassword() { return this.passwordHash; }
-
-    /** New accounts must replace their temporary password before normal use. */
-    public boolean isMustChangePassword() { return this.mustChangePassword; }
-
-    /**
-     * Replaces the hash and clears the first-login requirement together.
-     * A trusted auth service must authorize the change, verify the old password,
-     * reject reuse, and encode the new password before calling this method.
-     */
-    public void changePassword(String newPasswordHash) {
-        if (newPasswordHash == null || newPasswordHash.isBlank() || newPasswordHash.length() > 255) {
-            throw new IllegalArgumentException("Invalid encoded password");
-        }
-        this.passwordHash = newPasswordHash;
-        this.mustChangePassword = false;
-    }
-
-    /** Returns the email login identifier required by Spring Security's UserDetails contract. */
-    @Override
-    public String getUsername() { return this.email; }
+    public String getName() { return this.email; }
 
     /** Returns the database-generated ID, or null before persistence. */
     public Long getUserId() { return this.userId; }
 
-    /** Returns the generated email address, or null before persistence. */
+    /** Returns the email matching the external identity. */
     public String getEmail() { return this.email; }
 
     /** Returns the first name. */

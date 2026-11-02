@@ -42,7 +42,7 @@ class UserProfileApiTest {
     private MockHttpServletRequestBuilder updateAs(User user) {
         MockHttpSession session = new MockHttpSession();
         if (user != null) {
-            var authentication = UsernamePasswordAuthenticationToken.authenticated(user, null, user.getAuthorities());
+            var authentication = UsernamePasswordAuthenticationToken.authenticated(user, null, java.util.List.of());
             session.setAttribute(HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY,
                     new SecurityContextImpl(authentication));
         }
@@ -58,36 +58,34 @@ class UserProfileApiTest {
 
     @Test
     void persistsOnlyOwnEditableFieldsAndReturnsNoPassword() throws Exception {
-        User user = users.save(new User("encoded-secret", "Sara", "Nordmann"));
-        User other = users.save(new User("other-secret", "Sara", "Nordmann"));
+        User user = users.save(new User("sara@example.com", "Sara", "Nordmann"));
+        User other = users.save(new User("other@example.com", "Sara", "Nordmann"));
         mvc.perform(updateAs(user).content("""
                 {"firstName":"Kari","lastName":"Hansen"}
                 """))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$", aMapWithSize(6)))
+                .andExpect(jsonPath("$", aMapWithSize(5)))
                 .andExpect(jsonPath("$.username").doesNotExist())
                 .andExpect(jsonPath("$.id").doesNotExist())
                 .andExpect(jsonPath("$.userId").value(user.getUserId()))
                 .andExpect(jsonPath("$.firstName").value("Kari"))
                 .andExpect(jsonPath("$.lastName").value("Hansen"))
-                .andExpect(jsonPath("$.email").value(user.getUserId() + "@epost.com"))
+                .andExpect(jsonPath("$.email").value(user.getEmail()))
                 .andExpect(jsonPath("$.access").value("STANDARD"))
-                .andExpect(jsonPath("$.mustChangePassword").value(true))
                 .andExpect(content().string(not(containsString("encoded-secret"))));
         entities.flush();
         entities.clear();
         User stored = users.findById(user.getUserId()).orElseThrow();
         assertEquals("Kari", stored.getFirstName());
         assertEquals("Hansen", stored.getLastName());
-        assertEquals(user.getUserId() + "@epost.com", stored.getEmail());
-        assertEquals("encoded-secret", stored.getPassword());
+        assertEquals(user.getEmail(), stored.getEmail());
         assertEquals(Access.STANDARD, stored.getAccess());
-        assertEquals(other.getUserId() + "@epost.com", users.findById(other.getUserId()).orElseThrow().getEmail());
+        assertEquals(other.getEmail(), users.findById(other.getUserId()).orElseThrow().getEmail());
     }
 
     @Test
     void unchangedProfileIsAllowed() throws Exception {
-        User user = users.save(new User("secret", "Sara", "Nordmann"));
+        User user = users.save(new User("sara@example.com", "Sara", "Nordmann"));
         mvc.perform(updateAs(user).content("""
                 {"firstName":"Sara","lastName":"Nordmann"}
                 """))
@@ -106,11 +104,11 @@ class UserProfileApiTest {
             "{\"firstName\":\"   \",\"lastName\":\"Nordmann\"}",
             "{\"firstName\":\"Sara\",\"lastName\":\"   \"}"})
     void invalidProfilesAreRejectedWithoutChanges(String body) throws Exception {
-        User user = users.save(new User("secret", "Sara", "Nordmann"));
+        User user = users.save(new User("sara@example.com", "Sara", "Nordmann"));
         mvc.perform(updateAs(user).content(body)).andExpect(status().isBadRequest());
         entities.flush();
         entities.clear();
-        assertEquals(user.getUserId() + "@epost.com", users.findById(user.getUserId()).orElseThrow().getEmail());
+        assertEquals(user.getEmail(), users.findById(user.getUserId()).orElseThrow().getEmail());
         assertEquals("Sara", users.findById(user.getUserId()).orElseThrow().getFirstName());
         assertEquals("Nordmann", users.findById(user.getUserId()).orElseThrow().getLastName());
     }
@@ -125,7 +123,7 @@ class UserProfileApiTest {
 
     @Test
     void deletedSessionUserReturnsNotFound() throws Exception {
-        User user = users.save(new User("secret", "Sara", "Nordmann"));
+        User user = users.save(new User("sara@example.com", "Sara", "Nordmann"));
         users.deleteById(user.getUserId());
         mvc.perform(updateAs(user).content("""
                 {"firstName":"Sara","lastName":"Nordmann"}
@@ -135,8 +133,8 @@ class UserProfileApiTest {
 
     @Test
     void profileRequestCannotGrantAccessOrReplaceCredentialsOrTargetAnotherUser() throws Exception {
-        User user = users.save(new User("secret", "Sara", "Nordmann"));
-        User other = users.save(new User("other-secret", "Sara", "Nordmann"));
+        User user = users.save(new User("sara@example.com", "Sara", "Nordmann"));
+        User other = users.save(new User("other@example.com", "Sara", "Nordmann"));
         mvc.perform(updateAs(user).content("""
                 {"email":"updated@example.com","firstName":"Sara","lastName":"Nordmann",
                  "access":"ADMIN","password":"new-secret","passwordHash":"new-hash",
@@ -148,26 +146,24 @@ class UserProfileApiTest {
         User stored = users.findById(user.getUserId()).orElseThrow();
         assertEquals(Access.STANDARD, stored.getAccess());
         assertEquals(user.getUserId(), stored.getUserId());
-        assertTrue(stored.isMustChangePassword());
-        assertEquals("secret", stored.getPassword());
-        assertEquals(user.getUserId() + "@epost.com", stored.getEmail());
-        assertEquals(other.getUserId() + "@epost.com", users.findById(other.getUserId()).orElseThrow().getEmail());
+        assertEquals(user.getEmail(), stored.getEmail());
+        assertEquals(other.getEmail(), users.findById(other.getUserId()).orElseThrow().getEmail());
     }
 
     @ParameterizedTest
     @ValueSource(strings = {"changed@example.com", "other@example.com", "invalid-email", ""})
     void submittedEmailCannotChangeStoredEmail(String email) throws Exception {
-        User user = users.save(new User("secret", "Sara", "Nordmann"));
-        users.save(new User("other-secret", "Sara", "Nordmann"));
+        User user = users.save(new User("sara@example.com", "Sara", "Nordmann"));
+        users.save(new User("other@example.com", "Sara", "Nordmann"));
         mvc.perform(updateAs(user).content("""
                 {"email":"%s","firstName":"Sara","lastName":"Nordmann"}
                 """.formatted(email)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.email").value(user.getUserId() + "@epost.com"));
+                .andExpect(jsonPath("$.email").value(user.getEmail()));
         entities.flush();
         entities.clear();
         User stored = users.findById(user.getUserId()).orElseThrow();
-        assertEquals(user.getUserId() + "@epost.com", stored.getEmail());
-        assertEquals(user.getUserId(), users.findByEmail(user.getUserId() + "@epost.com").orElseThrow().getUserId());
+        assertEquals(user.getEmail(), stored.getEmail());
+        assertEquals(user.getUserId(), users.findByEmail(user.getEmail()).orElseThrow().getUserId());
     }
 }

@@ -1,10 +1,6 @@
 package no.hvl.dat250.lms.user.api.controllers;
 
 import jakarta.validation.Valid;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-import no.hvl.dat250.lms.user.api.dto.ChangePasswordRequest;
-import no.hvl.dat250.lms.user.service.UserPasswordService;
 import no.hvl.dat250.lms.user.api.dto.UpdateUserRequest;
 import no.hvl.dat250.lms.user.api.dto.UserResponse;
 import no.hvl.dat250.lms.user.api.dto.UserLookupPageResponse;
@@ -18,9 +14,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.bind.annotation.ResponseStatus;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.web.authentication.logout.SecurityContextLogoutHandler;
 import org.springframework.web.server.ResponseStatusException;
 
 /**
@@ -30,21 +23,9 @@ import org.springframework.web.server.ResponseStatusException;
 @RequestMapping("/api/users")
 public class UserController {
     private final UserService userService;
-    private final UserPasswordService passwords;
 
-    public UserController(UserService userService, UserPasswordService passwords) {
+    public UserController(UserService userService) {
         this.userService = userService;
-        this.passwords = passwords;
-    }
-
-    /** Changes own credentials and logs out the current session after successful persistence. */
-    @PutMapping("/me/password")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void changePassword(@Valid @RequestBody ChangePasswordRequest body,
-                               HttpServletRequest request, HttpServletResponse response) {
-        passwords.changeOwnPassword(body);
-        new SecurityContextLogoutHandler().logout(request, response,
-                SecurityContextHolder.getContext().getAuthentication());
     }
 
     /** Finds existing accounts for course managers/admins without exposing administrative fields. */
@@ -59,7 +40,7 @@ public class UserController {
      * Returns the authenticated user's current profile for GET /api/users/me.
      *
      * @param principal the user identified by Spring Security
-     * @return the stored profile without the password hash
+     * @return the stored application profile
      * @throws ResponseStatusException with status 401 if no valid user identity is
      *         available, or 404 if the user no longer exists
      */
