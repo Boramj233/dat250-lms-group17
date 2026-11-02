@@ -7,10 +7,9 @@ WORKDIR /app
 COPY gradlew .
 COPY gradle/ gradle/
 COPY settings.gradle.kts .
-COPY build.gradle.kts .
 COPY backend/build.gradle.kts backend/
 
-RUN chmod +x gradlew
+RUN sed -i 's/\r$//' gradlew && chmod +x gradlew
 
 # Copy backend source code
 COPY backend/src/ backend/src/

@@ -67,7 +67,7 @@ val buildFrontend = tasks.register<Exec>("buildFrontend") {
     )
     outputs.dir(rootProject.file("frontend/dist"))
 }
-
+/* 
 tasks.named<ProcessResources>("processResources") {
     dependsOn(buildFrontend)
 
@@ -75,3 +75,4 @@ tasks.named<ProcessResources>("processResources") {
         into("static")
     }
 }
+*/
