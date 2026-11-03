@@ -1,7 +1,10 @@
 package no.hvl.dat250.lms.course.api.controllers;
 
+import java.util.Optional;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -21,6 +24,22 @@ public class CourseController {
 
     public CourseController(CourseService service){
         this.service = service;
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<CourseResponse> getCourse(
+        @PathVariable Long id
+    ){
+        Optional<Course> found = service.findCourseById(id);
+
+        if (found.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        }
+
+        CourseResponse response =
+            CourseResponse.from(found.get());
+
+        return ResponseEntity.status(HttpStatus.OK).body(response);
     }
 
     @PostMapping

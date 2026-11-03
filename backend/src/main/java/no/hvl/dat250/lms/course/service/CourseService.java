@@ -1,5 +1,7 @@
 package no.hvl.dat250.lms.course.service;
 
+import java.util.Optional;
+
 import org.springframework.stereotype.Service;
 
 import jakarta.transaction.Transactional;
@@ -47,5 +49,10 @@ public class CourseService {
         Course course = new Course(title, description, term, year);
 
         return repository.save(course);
+    }
+
+    @Transactional
+    public Optional<Course> findCourseById(Long id) {
+        return repository.findById(id);
     }
 }

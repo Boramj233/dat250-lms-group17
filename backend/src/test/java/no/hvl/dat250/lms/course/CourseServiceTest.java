@@ -16,10 +16,13 @@ import org.mockito.Mock;
 
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+
+import java.util.Optional;
 
 @ExtendWith(MockitoExtension.class)
 class CourseServiceTest {
@@ -78,6 +81,50 @@ class CourseServiceTest {
         assertSame(savedCourse, result);
 
         verify(repository).save(any(Course.class));
+    }
+
+    @Test
+    void findExistingCourseById() {
+
+        // Arrange
+        Course course = new Course(
+            "DAT250",
+            "Advanced Software Technologies",
+            Term.AUTUMN,
+            2026
+        );
+
+        when(repository.findById(42L))
+            .thenReturn(Optional.of(course));
+
+        CourseService service = new CourseService(repository);
+
+        // Act
+        Optional<Course> result = service.findCourseById(42L);
+
+        // Assert
+        assertTrue(result.isPresent());
+        assertSame(course, result.orElseThrow());
+
+        verify(repository).findById(42L);
+    }
+
+    @Test
+    void findMissingCourseById() {
+
+        // Arrange
+        when(repository.findById(999L))
+            .thenReturn(Optional.empty());
+
+        CourseService service = new CourseService(repository);
+
+        // Act
+        Optional<Course> result = service.findCourseById(999L);
+
+        // Assert
+        assertTrue(result.isEmpty());
+
+        verify(repository).findById(999L);
     }
 
     @Test

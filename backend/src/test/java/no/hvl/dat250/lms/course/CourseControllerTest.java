@@ -17,6 +17,9 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+
+import java.util.Optional;
 
 @WebMvcTest(CourseController.class)
 @AutoConfigureMockMvc(addFilters = false)
@@ -84,5 +87,43 @@ class CourseControllerTest {
         .andExpect(status().isBadRequest());
 
         verifyNoInteractions(service);
+    }
+
+    @Test
+    void existingCourseReturns200() throws Exception {
+
+        // Arrange
+        Course course = new Course(
+            "DAT250",
+            "Advanced Software Technologies",
+            Term.AUTUMN,
+            2026
+        );
+
+        when(service.findCourseById(42L))
+            .thenReturn(Optional.of(course));
+
+        // Act + Assert
+        mockMvc.perform(
+            get("/api/courses/42")
+        )
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.title").value("DAT250"))
+        .andExpect(jsonPath("$.term").value("AUTUMN"))
+        .andExpect(jsonPath("$.year").value(2026));
+    }
+
+    @Test
+    void missingCourseReturns404() throws Exception {
+
+        // Arrange
+        when(service.findCourseById(999L))
+            .thenReturn(Optional.empty());
+
+        // Act + Assert
+        mockMvc.perform(
+            get("/api/courses/999")
+        )
+        .andExpect(status().isNotFound());
     }
 }
