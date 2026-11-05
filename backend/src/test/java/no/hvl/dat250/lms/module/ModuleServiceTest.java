@@ -1,58 +1,173 @@
+
 package no.hvl.dat250.lms.module;
 
-import org.junit.jupiter.api.Disabled;
-import org.junit.jupiter.api.Test;
-import static org.junit.jupiter.api.Assertions.fail;
+import java.util.List;
+import java.util.NoSuchElementException;
+import java.util.Optional;
 
+import no.hvl.dat250.lms.course.domain.Course;
+import no.hvl.dat250.lms.course.domain.Term;
+import no.hvl.dat250.lms.course.service.CourseService;
+
+import no.hvl.dat250.lms.module.domain.Module;
+import no.hvl.dat250.lms.module.repository.ModuleRepository;
+import no.hvl.dat250.lms.module.service.ModuleService;
+
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+
+import org.mockito.ArgumentCaptor;
+import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class ModuleServiceTest {
-    // Mock repositories and construct ModuleService when its API is defined.
 
-    @Test
-    @Disabled("Not implemented yet")
-    void modulesKeepTheirOrderWithinCourse() {
-        // Verify insertion and reordering produce the expected order in one course
-        // without affecting modules belonging to another course.
-        fail("Not implemented yet");
+    @Mock
+    private ModuleRepository moduleRepository;
+
+    @Mock
+    private CourseService courseService;
+
+    private ModuleService createService() {
+        return new ModuleService(
+                moduleRepository,
+                courseService
+        );
+    }
+
+    private Course createTestCourse() {
+        return new Course(
+                "DAT250",
+                "Advanced Software Technologies",
+                Term.AUTUMN,
+                2026
+        );
     }
 
     @Test
-    @Disabled("Not implemented yet")
-    void dependentModuleRequiresAllPrerequisitesToBeCompleted() {
-        // If module dependencies are implemented, reject student access when any
-        // prerequisite is incomplete and allow it once all are completed.
-        // Define completion for pages, quizzes, and assignments before testing it.
-        fail("Not implemented yet");
+    void validModuleIsSavedForExistingCourse() {
+
+        // Arrange
+        Course course = createTestCourse();
+
+        when(courseService.findCourseById(42L))
+                .thenReturn(Optional.of(course));
+
+        when(moduleRepository.save(any(Module.class)))
+                .thenAnswer(invocation ->
+                        invocation.getArgument(0));
+
+        ModuleService service = createService();
+
+        // Act
+        Module result = service.createModule(
+                42L, "Java Refresh", 0);
+
+        // Assert
+        ArgumentCaptor<Module> captor =
+                ArgumentCaptor.forClass(Module.class);
+
+        verify(courseService).findCourseById(42L);
+        verify(moduleRepository).save(captor.capture());
+
+        Module saved = captor.getValue();
+
+        assertSame(saved, result);
+        assertSame(course, saved.getCourse());
+        assertEquals("Java Refresh", saved.getTitle());
+        assertEquals(0, saved.getPosition());
     }
 
     @Test
-    @Disabled("Not implemented yet")
-    void onlyTeachersOfModulesCourseCanModifyModule() {
-        // Reject students and teachers of other courses; allow this course's teacher.
-        fail("Not implemented yet");
+    void missingCoursePreventsModuleCreation() {
+
+        // Arrange
+        when(courseService.findCourseById(999L))
+                .thenReturn(Optional.empty());
+
+        ModuleService service = createService();
+
+        // Act + Assert
+        assertThrows(
+                NoSuchElementException.class,
+                () -> service.createModule(
+                        999L, "Java Refresh", 0)
+        );
+
+        verify(courseService).findCourseById(999L);
+        verifyNoInteractions(moduleRepository);
     }
 
     @Test
-    @Disabled("Not implemented yet")
-    void moduleCanBeCreatedForExistingCourse() {
-        // Create a module for an existing course and verify the association is saved.
-        fail("Not implemented yet");
+    void invalidTitlePreventsModuleCreation() {
+
+        ModuleService service = createService();
+
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> service.createModule(
+                        42L, "", 0)
+        );
+
+        verifyNoInteractions(
+                courseService, moduleRepository);
     }
 
     @Test
-    @Disabled("Not implemented yet")
-    void moduleMustBelongToCourse() {
-        // Reject creating a module without a course; verify no module is saved.
-        fail("Not implemented yet");
+    void existingCourseReturnsModules() {
+
+        // Arrange
+        Course course = createTestCourse();
+
+        Module first = new Module(
+                course, "Java Refresh", 0);
+        Module second = new Module(
+                course, "Spring Boot", 1);
+
+        List<Module> expected = List.of(first, second);
+
+        when(courseService.findCourseById(42L))
+                .thenReturn(Optional.of(course));
+
+        when(moduleRepository
+                .findByCourse_IdOrderByPositionAsc(42L))
+                .thenReturn(expected);
+
+        ModuleService service = createService();
+
+        // Act
+        List<Module> result =
+                service.findModulesByCourse(42L);
+
+        // Assert
+        assertEquals(expected, result);
+
+        verify(courseService).findCourseById(42L);
+        verify(moduleRepository)
+                .findByCourse_IdOrderByPositionAsc(42L);
     }
 
     @Test
-    @Disabled("Not implemented yet")
-    void moduleCannotReferenceUnknownCourse() {
-        // Reject a nonexistent course ID; verify no module is saved.
-        fail("Not implemented yet");
+    void missingCoursePreventsListingModules() {
+
+        // Arrange
+        when(courseService.findCourseById(999L))
+                .thenReturn(Optional.empty());
+
+        ModuleService service = createService();
+
+        // Act + Assert
+        assertThrows(
+                NoSuchElementException.class,
+                () -> service.findModulesByCourse(999L)
+        );
+
+        verify(courseService).findCourseById(999L);
+        verifyNoInteractions(moduleRepository);
     }
 }
