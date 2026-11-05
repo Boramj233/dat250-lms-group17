@@ -1,20 +1,22 @@
 package no.hvl.dat250.lms.group.api.controllers;
 
 import no.hvl.dat250.lms.group.api.dto.GroupDTO;
+import no.hvl.dat250.lms.group.domain.Group;
 import no.hvl.dat250.lms.group.service.GroupService;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
+import java.net.URI;
 import java.util.List;
+
 
 /**
  * GroupController is responsible for HTTP communication
  */
 
 @RestController
-@RequestMapping("/groups")
+@RequestMapping("/api/courses/{courseId}/groups")
 public class GroupController {
 
     private final GroupService groupService;
@@ -24,12 +26,32 @@ public class GroupController {
     }
 
     @GetMapping()
-    public List<GroupDTO> getAllGroups() {
-        return groupService.getAllGroups();
+    public List<GroupDTO> getAllGroups(@PathVariable Long courseId) {
+        return groupService.getAllGroups(courseId);
     }
 
-    @GetMapping("/{id}")
-    public GroupDTO getGroupById(@PathVariable Long id) {
-        return groupService.getGroupById(id);
+    @GetMapping("/{groupId}")
+    public GroupDTO getGroup(@PathVariable Long courseId, @PathVariable Long groupId) {
+        return groupService.getGroupById(groupId, courseId);
     }
+
+    @PostMapping()
+    public ResponseEntity<GroupDTO> createGroup(@PathVariable Long courseId, @RequestBody Group group) {
+        GroupDTO createdGroup = groupService.createGroup(group.getGroupNumber(), courseId);
+        URI location = ServletUriComponentsBuilder
+                .fromCurrentRequest()
+                .path("/{id}")
+                .buildAndExpand(createdGroup.id())
+                .encode()
+                .toUri();
+
+        return ResponseEntity.created(location).body(createdGroup);
+    }
+
+    @PutMapping("/{groupId}")
+    public Group updateGroup() { return null; }
+
+    @DeleteMapping("/{groupId}")
+    public ResponseEntity<Void> deleteGroup() { return null; }
+
 }
