@@ -8,6 +8,7 @@ import no.hvl.dat250.lms.content.api.controllers.ContentController;
 import no.hvl.dat250.lms.content.domain.StaticPage;
 import no.hvl.dat250.lms.content.service.ContentService;
 import no.hvl.dat250.lms.module.domain.Module;
+import no.hvl.dat250.lms.course.domain.Course;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -205,5 +206,55 @@ class ContentControllerTest {
                 get("/api/courses/2/modules/10/contents")
             )
             .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void getStaticPageByIdReturns200() throws Exception {
+
+        // Arrange
+        Course course = mock(Course.class);
+        Module module = mock(Module.class);
+
+        when(course.getId()).thenReturn(1L);
+        when(module.getId()).thenReturn(2L);
+        when(module.getCourse()).thenReturn(course);
+
+        StaticPage page = new StaticPage(
+            module,
+            "Introduction to Java",
+            0,
+            "Java basics"
+        );
+
+        ReflectionTestUtils.setField(page, "id", 5L);
+
+        when(contentService.findStaticPageById(5L))
+                .thenReturn(page);
+
+        // Act + Assert
+        mockMvc.perform(get("/api/contents/5"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.id").value(5))
+            .andExpect(jsonPath("$.courseId").value(1))
+            .andExpect(jsonPath("$.moduleId").value(2))
+            .andExpect(jsonPath("$.title").value("Introduction to Java"))
+            .andExpect(jsonPath("$.position").value(0))
+            .andExpect(jsonPath("$.body").value("Java basics"));
+
+        verify(contentService).findStaticPageById(5L);
+    }
+
+    @Test
+    void getMissingStaticPageReturns404() throws Exception {
+
+        when(contentService.findStaticPageById(999L))
+                .thenThrow(new NoSuchElementException(
+                    "Content not found: 999"
+                ));
+
+        mockMvc.perform(get("/api/contents/999"))
+            .andExpect(status().isNotFound());
+
+        verify(contentService).findStaticPageById(999L);
     }
 }

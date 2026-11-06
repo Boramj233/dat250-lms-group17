@@ -85,4 +85,24 @@ public class ContentService {
 
     }
 
+    @Transactional(readOnly = true)
+    public StaticPage findStaticPageById(Long contentId) {
+
+        if (contentId == null) {
+            throw new IllegalArgumentException(
+                "Content ID must not be null");
+        }
+
+        Content content = contentRepository.findById(contentId)
+                .orElseThrow(() -> new NoSuchElementException(
+                    "Content not found: " + contentId));
+
+        if (!(content instanceof StaticPage page)) {
+            throw new NoSuchElementException(
+                "Static page not found: " + contentId);
+        }
+
+        return page;
+    }
+
 }

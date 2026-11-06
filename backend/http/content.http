@@ -31,3 +31,12 @@ Content-Type: application/json
 
 ### 5. Test wrong Course ID
 GET {{baseUrl}}/api/courses/999999/modules/{{moduleId}}/contents
+
+
+@contentId = 5
+
+### 6. Get StaticPage detail
+GET {{baseUrl}}/api/contents/{{contentId}}
+
+### 7. Get nonexistent StaticPage
+GET {{baseUrl}}/api/contents/999999

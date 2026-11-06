@@ -307,6 +307,46 @@ class ContentServiceTest {
     }
 
 
+    @Test
+    void findExistingStaticPageById() {
+
+        Module module = mock(Module.class);
+
+        StaticPage page = new StaticPage(
+            module,
+            "Introduction to Java",
+            0,
+            "Java basics"
+        );
+
+        when(contentRepository.findById(5L))
+                .thenReturn(Optional.of(page));
+
+        ContentService service = createService();
+
+        StaticPage result = service.findStaticPageById(5L);
+
+        assertSame(page, result);
+
+        verify(contentRepository).findById(5L);
+        verifyNoInteractions(moduleService);
+    }
+
+    @Test
+    void findMissingStaticPageByIdThrowsException() {
+
+        when(contentRepository.findById(999L))
+                .thenReturn(Optional.empty());
+
+        ContentService service = createService();
+
+        assertThrows(
+            NoSuchElementException.class,
+            () -> service.findStaticPageById(999L)
+        );
+
+        verify(contentRepository).findById(999L);
+    }
 
     @Test
     @Disabled("Not implemented yet")

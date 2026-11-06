@@ -17,10 +17,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping(
-    "/api/courses/{courseId}/modules/{moduleId}/contents"
-)
 public class ContentController {
+
+    private static final String MODULE_CONTENTS_PATH =
+        "/api/courses/{courseId}/modules/{moduleId}/contents";
 
     private final ContentService contentService;
 
@@ -28,7 +28,7 @@ public class ContentController {
         this.contentService = contentService;
     }
 
-    @PostMapping("/pages")
+    @PostMapping(MODULE_CONTENTS_PATH + "/pages")
     public ResponseEntity<StaticPageResponse> createStaticPage(
             @PathVariable Long courseId,
             @PathVariable Long moduleId,
@@ -49,7 +49,7 @@ public class ContentController {
                 ));
     }
 
-    @GetMapping
+    @GetMapping(MODULE_CONTENTS_PATH)
     public ResponseEntity<List<ContentSummaryResponse>> getContents(
             @PathVariable Long courseId,
             @PathVariable Long moduleId) {
@@ -71,4 +71,22 @@ public class ContentController {
 
         return ResponseEntity.notFound().build();
     }
+
+    @GetMapping("/api/contents/{contentId}")
+    public ResponseEntity<StaticPageResponse> getStaticPage(
+        @PathVariable Long contentId) {
+
+    StaticPage page =
+            contentService.findStaticPageById(contentId);
+
+    Long moduleId = page.getModule().getId();
+    Long courseId = page.getModule().getCourse().getId();
+
+    return ResponseEntity.ok(
+            StaticPageResponse.from(
+                page,
+                courseId,
+                moduleId
+            )
+    );}
 }
