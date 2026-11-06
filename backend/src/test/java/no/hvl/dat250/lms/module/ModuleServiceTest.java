@@ -170,4 +170,57 @@ class ModuleServiceTest {
         verify(courseService).findCourseById(999L);
         verifyNoInteractions(moduleRepository);
     }
+
+        @Test
+        void findModuleInCorrectCourse() {
+
+        // Arrange
+        Module module = mock(Module.class);
+
+        when(moduleRepository.findByIdAndCourse_Id(10L, 1L))
+                .thenReturn(Optional.of(module));
+
+        ModuleService service = new ModuleService(
+                moduleRepository,
+                courseService
+        );
+
+        // Act
+        Optional<Module> result =
+                service.findModuleInCourse(1L, 10L);
+
+        // Assert
+        assertTrue(result.isPresent());
+        assertSame(module, result.get());
+
+        verify(moduleRepository)
+                .findByIdAndCourse_Id(10L, 1L);
+
+        verifyNoInteractions(courseService);
+        }
+
+        @Test
+        void findModuleInWrongCourseReturnsEmpty() {
+
+        // Arrange
+        when(moduleRepository.findByIdAndCourse_Id(10L, 2L))
+                .thenReturn(Optional.empty());
+
+        ModuleService service = new ModuleService(
+                moduleRepository,
+                courseService
+        );
+
+        // Act
+        Optional<Module> result =
+                service.findModuleInCourse(2L, 10L);
+
+        // Assert
+        assertTrue(result.isEmpty());
+
+        verify(moduleRepository)
+                .findByIdAndCourse_Id(10L, 2L);
+
+        verifyNoInteractions(courseService);
+        }
 }

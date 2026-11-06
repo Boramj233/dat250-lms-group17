@@ -16,6 +16,7 @@ import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import static org.junit.jupiter.api.Assertions.*;
 
 import java.util.List;
+import java.util.Optional;
 
 @DataJpaTest
 class ModuleRepositoryTest {
@@ -128,5 +129,53 @@ class ModuleRepositoryTest {
                 .map(Module::getTitle)
                 .toList()
         );
+    }
+
+    @Test
+    void moduleCanOnlyBeFoundWithinItsOwnCourse() {
+
+        // Arrange: two different courses
+        Course course1 = courseRepository.saveAndFlush(
+            new Course(
+                "DAT250", "Advanced Software Technologies",
+                Term.AUTUMN, 2026
+            )
+        );
+
+        Course course2 = courseRepository.saveAndFlush(
+            new Course(
+                "INF264", "Machine Learning",
+                Term.AUTUMN, 2026
+            )
+        );
+
+        // Module belongs to course1
+        Module module = moduleRepository.saveAndFlush(
+            new Module(course1, "Java Refresh", 0)
+        );
+
+        Long moduleId = module.getId();
+        Long course1Id = course1.getId();
+        Long course2Id = course2.getId();
+
+        entityManager.clear();
+
+        // Act: matching course
+        Optional<Module> found =
+            moduleRepository.findByIdAndCourse_Id(
+                moduleId, course1Id
+            );
+
+        // Act: wrong course
+        Optional<Module> notFound =
+            moduleRepository.findByIdAndCourse_Id(
+                moduleId, course2Id
+            );
+
+        // Assert
+        assertTrue(found.isPresent());
+        assertEquals("Java Refresh", found.get().getTitle());
+
+        assertTrue(notFound.isEmpty());
     }
 }

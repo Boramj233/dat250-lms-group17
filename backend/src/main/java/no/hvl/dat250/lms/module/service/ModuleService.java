@@ -2,6 +2,7 @@ package no.hvl.dat250.lms.module.service;
 
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.Optional;
 
 import no.hvl.dat250.lms.course.domain.Course;
 import no.hvl.dat250.lms.course.service.CourseService;
@@ -56,6 +57,16 @@ public class ModuleService {
         return moduleRepository.save(module);
     }
 
+    public Optional<Module> findModuleById(Long id) {
+
+        if (id == null) {
+            throw new IllegalArgumentException(
+                "Module ID must not be null");
+        }
+
+        return moduleRepository.findById(id);
+    }
+
     @Transactional(readOnly = true)
     public List<Module> findModulesByCourse(Long courseId) {
 
@@ -70,5 +81,21 @@ public class ModuleService {
 
         return moduleRepository
                 .findByCourse_IdOrderByPositionAsc(courseId);
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<Module> findModuleInCourse(
+            Long courseId,
+            Long moduleId) {
+
+        if (courseId == null || moduleId == null) {
+            throw new IllegalArgumentException(
+                "Course ID and Module ID must not be null");
+        }
+
+        return moduleRepository.findByIdAndCourse_Id(
+            moduleId,
+            courseId
+        );
     }
 }
