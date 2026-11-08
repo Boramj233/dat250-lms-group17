@@ -2,14 +2,124 @@ package no.hvl.dat250.lms.enrollment;
 
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.fail;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
+
+import java.util.NoSuchElementException;
+import java.util.Optional;
 
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+
+import no.hvl.dat250.lms.enrollment.domain.CourseRole;
+import no.hvl.dat250.lms.enrollment.domain.Enrollment;
+import no.hvl.dat250.lms.enrollment.repository.EnrollmentRepository;
+import no.hvl.dat250.lms.enrollment.service.EnrollmentService;
 
 @ExtendWith(MockitoExtension.class)
 class EnrollmentServiceTest {
     // Mock the repository and construct EnrollmentService when its API is defined.
+
+
+    @Mock
+    private EnrollmentRepository enrollmentRepository;
+
+    @InjectMocks
+    private EnrollmentService enrollmentService;
+
+    @Test
+    void activeStudentCanAccessCourse() {
+
+        Enrollment enrollment = mock(Enrollment.class);
+
+        when(enrollment.isActive()).thenReturn(true);
+        when(enrollment.getRole()).thenReturn(CourseRole.STUDENT);
+
+        when(enrollmentRepository
+                .findByUser_IdAndCourse_Id(1L, 2L))
+            .thenReturn(Optional.of(enrollment));
+
+        Enrollment result = enrollmentService
+            .requireActiveStudent(1L, 2L);
+
+        assertSame(enrollment, result);
+    }
+
+    @Test
+    void missingEnrollmentIsRejected() {
+
+        when(enrollmentRepository
+                .findByUser_IdAndCourse_Id(1L, 2L))
+            .thenReturn(Optional.empty());
+
+        assertThrows(
+            NoSuchElementException.class,
+            () -> enrollmentService
+                .requireActiveStudent(1L, 2L)
+        );
+    }
+
+    @Test
+    void inactiveStudentIsRejected() {
+
+        Enrollment enrollment = mock(Enrollment.class);
+
+        when(enrollment.isActive()).thenReturn(false);
+
+        when(enrollmentRepository
+                .findByUser_IdAndCourse_Id(1L, 2L))
+            .thenReturn(Optional.of(enrollment));
+
+        assertThrows(
+            IllegalStateException.class,
+            () -> enrollmentService
+                .requireActiveStudent(1L, 2L)
+        );
+    }
+
+    @Test
+    void teacherCannotSubmitAsStudent() {
+
+        Enrollment enrollment = mock(Enrollment.class);
+
+        when(enrollment.isActive()).thenReturn(true);
+        when(enrollment.getRole()).thenReturn(CourseRole.TEACHER);
+
+        when(enrollmentRepository
+                .findByUser_IdAndCourse_Id(1L, 2L))
+            .thenReturn(Optional.of(enrollment));
+
+        assertThrows(
+            IllegalStateException.class,
+            () -> enrollmentService
+                .requireActiveStudent(1L, 2L)
+        );
+    }
+
+    @Test
+    void invalidIdsAreRejected() {
+
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> enrollmentService
+                .requireActiveStudent(null, 2L)
+        );
+
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> enrollmentService
+                .requireActiveStudent(1L, -1L)
+        );
+
+        verifyNoInteractions(enrollmentRepository);
+    }
 
     @Test
     @Disabled("Not implemented yet")

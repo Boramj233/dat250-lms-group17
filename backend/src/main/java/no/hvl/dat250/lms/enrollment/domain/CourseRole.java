@@ -1,5 +1,6 @@
 package no.hvl.dat250.lms.enrollment.domain;
 
-public class CourseRole {
-    
-}
+public enum CourseRole {
+    STUDENT,
+    TEACHER,    
+} 
