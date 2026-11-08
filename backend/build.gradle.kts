@@ -55,6 +55,7 @@ dependencies {
 tasks.withType<Test> {
 	useJUnitPlatform()
 }
+<<<<<<< HEAD
 
 // Windows runs npm through its command script; other systems use npm directly.
 val npmCommand = if (System.getProperty("os.name").startsWith("Windows", ignoreCase = true)) {
@@ -97,3 +98,5 @@ tasks.named<ProcessResources>("processResources") {
     }
 }
 */
+=======
+>>>>>>> 1c51e719e80e0c3db55092b924bb4f4cd8bce5d7
