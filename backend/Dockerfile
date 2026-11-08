@@ -23,7 +23,8 @@ FROM eclipse-temurin:25-jre-alpine
 WORKDIR /app
 
 # Run as a non-root user
-RUN addgroup -S spring && adduser -S spring -G spring
+RUN addgroup -S spring && adduser -S spring -G spring \
+    && mkdir -p /app/data && chown spring:spring /app/data
 USER spring
 
 COPY --from=build /app/backend/build/libs/*.jar app.jar
