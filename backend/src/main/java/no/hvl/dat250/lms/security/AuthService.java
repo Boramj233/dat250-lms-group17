@@ -1,4 +1,4 @@
-package no.hvl.dat250.lms.auth;
+package no.hvl.dat250.lms.security;
 
 import jakarta.validation.ConstraintViolationException;
 import no.hvl.dat250.lms.user.domain.User;

@@ -1,4 +1,4 @@
-package no.hvl.dat250.lms.config;
+package no.hvl.dat250.lms.security;
 
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSHeader;

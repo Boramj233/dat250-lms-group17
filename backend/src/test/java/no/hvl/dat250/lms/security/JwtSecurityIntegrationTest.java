@@ -1,4 +1,4 @@
-package no.hvl.dat250.lms.auth;
+package no.hvl.dat250.lms.security;
 
 import jakarta.persistence.EntityManager;
 import no.hvl.dat250.lms.user.domain.Access;
@@ -15,8 +15,8 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
-import static no.hvl.dat250.lms.auth.TestTokens.bearer;
-import static no.hvl.dat250.lms.auth.TestTokens.bearerUnverified;
+import static no.hvl.dat250.lms.security.TestTokens.bearer;
+import static no.hvl.dat250.lms.security.TestTokens.bearerUnverified;
 import static org.hamcrest.Matchers.startsWith;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;

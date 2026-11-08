@@ -1,7 +1,7 @@
 package no.hvl.dat250.lms.user;
 
 import no.hvl.dat250.lms.user.domain.User;
-import no.hvl.dat250.lms.auth.TestTokens;
+import no.hvl.dat250.lms.security.TestTokens;
 import no.hvl.dat250.lms.user.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

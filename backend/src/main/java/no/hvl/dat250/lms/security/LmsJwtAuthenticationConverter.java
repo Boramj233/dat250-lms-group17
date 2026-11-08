@@ -1,4 +1,4 @@
-package no.hvl.dat250.lms.auth;
+package no.hvl.dat250.lms.security;
 
 import java.util.List;
 import no.hvl.dat250.lms.user.domain.AuthenticatedUser;

@@ -1,4 +1,4 @@
-package no.hvl.dat250.lms.auth;
+package no.hvl.dat250.lms.security;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
