@@ -1,12 +1,15 @@
 package no.hvl.dat250.lms.auth;
 
+import jakarta.validation.ConstraintViolationException;
 import no.hvl.dat250.lms.user.domain.User;
 import no.hvl.dat250.lms.user.service.UserService;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
 import org.springframework.security.oauth2.core.OAuth2Error;
-import org.springframework.security.oauth2.core.oidc.user.OidcUser;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
 
+/** Links a verified Keycloak identity to the local user profile. */
 @Service
 public class AuthService {
     private final UserService users;
@@ -15,13 +18,20 @@ public class AuthService {
         this.users = users;
     }
 
-    public User provisionUser(OidcUser identity) {
-        String email = verifiedEmail(identity);
-        String firstName = identity.getGivenName();
-        String lastName = identity.getFamilyName();
+    /**
+     * Finds the local profile for the token's verified email, creating a STANDARD
+     * profile on first login. Existing access is never changed here.
+     *
+     * @throws OAuth2AuthenticationException (results in 401) if the email is missing or
+     *         not verified, or the profile data from Keycloak is invalid
+     */
+    public User provisionUser(Jwt token) {
+        String email = verifiedEmail(token);
+        String firstName = token.getClaimAsString("given_name");
+        String lastName = token.getClaimAsString("family_name");
         // Some providers supply only the full name. Local profiles require both fields.
         if (firstName == null || firstName.isBlank()) {
-            firstName = identity.getFullName();
+            firstName = token.getClaimAsString("name");
         }
         if (firstName == null || firstName.isBlank()) {
             firstName = email;
@@ -29,18 +39,20 @@ public class AuthService {
         if (lastName == null || lastName.isBlank()) {
             lastName = firstName;
         }
-        return users.findOrCreateOidcUser(email, firstName, lastName);
+        try {
+            return users.findOrCreateOidcUser(email, firstName, lastName);
+        } catch (DataIntegrityViolationException ex) {
+            // Two first requests for the same new user raced; the other one created it.
+            return users.findByEmail(email).orElseThrow(() -> ex);
+        } catch (ConstraintViolationException ex) {
+            throw new OAuth2AuthenticationException(new OAuth2Error("invalid_profile"), ex);
+        }
     }
 
-    public User findUser(OidcUser identity) {
-        return users.findByEmail(verifiedEmail(identity))
-                .orElseThrow(() -> new OAuth2AuthenticationException(new OAuth2Error("invalid_user")));
-    }
-
-    private String verifiedEmail(OidcUser identity) {
-        // Trust the signed ID token, not request parameters or an arbitrary email header.
-        String email = identity.getIdToken().getEmail();
-        if (!Boolean.TRUE.equals(identity.getIdToken().getEmailVerified())
+    private String verifiedEmail(Jwt token) {
+        // Trust only the signed token, never request parameters or an arbitrary header.
+        String email = token.getClaimAsString("email");
+        if (!Boolean.TRUE.equals(token.getClaimAsBoolean("email_verified"))
                 || email == null || email.isBlank()) {
             throw new OAuth2AuthenticationException(new OAuth2Error("verified_email_required"));
         }

@@ -1,5 +1,6 @@
 import { Link, NavLink } from 'react-router'
 import { paths } from '../../app/paths'
+import { isAuthenticated, logout } from '../../data/auth/auth'
 import './Topbar.css'
 
 type TopbarProps = {
@@ -38,7 +39,9 @@ export default function Topbar({ sidebarOpen, onToggleSidebar }: TopbarProps) {
       </button>
       <Link className="brand" to={paths.home}>DAT250 LMS</Link>
       <nav className="main-nav" aria-label="Main navigation">
-        <NavLink to={paths.login}>Log in</NavLink>
+        {isAuthenticated()
+          ? <button type="button" onClick={logout}>Log out</button>
+          : <NavLink to={paths.login}>Log in</NavLink>}
       </nav>
     </header>
   )

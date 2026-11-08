@@ -2,6 +2,7 @@ package no.hvl.dat250.lms.user;
 
 import jakarta.persistence.EntityManager;
 import no.hvl.dat250.lms.user.domain.Access;
+import no.hvl.dat250.lms.user.domain.AuthenticatedUser;
 import no.hvl.dat250.lms.user.domain.User;
 import no.hvl.dat250.lms.user.repository.UserRepository;
 import no.hvl.dat250.lms.user.service.UserService;
@@ -39,7 +40,7 @@ class UserIntegrationTest {
         administrator.setAccess(Access.ADMIN);
         users.save(administrator);
         SecurityContextHolder.getContext().setAuthentication(
-                UsernamePasswordAuthenticationToken.authenticated(administrator, null, java.util.List.of()));
+                UsernamePasswordAuthenticationToken.authenticated(new AuthenticatedUser(administrator.getUserId()), null, java.util.List.of()));
         User created = service.createUser("Sara", "Nordmann", "sara@example.com");
         Long userId = created.getUserId();
         org.junit.jupiter.api.Assertions.assertNotNull(userId);

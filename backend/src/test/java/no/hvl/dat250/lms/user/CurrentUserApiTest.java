@@ -1,14 +1,17 @@
 package no.hvl.dat250.lms.user;
 
 import no.hvl.dat250.lms.user.domain.User;
-import no.hvl.dat250.lms.auth.ApiTokenService;
+import no.hvl.dat250.lms.auth.TestTokens;
 import no.hvl.dat250.lms.user.repository.UserRepository;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,8 +25,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @Transactional
 class CurrentUserApiTest {
     @Autowired private MockMvc mvc;
-    @Autowired private ApiTokenService tokens;
+    @MockitoBean private JwtDecoder jwtDecoder;
     @Autowired private UserRepository users;
+
+    @BeforeEach
+    void acceptTestTokens() { TestTokens.install(jwtDecoder); }
 
     @Test
     void returnsAuthenticatedUsersProfileWithoutPassword() throws Exception {
@@ -31,7 +37,7 @@ class CurrentUserApiTest {
         // A second account must not affect which profile is returned.
         users.save(new User("other@example.com", "Sara", "Nordmann"));
         mvc.perform(get("/api/users/me").accept(MediaType.APPLICATION_JSON)
-                        .header("Authorization", "Bearer " + tokens.issue(user).accessToken()))
+                        .header("Authorization", TestTokens.bearer(user.getEmail())))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", aMapWithSize(5)))
                 .andExpect(jsonPath("$.username").doesNotExist())
@@ -47,16 +53,6 @@ class CurrentUserApiTest {
     @Test
     void rejectsUnauthenticatedRequests() throws Exception {
         mvc.perform(get("/api/users/me").accept(MediaType.APPLICATION_JSON))
-                .andExpect(status().isUnauthorized());
-    }
-
-
-    @Test
-    void deletedTokenUserIsUnauthenticated() throws Exception {
-        User user = users.save(new User("sara@example.com", "Sara", "Nordmann"));
-        String token = tokens.issue(user).accessToken();
-        users.deleteById(user.getUserId());
-        mvc.perform(get("/api/users/me").header("Authorization", "Bearer " + token))
                 .andExpect(status().isUnauthorized());
     }
 }

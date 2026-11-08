@@ -4,6 +4,7 @@ import jakarta.validation.ConstraintViolationException;
 import jakarta.validation.Validation;
 import jakarta.validation.ValidatorFactory;
 import no.hvl.dat250.lms.user.domain.Access;
+import no.hvl.dat250.lms.user.domain.AuthenticatedUser;
 import no.hvl.dat250.lms.user.domain.User;
 import no.hvl.dat250.lms.user.repository.UserRepository;
 import no.hvl.dat250.lms.user.service.UserService;
@@ -50,8 +51,7 @@ class UserServiceTest {
     void clearAuthentication() { SecurityContextHolder.clearContext(); }
 
     private void authenticateAs(Access storedAccess) {
-        User principal = mock(User.class);
-        when(principal.getUserId()).thenReturn(1L);
+        AuthenticatedUser principal = new AuthenticatedUser(1L);
         User stored = new User("sara@example.com", "Admin", "User");
         stored.setAccess(storedAccess);
         when(users.findById(1L)).thenReturn(Optional.of(stored));
@@ -120,8 +120,7 @@ class UserServiceTest {
 
     @Test
     void deletedSessionUserCannotCreateUsers() {
-        User principal = mock(User.class);
-        when(principal.getUserId()).thenReturn(99L);
+        AuthenticatedUser principal = new AuthenticatedUser(99L);
         SecurityContextHolder.getContext().setAuthentication(
                 UsernamePasswordAuthenticationToken.authenticated(principal, null, List.of()));
         assertThrows(AccessDeniedException.class,

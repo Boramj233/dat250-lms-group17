@@ -3,7 +3,7 @@ package no.hvl.dat250.lms.user;
 import jakarta.persistence.EntityManager;
 import no.hvl.dat250.lms.user.domain.Access;
 import no.hvl.dat250.lms.user.domain.User;
-import no.hvl.dat250.lms.auth.ApiTokenService;
+import no.hvl.dat250.lms.auth.TestTokens;
 import no.hvl.dat250.lms.user.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -14,7 +14,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,7 +32,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @Transactional
 class AdminUserApiTest {
     @Autowired private MockMvc mvc;
-    @Autowired private ApiTokenService tokens;
+    @MockitoBean private JwtDecoder jwtDecoder;
     @Autowired private UserRepository users;
     @Autowired private EntityManager entities;
     private User admin;
@@ -39,6 +41,7 @@ class AdminUserApiTest {
 
     @BeforeEach
     void createAccounts() {
+        TestTokens.install(jwtDecoder);
         admin = new User("admin@example.com", "System", "Administrator");
         admin.setAccess(Access.ADMIN);
         users.save(admin);
@@ -48,7 +51,7 @@ class AdminUserApiTest {
 
     private MockHttpServletRequestBuilder as(User actor, MockHttpServletRequestBuilder builder) {
         if (actor != null) {
-            builder.header("Authorization", "Bearer " + tokens.issue(actor).accessToken());
+            builder.header("Authorization", TestTokens.bearer(actor.getEmail()));
         }
         return builder.contentType(MediaType.APPLICATION_JSON).accept(MediaType.APPLICATION_JSON);
     }
@@ -271,14 +274,6 @@ class AdminUserApiTest {
         assertEquals(Access.COURSE_MANAGER, other.getAccess());
         mvc.perform(as(other, get("/api/users/search").param("search", "Sara")))
                 .andExpect(status().isForbidden());
-    }
-
-    @Test
-    void deletedCourseManagerCannotSearchAccounts() throws Exception {
-        other.setAccess(Access.COURSE_MANAGER);
-        users.delete(other);
-        mvc.perform(as(other, get("/api/users/search").param("search", "Sara")))
-                .andExpect(status().isUnauthorized());
     }
 
     @Test

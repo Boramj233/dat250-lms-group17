@@ -7,18 +7,21 @@
   "resetPasswordAllowed": false,
   "clients": [
     {
-      "clientId": "spring",
-      "name": "Local LMS backend",
+      "clientId": "lms-frontend",
+      "name": "LMS frontend (browser)",
       "protocol": "openid-connect",
       "enabled": true,
-      "publicClient": false,
-      "clientAuthenticatorType": "client-secret",
-      "secret": "${KEYCLOAK_CLIENT_SECRET}",
+      "publicClient": true,
       "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
       "directAccessGrantsEnabled": false,
       "serviceAccountsEnabled": false,
-      "redirectUris": ["http://localhost:8080/login/oauth2/code/keycloak", "http://localhost:5173/login/oauth2/code/keycloak"],
+      "redirectUris": ["http://localhost:8080/*", "http://localhost:5173/*"],
       "webOrigins": ["http://localhost:8080", "http://localhost:5173"],
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "http://localhost:8080/*##http://localhost:5173/*"
+      },
       "defaultClientScopes": ["web-origins", "acr", "roles", "profile", "email"]
     }
   ],

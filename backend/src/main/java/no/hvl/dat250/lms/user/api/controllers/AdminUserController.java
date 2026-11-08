@@ -7,11 +7,16 @@ import no.hvl.dat250.lms.user.api.dto.UserPageResponse;
 import no.hvl.dat250.lms.user.api.dto.UserResponse;
 import no.hvl.dat250.lms.user.service.UserService;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import java.net.URI;
 
-/** Administrator operations; authorization is enforced in the service for every call. */
+/**
+ * Administrator operations. The role check here rejects non-admins early; the service
+ * still checks stored access for every call.
+ */
 @RestController
+@PreAuthorize("hasRole('ADMIN')")
 @RequestMapping("/api/admin/users")
 public class AdminUserController {
     private final UserService users;

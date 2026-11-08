@@ -7,6 +7,7 @@ import no.hvl.dat250.lms.user.api.dto.UserLookupResponse;
 import no.hvl.dat250.lms.user.repository.UserRepository;
 import no.hvl.dat250.lms.user.domain.User;
 import no.hvl.dat250.lms.user.domain.Access;
+import no.hvl.dat250.lms.user.domain.AuthenticatedUser;
 import java.util.Optional;
 import java.util.Arrays;
 import org.springframework.security.authentication.AuthenticationCredentialsNotFoundException;
@@ -75,11 +76,10 @@ public class UserService {
     private Long requireCurrentUserId() {
         var authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !authentication.isAuthenticated()
-                || !(authentication.getPrincipal() instanceof User principal)
-                || principal.getUserId() == null) {
+                || !(authentication.getPrincipal() instanceof AuthenticatedUser principal)) {
             throw new AuthenticationCredentialsNotFoundException("Authentication required");
         }
-        return principal.getUserId();
+        return principal.userId();
     }
 
     /** Reloads the authenticated account, for trusted internal callers. */
