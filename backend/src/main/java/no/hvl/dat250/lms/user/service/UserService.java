@@ -156,6 +156,23 @@ public class UserService {
         return userRepository.findById(id);
     }
 
+    /** Trusted auth callers only: the email must come from a verified OIDC identity. */
+    @Transactional
+    public User findOrCreateOidcUser(String email, String firstName, String lastName) {
+        return userRepository.findByEmail(email).orElseGet(() -> {
+            User user = new User(email, firstName, lastName);
+            var violations = validator.validate(user);
+            if (!violations.isEmpty()) {
+                throw new ConstraintViolationException(violations);
+            }
+            return userRepository.saveAndFlush(user);
+        });
+    }
+
+    public Optional<User> findByEmail(String email) {
+        return userRepository.findByEmail(email);
+    }
+
     /**
      * Replaces names without changing userId, email, or global access.
      * The caller must obtain the target ID from the authenticated identity.

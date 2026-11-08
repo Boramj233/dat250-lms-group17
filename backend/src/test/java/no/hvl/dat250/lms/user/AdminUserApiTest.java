@@ -3,9 +3,9 @@ package no.hvl.dat250.lms.user;
 import jakarta.persistence.EntityManager;
 import no.hvl.dat250.lms.user.domain.Access;
 import no.hvl.dat250.lms.user.domain.User;
+import no.hvl.dat250.lms.auth.ApiTokenService;
 import no.hvl.dat250.lms.user.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
@@ -14,11 +14,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
-import org.springframework.mock.web.*;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.context.SecurityContextImpl;
-import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
-import org.springframework.security.web.csrf.*;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
@@ -35,6 +30,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @Transactional
 class AdminUserApiTest {
     @Autowired private MockMvc mvc;
+    @Autowired private ApiTokenService tokens;
     @Autowired private UserRepository users;
     @Autowired private EntityManager entities;
     private User admin;
@@ -51,21 +47,10 @@ class AdminUserApiTest {
     }
 
     private MockHttpServletRequestBuilder as(User actor, MockHttpServletRequestBuilder builder) {
-        MockHttpSession session = new MockHttpSession();
         if (actor != null) {
-            session.setAttribute(HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY,
-                    new SecurityContextImpl(UsernamePasswordAuthenticationToken.authenticated(
-                            actor, null, java.util.List.of())));
+            builder.header("Authorization", "Bearer " + tokens.issue(actor).accessToken());
         }
-        var token = new DefaultCsrfToken("X-CSRF-TOKEN", "_csrf", "admin-test-token");
-        var request = new MockHttpServletRequest();
-        request.setSession(session);
-        var response = new MockHttpServletResponse();
-        new HttpSessionCsrfTokenRepository().saveToken(token, request, response);
-        new XorCsrfTokenRequestAttributeHandler().handle(request, response, () -> token);
-        CsrfToken exposed = (CsrfToken) request.getAttribute(CsrfToken.class.getName());
-        return builder.session(session).header(token.getHeaderName(), exposed.getToken())
-                .contentType(MediaType.APPLICATION_JSON).accept(MediaType.APPLICATION_JSON);
+        return builder.contentType(MediaType.APPLICATION_JSON).accept(MediaType.APPLICATION_JSON);
     }
 
     @Test
@@ -166,7 +151,6 @@ class AdminUserApiTest {
     }
 
     @Test
-    @Disabled("TODO: Re-enable when API authentication returns 401 for anonymous requests")
     void anonymousRequestsAreRejected() throws Exception {
         mvc.perform(as(null, get("/api/admin/users"))).andExpect(status().isUnauthorized());
         mvc.perform(as(null, get("/api/admin/users/{id}", user.getUserId())))
@@ -177,7 +161,7 @@ class AdminUserApiTest {
     }
 
     @Test
-    void outdatedAdminSessionCannotRetainPrivileges() throws Exception {
+    void outdatedAdminTokenCannotRetainPrivileges() throws Exception {
         entities.flush();
         entities.detach(admin);
         User storedAdmin = users.findByUserId(admin.getUserId()).orElseThrow();
@@ -271,7 +255,6 @@ class AdminUserApiTest {
     }
 
     @Test
-    @Disabled("TODO: Re-enable when API authentication returns 401 for anonymous requests")
     void standardAndAnonymousUsersCannotSearchOtherAccounts() throws Exception {
         mvc.perform(as(user, get("/api/users/search").param("search", "Sara")))
                 .andExpect(status().isForbidden());
@@ -280,7 +263,7 @@ class AdminUserApiTest {
     }
 
     @Test
-    void outdatedCourseManagerSessionCannotSearchAccounts() throws Exception {
+    void outdatedCourseManagerTokenCannotSearchAccounts() throws Exception {
         other.setAccess(Access.COURSE_MANAGER);
         entities.flush();
         entities.detach(other);
@@ -295,7 +278,7 @@ class AdminUserApiTest {
         other.setAccess(Access.COURSE_MANAGER);
         users.delete(other);
         mvc.perform(as(other, get("/api/users/search").param("search", "Sara")))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isUnauthorized());
     }
 
     @Test
@@ -349,16 +332,17 @@ class AdminUserApiTest {
     }
 
     @Test
-    @Disabled("TODO: Re-enable when API authentication returns 401 for anonymous requests")
-    void anonymousAndCsrfLessCreationAreRejected() throws Exception {
+    void anonymousCreationIsRejected() throws Exception {
         mvc.perform(as(null, post("/api/admin/users")).content(validCreationBody()))
                 .andExpect(status().isUnauthorized());
-        mvc.perform(as(admin, post("/api/admin/users")).with(request -> {
-                    request.removeHeader("X-CSRF-TOKEN");
-                    return request;
-                }).content(validCreationBody()))
-                .andExpect(status().isForbidden());
         assertEquals(3, users.count());
+    }
+
+    @Test
+    void bearerAuthenticatedCreationDoesNotRequireCsrf() throws Exception {
+        mvc.perform(as(admin, post("/api/admin/users")).content(validCreationBody()))
+                .andExpect(status().isCreated());
+        assertEquals(4, users.count());
     }
 
     @ParameterizedTest

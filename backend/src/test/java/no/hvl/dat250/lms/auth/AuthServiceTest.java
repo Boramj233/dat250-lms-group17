@@ -1,84 +1,51 @@
 package no.hvl.dat250.lms.auth;
 
-import org.junit.jupiter.api.Disabled;
+import java.time.Instant;
+import java.util.List;
+import no.hvl.dat250.lms.user.domain.User;
+import no.hvl.dat250.lms.user.service.UserService;
 import org.junit.jupiter.api.Test;
-import static org.junit.jupiter.api.Assertions.fail;
+import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
+import org.springframework.security.oauth2.core.oidc.OidcIdToken;
+import org.springframework.security.oauth2.core.oidc.user.DefaultOidcUser;
+import org.springframework.security.oauth2.core.oidc.user.OidcUser;
 
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.junit.jupiter.MockitoExtension;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
 
-@ExtendWith(MockitoExtension.class)
 class AuthServiceTest {
-    @Test
-    @Disabled("Not implemented yet")
-    void invalidEmailIsRejected() {
-        // Reject blank or malformed email addresses when creating/updating users.
-        // Define email normalization rules and apply them consistently to uniqueness
-        // checks and login; do not assume case/whitespace handling without a decision.
-        fail("Not implemented yet");
-    }
+    private final UserService users = mock(UserService.class);
+    private final AuthService auth = new AuthService(users);
 
-    // Mock user persistence and password verification when the service API is defined.
-
-    @Test
-    @Disabled("Not implemented yet")
-    void userHasOneEmailAndOneActivePassword() {
-        // Require one non-blank email and one active password hash per user.
-        // Changing credentials replaces the existing value rather than adding
-        // an alternative email or another active password for the same account.
-        fail("Not implemented yet");
+    static OidcUser identity(String email, boolean verified) {
+        var token = OidcIdToken.withTokenValue("test-id-token")
+                .issuedAt(Instant.now()).expiresAt(Instant.now().plusSeconds(300))
+                .claim("sub", "keycloak-subject").claim("email", email)
+                .claim("email_verified", verified).claim("given_name", "Sara")
+                .claim("family_name", "Nordmann").build();
+        return new DefaultOidcUser(List.of(), token);
     }
 
     @Test
-    @Disabled("Not implemented yet")
-    void duplicateEmailIsRejected() {
-        // Reject assigning an email already used by another user, both when
-        // creating an account and when changing an email. Leave existing users unchanged.
-        // Passwords do not need to be unique across users.
-        fail("Not implemented yet");
+    void delegatesVerifiedIdentityToProfileService() {
+        User expected = new User("sara@example.com", "Sara", "Nordmann");
+        when(users.findOrCreateOidcUser(expected.getEmail(), "Sara", "Nordmann")).thenReturn(expected);
+        assertSame(expected, auth.provisionUser(identity(expected.getEmail(), true)));
     }
 
     @Test
-    @Disabled("Not implemented yet")
-    void correctEmailAndPasswordAllowLogin() {
-        // Accept credentials that match an existing user and its stored password hash.
-        fail("Not implemented yet");
+    void unverifiedEmailCannotCreateOrLinkAProfile() {
+        assertThrows(OAuth2AuthenticationException.class,
+                () -> auth.provisionUser(identity("admin@example.com", false)));
+        verifyNoInteractions(users);
     }
 
     @Test
-    @Disabled("Not implemented yet")
-    void incorrectCredentialsRejectLogin() {
-        // Test wrong password, unknown email, and missing email/password separately.
-        // Do not reveal whether an email exists in authentication error messages.
-        fail("Not implemented yet");
-    }
-
-    @Test
-    @Disabled("Not implemented yet")
-    void authenticatedUserCanChangeOwnPassword() {
-        // Verify the current password before changing it. Store a hash of the new
-        // password, never plaintext, and verify the hash matches the new password.
-        fail("Not implemented yet");
-    }
-
-    @Test
-    @Disabled("Not implemented yet")
-    void incorrectCurrentPasswordRejectsPasswordChange() {
-        // Reject the change and leave the stored password unchanged.
-        fail("Not implemented yet");
-    }
-
-    @Test
-    @Disabled("Not implemented yet")
-    void userCannotChangeAnotherUsersPassword() {
-        // Use the authenticated identity to select the account being changed.
-        fail("Not implemented yet");
-    }
-
-    @Test
-    @Disabled("Not implemented yet")
-    void oldPasswordIsRejectedAfterPasswordChange() {
-        // Verify the old password no longer authenticates and the new one does.
-        fail("Not implemented yet");
+    void missingEmailCannotCreateOrLinkAProfile() {
+        var token = OidcIdToken.withTokenValue("id").claim("sub", "subject")
+                .claim("email_verified", true).build();
+        assertThrows(OAuth2AuthenticationException.class,
+                () -> auth.provisionUser(new DefaultOidcUser(List.of(), token)));
+        verifyNoInteractions(users);
     }
 }

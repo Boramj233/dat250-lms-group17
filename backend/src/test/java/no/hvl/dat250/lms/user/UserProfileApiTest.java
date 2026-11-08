@@ -3,8 +3,8 @@ package no.hvl.dat250.lms.user;
 import jakarta.persistence.EntityManager;
 import no.hvl.dat250.lms.user.domain.Access;
 import no.hvl.dat250.lms.user.domain.User;
+import no.hvl.dat250.lms.auth.ApiTokenService;
 import no.hvl.dat250.lms.user.repository.UserRepository;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -12,14 +12,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
-import org.springframework.mock.web.*;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.context.SecurityContextImpl;
-import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
-import org.springframework.security.web.csrf.DefaultCsrfToken;
-import org.springframework.security.web.csrf.CsrfToken;
-import org.springframework.security.web.csrf.HttpSessionCsrfTokenRepository;
-import org.springframework.security.web.csrf.XorCsrfTokenRequestAttributeHandler;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
@@ -36,25 +28,18 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @Transactional
 class UserProfileApiTest {
     @Autowired private MockMvc mvc;
+    @Autowired private ApiTokenService tokens;
     @Autowired private UserRepository users;
     @Autowired private EntityManager entities;
 
-    // Real security filters and a session CSRF token, without changing security configuration.
+    // API writes authenticate with a bearer token and do not use cookie/CSRF authentication.
     private MockHttpServletRequestBuilder updateAs(User user) {
-        MockHttpSession session = new MockHttpSession();
+        var builder = put("/api/users/me").contentType(MediaType.APPLICATION_JSON)
+                .accept(MediaType.APPLICATION_JSON);
         if (user != null) {
-            var authentication = UsernamePasswordAuthenticationToken.authenticated(user, null, java.util.List.of());
-            session.setAttribute(HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY,
-                    new SecurityContextImpl(authentication));
+            builder.header("Authorization", "Bearer " + tokens.issue(user).accessToken());
         }
-        var token = new DefaultCsrfToken("X-CSRF-TOKEN", "_csrf", "profile-test-token");
-        var request = new MockHttpServletRequest();
-        request.setSession(session);
-        new HttpSessionCsrfTokenRepository().saveToken(token, request, new MockHttpServletResponse());
-        new XorCsrfTokenRequestAttributeHandler().handle(request, new MockHttpServletResponse(), () -> token);
-        CsrfToken exposedToken = (CsrfToken) request.getAttribute(CsrfToken.class.getName());
-        return put("/api/users/me").session(session).header(token.getHeaderName(), exposedToken.getToken())
-                .contentType(MediaType.APPLICATION_JSON).accept(MediaType.APPLICATION_JSON);
+        return builder;
     }
 
     @Test
@@ -115,7 +100,6 @@ class UserProfileApiTest {
     }
 
     @Test
-    @Disabled("TODO: Re-enable when API authentication returns 401 for anonymous requests")
     void anonymousUpdateIsRejected() throws Exception {
         mvc.perform(updateAs(null).content("""
                 {"firstName":"Sara","lastName":"Nordmann"}
@@ -124,13 +108,13 @@ class UserProfileApiTest {
     }
 
     @Test
-    void deletedSessionUserReturnsNotFound() throws Exception {
+    void deletedTokenUserIsUnauthenticated() throws Exception {
         User user = users.save(new User("sara@example.com", "Sara", "Nordmann"));
         users.deleteById(user.getUserId());
         mvc.perform(updateAs(user).content("""
                 {"firstName":"Sara","lastName":"Nordmann"}
                 """))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isUnauthorized());
     }
 
     @Test

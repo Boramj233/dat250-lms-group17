@@ -1,17 +1,13 @@
 package no.hvl.dat250.lms.user;
 
 import no.hvl.dat250.lms.user.domain.User;
+import no.hvl.dat250.lms.auth.ApiTokenService;
 import no.hvl.dat250.lms.user.repository.UserRepository;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
-import org.springframework.mock.web.MockHttpSession;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.context.SecurityContextImpl;
-import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,6 +22,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @Transactional
 class CurrentUserApiTest {
     @Autowired private MockMvc mvc;
+    @Autowired private ApiTokenService tokens;
     @Autowired private UserRepository users;
 
     @Test
@@ -34,7 +31,7 @@ class CurrentUserApiTest {
         // A second account must not affect which profile is returned.
         users.save(new User("other@example.com", "Sara", "Nordmann"));
         mvc.perform(get("/api/users/me").accept(MediaType.APPLICATION_JSON)
-                        .session(sessionFor(user)))
+                        .header("Authorization", "Bearer " + tokens.issue(user).accessToken()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", aMapWithSize(5)))
                 .andExpect(jsonPath("$.username").doesNotExist())
@@ -48,30 +45,18 @@ class CurrentUserApiTest {
     }
 
     @Test
-    @Disabled("TODO: Re-enable when API authentication returns 401 for anonymous requests")
     void rejectsUnauthenticatedRequests() throws Exception {
         mvc.perform(get("/api/users/me").accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isUnauthorized());
     }
 
-    private MockHttpSession sessionFor(User user) {
-        MockHttpSession session = new MockHttpSession();
-        session.setAttribute(HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY,
-                new SecurityContextImpl(UsernamePasswordAuthenticationToken.authenticated(user, null, java.util.List.of())));
-        return session;
-    }
 
     @Test
-    void returnsNotFoundWhenSessionUserHasBeenDeleted() throws Exception {
+    void deletedTokenUserIsUnauthenticated() throws Exception {
         User user = users.save(new User("sara@example.com", "Sara", "Nordmann"));
-        var authentication = UsernamePasswordAuthenticationToken.authenticated(
-                user, null, java.util.List.of());
-        MockHttpSession session = new MockHttpSession();
-        session.setAttribute(HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY,
-                new SecurityContextImpl(authentication));
+        String token = tokens.issue(user).accessToken();
         users.deleteById(user.getUserId());
-
-        mvc.perform(get("/api/users/me").session(session).accept(MediaType.APPLICATION_JSON))
-                .andExpect(status().isNotFound());
+        mvc.perform(get("/api/users/me").header("Authorization", "Bearer " + token))
+                .andExpect(status().isUnauthorized());
     }
 }
