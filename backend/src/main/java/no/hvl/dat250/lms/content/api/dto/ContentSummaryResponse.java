@@ -2,6 +2,7 @@ package no.hvl.dat250.lms.content.api.dto;
 
 import no.hvl.dat250.lms.content.domain.Content;
 import no.hvl.dat250.lms.content.domain.StaticPage;
+import no.hvl.dat250.lms.content.domain.Quiz;
 
 public record ContentSummaryResponse(
     Long id,
@@ -16,6 +17,15 @@ public record ContentSummaryResponse(
             return new ContentSummaryResponse(
                 content.getId(),
                 "STATIC_PAGE",
+                content.getTitle(),
+                content.getPosition()
+            );
+        }
+
+        if (content instanceof Quiz) {
+            return new ContentSummaryResponse(
+                content.getId(),
+                "QUIZ",
                 content.getTitle(),
                 content.getPosition()
             );
