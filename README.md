@@ -118,8 +118,8 @@ From the repository root:
 ./gradlew :backend:build
 ```
 
-This automatically installs frontend dependencies,
-builds React, and packages the Spring Boot application.
+This builds and tests the Spring Boot application only.
+The frontend is built separately with `npm run build` in `frontend/`.
 
 ### Run the Application
 

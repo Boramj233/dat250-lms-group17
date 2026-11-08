@@ -1,17 +1,17 @@
 
 # DAT250 Group 17 LMS: build and test on merge requests and main.
+# Frontend and backend are built independently and run in parallel.
 workflow:
   rules:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
     - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
 
 stages:
-  - frontend
-  - backend
+  - build
 
-# Job 1: Build the React app with Node.js.
+# Build the React app with Node.js.
 frontend-build:
-  stage: frontend
+  stage: build
   image: node:26-bookworm-slim
   script:
     - cd frontend
@@ -22,18 +22,13 @@ frontend-build:
       - frontend/dist/
     expire_in: 1 week
 
-# Job 2: Build and test Spring Boot with Java 25.
+# Build and test Spring Boot with Java 25.
 backend-build-test:
-  stage: backend
+  stage: build
   image: eclipse-temurin:25-jdk
-  needs:
-    - job: frontend-build
-      artifacts: true
   script:
     - java -version
-    - test -f frontend/dist/index.html
-    - ./gradlew --no-daemon :backend:build -x :backend:installFrontend -x :backend:buildFrontend
-    - test -f backend/build/resources/main/static/index.html
+    - ./gradlew --no-daemon :backend:build
   artifacts:
     when: always
     paths:
