@@ -95,6 +95,18 @@ public class TokenService implements OpaqueTokenIntrospector {
         return new AuthenticatedUser(user.getUserId(), List.of(authority));
     }
 
+    /**
+     * Revokes every token of this user (used on logout). The tokens are opaque and only
+     * valid while their entry is in the map, so removing the entries is enough.
+     *
+     * @return the number of tokens revoked
+     */
+    public int revokeAllFor(Long userId) {
+        int before = tokens.size();
+        tokens.values().removeIf(stored -> stored.userId().equals(userId));
+        return before - tokens.size();
+    }
+
     private static String hash(String token) {
         try {
             byte[] digest = MessageDigest.getInstance("SHA-256")

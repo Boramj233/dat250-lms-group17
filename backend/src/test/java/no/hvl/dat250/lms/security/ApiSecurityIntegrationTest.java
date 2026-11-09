@@ -29,6 +29,7 @@ import static org.hamcrest.Matchers.startsWith;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 /**
@@ -162,6 +163,27 @@ class ApiSecurityIntegrationTest {
         entities.flush();
         mvc.perform(get("/api/users/me").header("Authorization", header))
                 .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void logoutRevokesTheUsersTokensButNotOtherUsersTokens() throws Exception {
+        User student = saveUser("student1@example.com", Access.STANDARD);
+        User other = saveUser("student2@example.com", Access.STANDARD);
+        String studentToken = bearer(student);
+        String otherToken = bearer(other);
+        mvc.perform(get("/api/users/me").header("Authorization", studentToken))
+                .andExpect(status().isOk());
+
+        mvc.perform(post("/logout").session(loginSession(student.getEmail())))
+                .andExpect(status().is3xxRedirection());
+
+        // Same token, still within its lifetime: revoked by the logout.
+        mvc.perform(get("/api/users/me").header("Authorization", studentToken))
+                .andExpect(status().isUnauthorized())
+                .andExpect(header().doesNotExist("Location"));
+        mvc.perform(get("/api/users/me").header("Authorization", otherToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.userId").value(other.getUserId()));
     }
 
     /** A session as the login chain stores it after a successful Keycloak login. */

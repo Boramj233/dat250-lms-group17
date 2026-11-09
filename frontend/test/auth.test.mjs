@@ -1,6 +1,6 @@
 import { afterEach, test } from 'node:test'
 import assert from 'node:assert/strict'
-import { clearToken, getAccessToken, isLoginRequired, login, LOGIN_URL } from '../src/data/auth/auth.ts'
+import { clearToken, getAccessToken, isLoginRequired, login, LOGIN_URL, logout } from '../src/data/auth/auth.ts'
 import { apiClient, AuthenticationRequiredError } from '../src/data/shared/apiClient.ts'
 
 const originalFetch = globalThis.fetch
@@ -23,6 +23,31 @@ test('login is a full page navigation to the Spring Boot OAuth 2.0 login', () =>
   login()
   assert.equal(globalThis.window.location.href, '/oauth2/authorization/keycloak')
   assert.equal(LOGIN_URL, '/oauth2/authorization/keycloak')
+})
+
+test('logout forgets the token and submits a form POST to /logout instead of using fetch', async () => {
+  let tokenRequests = 0
+  globalThis.fetch = async url => {
+    assert.equal(url, '/token', 'logout must not use fetch')
+    tokenRequests++
+    return token(`token-${tokenRequests}`)
+  }
+  assert.equal(await getAccessToken(), 'token-1')
+
+  const submitted = []
+  const originalDocument = globalThis.document
+  globalThis.document = {
+    createElement: tag => ({ tag, submit() { submitted.push({ tag, method: this.method, action: this.action }) } }),
+    body: { appendChild() {} },
+  }
+  try {
+    logout()
+  } finally {
+    globalThis.document = originalDocument
+  }
+  assert.deepEqual(submitted, [{ tag: 'form', method: 'post', action: '/logout' }])
+  // The old token is gone from memory: the next call has to ask GET /token again.
+  assert.equal(await getAccessToken(), 'token-2')
 })
 
 test('concurrent requests share one token fetch and reuse the token in memory', async () => {

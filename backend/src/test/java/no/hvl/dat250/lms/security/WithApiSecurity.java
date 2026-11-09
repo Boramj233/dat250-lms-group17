@@ -18,5 +18,5 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 @Retention(RetentionPolicy.RUNTIME)
 @Import(SecurityConfig.class)
 @ActiveProfiles("test")
-@MockitoBean(types = {TokenService.class, LmsOidcUserService.class})
+@MockitoBean(types = {TokenService.class, LmsOidcUserService.class, TokenRevokingLogoutHandler.class})
 public @interface WithApiSecurity {}

@@ -94,6 +94,22 @@ class TokenServiceTest {
     }
 
     @Test
+    void revokeAllForRemovesOnlyThatUsersTokens() {
+        User sara = storedUser(7, Access.STANDARD);
+        User ola = storedUser(8, Access.STANDARD);
+        String saraBrowser = tokens.issue(sara).accessToken();
+        String saraOtherTab = tokens.issue(sara).accessToken();
+        String olaToken = tokens.issue(ola).accessToken();
+
+        assertEquals(2, tokens.revokeAllFor(7L));
+
+        assertThrows(BadOpaqueTokenException.class, () -> tokens.introspect(saraBrowser));
+        assertThrows(BadOpaqueTokenException.class, () -> tokens.introspect(saraOtherTab));
+        assertEquals(8L, ((AuthenticatedUser) tokens.introspect(olaToken)).userId());
+        assertEquals(0, tokens.revokeAllFor(7L));
+    }
+
+    @Test
     void lifetimeMustBePositiveAndUserMustBeStored() {
         assertThrows(IllegalArgumentException.class, () -> new TokenService(users, clock, Duration.ZERO));
         assertThrows(IllegalArgumentException.class,

@@ -65,6 +65,7 @@ public class SecurityConfig {
     @Bean
     @Order(2)
     SecurityFilterChain loginSecurity(HttpSecurity http, LmsOidcUserService oidcUsers,
+                                      TokenRevokingLogoutHandler revokeTokens,
                                       @Value("${lms.security.issuer-uri}") String issuerUri,
                                       @Value("${spring.security.oauth2.client.registration.keycloak.client-id}")
                                       String clientId) throws Exception {
@@ -95,9 +96,11 @@ public class SecurityConfig {
                 // Back to the SPA, on the address the browser used (Vite or nginx).
                 .defaultSuccessUrl("/", true)
                 .failureUrl("/?login_error"))
-            // POST /logout ends the session here and then the session in Keycloak; otherwise
-            // the next login would succeed without asking for the password.
+            // POST /logout: 1) revoke the user's API tokens, 2) invalidate the session
+            // (Spring's own handler, which runs after the ones added here), 3) redirect to
+            // Keycloak's logout; otherwise the next login would not ask for the password.
             .logout(logout -> logout
+                .addLogoutHandler(revokeTokens)
                 .logoutSuccessHandler(keycloakLogout(issuerUri, clientId)))
             // The session cookie is SameSite=Lax, so a cross-site form cannot send it to
             // /logout. The SPA has no CSRF token to send.
