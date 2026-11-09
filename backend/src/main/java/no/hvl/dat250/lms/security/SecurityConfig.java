@@ -3,48 +3,83 @@ package no.hvl.dat250.lms.security;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.annotation.Order;
 import org.springframework.security.access.hierarchicalroles.RoleHierarchy;
 import org.springframework.security.access.hierarchicalroles.RoleHierarchyImpl;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.oauth2.client.oidc.authentication.OidcIdTokenDecoderFactory;
+import org.springframework.security.oauth2.client.oidc.authentication.OidcIdTokenValidator;
+import org.springframework.security.oauth2.client.registration.ClientRegistration;
 import org.springframework.security.oauth2.core.DelegatingOAuth2TokenValidator;
 import org.springframework.security.oauth2.core.OAuth2TokenValidator;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtClaimValidator;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.security.oauth2.jwt.JwtDecoderFactory;
+import org.springframework.security.oauth2.jwt.JwtIssuerValidator;
 import org.springframework.security.oauth2.jwt.JwtValidators;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.web.SecurityFilterChain;
 
 /**
- * The backend is an OAuth2 resource server: every API call carries a Keycloak access
- * token (JWT) in the Authorization header. There is no login, session or cookie here.
+ * Spring Boot is an OAuth 2.0 client: Keycloak performs the login and the backend keeps
+ * a session for the browser.
  */
 @Configuration
 @EnableMethodSecurity
 public class SecurityConfig {
 
     @Bean
+    @Order(1)
     SecurityFilterChain apiSecurity(HttpSecurity http, JwtDecoder jwtDecoder,
                                     AuthService authService) throws Exception {
         http
+            .securityMatcher("/api/**")
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .requestCache(cache -> cache.disable())
             // Authentication is an explicit Bearer header, never a cookie, so CSRF is not possible.
             .csrf(csrf -> csrf.disable())
-            .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/**").authenticated()
-                // Spring's error page, used when rendering error responses for API calls.
-                .requestMatchers("/error").permitAll()
-                // The backend only serves the API; everything else is closed.
-                .anyRequest().denyAll())
+            .authorizeHttpRequests(auth -> auth.anyRequest().authenticated())
             // Missing/invalid token -> 401 with WWW-Authenticate: Bearer (no login redirect).
             .oauth2ResourceServer(server -> server.jwt(jwt -> jwt
                 .decoder(jwtDecoder)
-                // Validated JWT -> AuthenticatedUser(userId) + ROLE_<access> from the database.
                 .jwtAuthenticationConverter(new LmsJwtAuthenticationConverter(authService))));
         return http.build();
+    }
+
+    /** Login with Keycloak (authorization code flow); the result is a session cookie. */
+    @Bean
+    @Order(2)
+    SecurityFilterChain loginSecurity(HttpSecurity http) throws Exception {
+        http
+            .authorizeHttpRequests(auth -> auth
+                .requestMatchers("/error", "/oauth2/authorization/**", "/login/oauth2/code/**").permitAll()
+                .anyRequest().denyAll())
+            .requestCache(cache -> cache.disable())
+            .oauth2Login(login -> login
+                // Without our own login page Spring would render a default one at /login.
+                .loginPage("/oauth2/authorization/keycloak")
+                // Back to the SPA, on the address the browser used (Vite or nginx).
+                .defaultSuccessUrl("/", true)
+                .failureUrl("/?login_error"));
+        return http.build();
+    }
+
+    /**
+     * Validates the id_token Keycloak returns from the code exchange: signature (keys from
+     * the internal JWK set URI), audience, expiry, and the issuer. The endpoints are
+     * configured one by one (public and internal URL differ), so Spring has no issuer to
+     * compare with; Keycloak writes its public URL into the iss claim.
+     */
+    @Bean
+    JwtDecoderFactory<ClientRegistration> idTokenDecoderFactory(
+            @Value("${lms.security.issuer-uri}") String issuerUri) {
+        var factory = new OidcIdTokenDecoderFactory();
+        factory.setJwtValidatorFactory(registration -> new DelegatingOAuth2TokenValidator<>(
+                new OidcIdTokenValidator(registration), new JwtIssuerValidator(issuerUri)));
+        return factory;
     }
 
     /**
