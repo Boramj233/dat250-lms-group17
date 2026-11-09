@@ -74,6 +74,10 @@ public class SecurityConfig {
                 .requestMatchers("/token").authenticated()
                 // Start of the login (step 1) and Keycloak's redirect back (step 3).
                 .requestMatchers("/oauth2/authorization/**", "/login/oauth2/code/**").permitAll()
+                // The SPA's static files contain no data, so they are open without a token
+                // (in Docker nginx serves them; this covers serving them from the backend).
+                .requestMatchers("/", "/index.html", "/assets/**",
+                        "/favicon.ico", "/favicon.svg", "/icons.svg").permitAll()
                 // Spring's error page.
                 .requestMatchers("/error").permitAll()
                 // Everything else (including the H2 console) is closed.
