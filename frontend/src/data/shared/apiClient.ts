@@ -1,5 +1,6 @@
-//shared api client for all api calls, using fetch and returning the response as json
-import { getAccessToken } from '../auth/auth.ts';
+// Shared fetch helper for all API calls: adds `Authorization: Bearer <token>` so the
+// components and query functions never handle the token themselves.
+import { clearToken, getAccessToken, requireLogin } from '../auth/auth.ts';
 
 const BASE_URL = import.meta.env?.VITE_API_URL ?? '';
 
@@ -13,17 +14,27 @@ export async function apiClient<T>(
   endpoint: string,
   options?: RequestInit
 ): Promise<T> {
-  // Refreshes the Keycloak access token first if it is about to expire.
-  const token = await getAccessToken();
-  if (!token) throw new AuthenticationRequiredError();
+  const send = (token: string) => {
+    const headers = new Headers(options?.headers);
+    headers.set('Authorization', `Bearer ${token}`);
+    // The token is the only credential for the API; the session cookie is not sent.
+    return fetch(`${BASE_URL}${endpoint}`, { ...options, credentials: 'omit', headers });
+  };
 
-  const headers = new Headers(options?.headers);
-  headers.set('Authorization', `Bearer ${token}`);
-  // The token in the header is the only credential; never send cookies to the API.
-  const response = await fetch(`${BASE_URL}${endpoint}`, { ...options, credentials: 'omit', headers });
+  let token = await getAccessToken();
+  if (!token) throw new AuthenticationRequiredError();
+  let response = await send(token);
 
   if (response.status === 401) {
-    throw new AuthenticationRequiredError();
+    // The token expired or the backend restarted: try once with a fresh token.
+    clearToken();
+    token = await getAccessToken();
+    if (!token) throw new AuthenticationRequiredError();
+    response = await send(token);
+    if (response.status === 401) {
+      requireLogin();
+      throw new AuthenticationRequiredError();
+    }
   }
 
   if (!response.ok) {

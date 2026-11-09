@@ -24,6 +24,14 @@
   margin-left: auto;
 }
 
+.main-nav {
+  align-items: center;
+}
+
+.current-user {
+  font-weight: var(--font-weight-bold);
+}
+
 .main-nav a {
   display: inline-flex;
   align-items: center;
