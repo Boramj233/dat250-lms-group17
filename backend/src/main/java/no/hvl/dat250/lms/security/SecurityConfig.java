@@ -1,5 +1,6 @@
 package no.hvl.dat250.lms.security;
 
+import java.time.Clock;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -55,6 +56,8 @@ public class SecurityConfig {
     SecurityFilterChain loginSecurity(HttpSecurity http, LmsOidcUserService oidcUsers) throws Exception {
         http
             .authorizeHttpRequests(auth -> auth
+                // Exchanges the login session for an API token.
+                .requestMatchers("/token").authenticated()
                 .requestMatchers("/error", "/oauth2/authorization/**", "/login/oauth2/code/**").permitAll()
                 .anyRequest().denyAll())
             .requestCache(cache -> cache.disable())
@@ -106,6 +109,12 @@ public class SecurityConfig {
         return new DelegatingOAuth2TokenValidator<>(
                 JwtValidators.createDefaultWithIssuer(issuerUri),
                 new JwtClaimValidator<String>("azp", clientId::equals));
+    }
+
+    /** Time source for token expiry; replaceable in tests. */
+    @Bean
+    Clock clock() {
+        return Clock.systemUTC();
     }
 
     /** A higher access level includes everything the lower levels may do. */

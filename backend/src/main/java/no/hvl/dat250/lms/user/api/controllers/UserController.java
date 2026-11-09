@@ -4,7 +4,7 @@ import jakarta.validation.Valid;
 import no.hvl.dat250.lms.user.api.dto.UpdateUserRequest;
 import no.hvl.dat250.lms.user.api.dto.UserResponse;
 import no.hvl.dat250.lms.user.api.dto.UserLookupPageResponse;
-import no.hvl.dat250.lms.user.domain.AuthenticatedUser;
+import no.hvl.dat250.lms.security.AuthenticatedUser;
 import no.hvl.dat250.lms.user.service.UserService;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;

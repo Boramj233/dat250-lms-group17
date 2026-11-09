@@ -4,7 +4,7 @@ import jakarta.validation.ConstraintViolationException;
 import jakarta.validation.Validation;
 import jakarta.validation.ValidatorFactory;
 import no.hvl.dat250.lms.user.domain.Access;
-import no.hvl.dat250.lms.user.domain.AuthenticatedUser;
+import no.hvl.dat250.lms.security.AuthenticatedUser;
 import no.hvl.dat250.lms.user.domain.User;
 import no.hvl.dat250.lms.user.repository.UserRepository;
 import no.hvl.dat250.lms.user.service.UserService;

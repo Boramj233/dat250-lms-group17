@@ -1,7 +1,6 @@
 package no.hvl.dat250.lms.security;
 
 import java.util.List;
-import no.hvl.dat250.lms.user.domain.AuthenticatedUser;
 import no.hvl.dat250.lms.user.domain.User;
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.security.authentication.AbstractAuthenticationToken;
