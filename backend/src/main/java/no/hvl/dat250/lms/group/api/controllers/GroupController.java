@@ -3,6 +3,7 @@ package no.hvl.dat250.lms.group.api.controllers;
 import no.hvl.dat250.lms.group.api.dto.GroupDTO;
 import no.hvl.dat250.lms.group.domain.Group;
 import no.hvl.dat250.lms.group.service.GroupService;
+import no.hvl.dat250.lms.user.domain.User;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
@@ -48,10 +49,31 @@ public class GroupController {
         return ResponseEntity.created(location).body(createdGroup);
     }
 
-    @PutMapping("/{groupId}")
-    public Group updateGroup() { return null; }
-
+    // If more groups are created than needed, it should be able to remove said groups
     @DeleteMapping("/{groupId}")
-    public ResponseEntity<Void> deleteGroup() { return null; }
+    public ResponseEntity<Void> deleteGroup(@PathVariable Long courseId, @PathVariable Long groupId) {
+        groupService.deleteGroup(courseId, groupId);
+        return ResponseEntity.noContent().build();
+    }
 
+    @PostMapping("{groupId}/members")
+    public ResponseEntity<GroupDTO> addGroupMember(
+            @PathVariable Long courseId,
+            @PathVariable Long groupId,
+            @RequestBody String email // <- or user id
+    ) {
+        GroupDTO updatedGroup = groupService.addGroupMember(
+                courseId, groupId, email);
+        return ResponseEntity.ok(updatedGroup);
+    }
+
+    @DeleteMapping("{groupId}/members/{userId}")
+    public ResponseEntity<Void> deleteUserFromGroup(
+            @PathVariable Long courseId,
+            @PathVariable Long groupId,
+            @RequestBody String email // <- or user id
+    ) {
+        groupService.deleteMemberFromGroup(courseId, groupId, email);
+        return ResponseEntity.noContent().build();
+    }
 }

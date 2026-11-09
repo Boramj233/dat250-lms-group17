@@ -1,9 +1,6 @@
 package no.hvl.dat250.lms.group.domain;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Positive;
 import no.hvl.dat250.lms.course.domain.Course;
 import no.hvl.dat250.lms.user.domain.User;
 
