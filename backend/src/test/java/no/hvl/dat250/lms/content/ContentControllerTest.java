@@ -13,18 +13,19 @@ import no.hvl.dat250.lms.course.domain.Course;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
-import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import no.hvl.dat250.lms.security.WithApiSecurity;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.servlet.MockMvc;
 
+import static no.hvl.dat250.lms.security.TestTokens.apiUser;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(ContentController.class)
-@AutoConfigureMockMvc(addFilters = false)
+@WithApiSecurity
 class ContentControllerTest {
 
     @Autowired
@@ -73,7 +74,7 @@ class ContentControllerTest {
                           "body": "Welcome to Java!"
                         }
                         """)
-            )
+            .with(apiUser()))
             .andExpect(status().isCreated())
             .andExpect(jsonPath("$.id").value(100))
             .andExpect(jsonPath("$.courseId").value(1))
@@ -100,7 +101,7 @@ class ContentControllerTest {
                           "body": " "
                         }
                         """)
-            )
+            .with(apiUser()))
             .andExpect(status().isBadRequest());
 
         verifyNoInteractions(contentService);
@@ -118,7 +119,7 @@ class ContentControllerTest {
                           "body": "Welcome to Java!"
                         }
                         """)
-            )
+            .with(apiUser()))
             .andExpect(status().isBadRequest());
 
         verifyNoInteractions(contentService);
@@ -143,7 +144,7 @@ class ContentControllerTest {
                           "body": "Welcome to Java!"
                         }
                         """)
-            )
+            .with(apiUser()))
             .andExpect(status().isNotFound());
     }
 
@@ -167,7 +168,7 @@ class ContentControllerTest {
 
         mockMvc.perform(
                 get("/api/courses/1/modules/10/contents")
-            )
+            .with(apiUser()))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.length()").value(2))
             .andExpect(jsonPath("$[0].id").value(100))
@@ -189,7 +190,7 @@ class ContentControllerTest {
 
         mockMvc.perform(
                 get("/api/courses/1/modules/10/contents")
-            )
+            .with(apiUser()))
             .andExpect(status().isOk())
             .andExpect(content().json("[]"));
     }
@@ -204,7 +205,7 @@ class ContentControllerTest {
 
         mockMvc.perform(
                 get("/api/courses/2/modules/10/contents")
-            )
+            .with(apiUser()))
             .andExpect(status().isNotFound());
     }
 
@@ -232,7 +233,7 @@ class ContentControllerTest {
                 .thenReturn(page);
 
         // Act + Assert
-        mockMvc.perform(get("/api/contents/5"))
+        mockMvc.perform(get("/api/contents/5").with(apiUser()))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.id").value(5))
             .andExpect(jsonPath("$.courseId").value(1))
@@ -252,7 +253,7 @@ class ContentControllerTest {
                     "Content not found: 999"
                 ));
 
-        mockMvc.perform(get("/api/contents/999"))
+        mockMvc.perform(get("/api/contents/999").with(apiUser()))
             .andExpect(status().isNotFound());
 
         verify(contentService).findStaticPageById(999L);

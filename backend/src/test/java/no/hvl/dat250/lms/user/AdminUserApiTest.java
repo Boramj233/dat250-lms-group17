@@ -14,9 +14,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
-import org.springframework.security.oauth2.jwt.JwtDecoder;
+import no.hvl.dat250.lms.security.TokenService;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 import org.springframework.transaction.annotation.Transactional;
@@ -32,7 +31,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @Transactional
 class AdminUserApiTest {
     @Autowired private MockMvc mvc;
-    @MockitoBean private JwtDecoder jwtDecoder;
+    @Autowired private TokenService tokenService;
     @Autowired private UserRepository users;
     @Autowired private EntityManager entities;
     private User admin;
@@ -41,7 +40,6 @@ class AdminUserApiTest {
 
     @BeforeEach
     void createAccounts() {
-        TestTokens.install(jwtDecoder);
         admin = new User("admin@example.com", "System", "Administrator");
         admin.setAccess(Access.ADMIN);
         users.save(admin);
@@ -51,7 +49,7 @@ class AdminUserApiTest {
 
     private MockHttpServletRequestBuilder as(User actor, MockHttpServletRequestBuilder builder) {
         if (actor != null) {
-            builder.header("Authorization", TestTokens.bearer(actor.getEmail()));
+            builder.header("Authorization", TestTokens.bearer(tokenService, actor));
         }
         return builder.contentType(MediaType.APPLICATION_JSON).accept(MediaType.APPLICATION_JSON);
     }

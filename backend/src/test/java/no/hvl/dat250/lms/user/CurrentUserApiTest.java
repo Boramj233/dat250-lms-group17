@@ -3,15 +3,13 @@ package no.hvl.dat250.lms.user;
 import no.hvl.dat250.lms.user.domain.User;
 import no.hvl.dat250.lms.security.TestTokens;
 import no.hvl.dat250.lms.user.repository.UserRepository;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
-import org.springframework.security.oauth2.jwt.JwtDecoder;
+import no.hvl.dat250.lms.security.TokenService;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,11 +23,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @Transactional
 class CurrentUserApiTest {
     @Autowired private MockMvc mvc;
-    @MockitoBean private JwtDecoder jwtDecoder;
+    @Autowired private TokenService tokenService;
     @Autowired private UserRepository users;
-
-    @BeforeEach
-    void acceptTestTokens() { TestTokens.install(jwtDecoder); }
 
     @Test
     void returnsAuthenticatedUsersProfileWithoutPassword() throws Exception {
@@ -37,7 +32,7 @@ class CurrentUserApiTest {
         // A second account must not affect which profile is returned.
         users.save(new User("other@example.com", "Sara", "Nordmann"));
         mvc.perform(get("/api/users/me").accept(MediaType.APPLICATION_JSON)
-                        .header("Authorization", TestTokens.bearer(user.getEmail())))
+                        .header("Authorization", TestTokens.bearer(tokenService, user)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", aMapWithSize(5)))
                 .andExpect(jsonPath("$.username").doesNotExist())

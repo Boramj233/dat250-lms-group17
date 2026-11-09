@@ -5,7 +5,6 @@ import no.hvl.dat250.lms.user.domain.Access;
 import no.hvl.dat250.lms.user.domain.User;
 import no.hvl.dat250.lms.security.TestTokens;
 import no.hvl.dat250.lms.user.repository.UserRepository;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -13,9 +12,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
-import org.springframework.security.oauth2.jwt.JwtDecoder;
+import no.hvl.dat250.lms.security.TokenService;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,19 +29,16 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @Transactional
 class UserProfileApiTest {
     @Autowired private MockMvc mvc;
-    @MockitoBean private JwtDecoder jwtDecoder;
+    @Autowired private TokenService tokenService;
     @Autowired private UserRepository users;
     @Autowired private EntityManager entities;
-
-    @BeforeEach
-    void acceptTestTokens() { TestTokens.install(jwtDecoder); }
 
     // API writes authenticate with a bearer token and do not use cookie/CSRF authentication.
     private MockHttpServletRequestBuilder updateAs(User user) {
         var builder = put("/api/users/me").contentType(MediaType.APPLICATION_JSON)
                 .accept(MediaType.APPLICATION_JSON);
         if (user != null) {
-            builder.header("Authorization", TestTokens.bearer(user.getEmail()));
+            builder.header("Authorization", TestTokens.bearer(tokenService, user));
         }
         return builder;
     }
