@@ -52,7 +52,7 @@ public class SecurityConfig {
     /** Login with Keycloak (authorization code flow); the result is a session cookie. */
     @Bean
     @Order(2)
-    SecurityFilterChain loginSecurity(HttpSecurity http) throws Exception {
+    SecurityFilterChain loginSecurity(HttpSecurity http, LmsOidcUserService oidcUsers) throws Exception {
         http
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/error", "/oauth2/authorization/**", "/login/oauth2/code/**").permitAll()
@@ -61,6 +61,8 @@ public class SecurityConfig {
             .oauth2Login(login -> login
                 // Without our own login page Spring would render a default one at /login.
                 .loginPage("/oauth2/authorization/keycloak")
+                // After the code exchange: find or create the local User by verified email.
+                .userInfoEndpoint(userInfo -> userInfo.oidcUserService(oidcUsers))
                 // Back to the SPA, on the address the browser used (Vite or nginx).
                 .defaultSuccessUrl("/", true)
                 .failureUrl("/?login_error"));
