@@ -13,6 +13,9 @@
 @quizId = {{seedQuiz.response.body.$.id}}
 @springPageId = {{seedSpringPage.response.body.$.id}}
 
+@assignmentCourseId = 1
+@assignmentModuleId = 2
+
 ### 1. Create a demo course (expect 201)
 # @name seedCourse
 POST {{baseUrl}}/api/courses
@@ -158,3 +161,48 @@ GET {{baseUrl}}/api/quizzes/999999999
 
 ### 18. StaticPage ID is not a Quiz (expect 404)
 GET {{baseUrl}}/api/quizzes/{{javaPageId}}
+
+
+### Assignment
+
+### Check existing Course
+GET http://localhost:8080/api/courses/1
+
+### Check existing Modules
+GET http://localhost:8080/api/courses/1/modules
+### 19. Create Assignment
+# @name createWeek2Assignment
+POST {{baseUrl}}/api/courses/{{assignmentCourseId}}/modules/{{assignmentModuleId}}/contents/assignments
+Content-Type: application/json
+
+{
+  "title": "Spring Boot and JPA Assignment",
+  "position": 1,
+  "instructions": "Implement JPA entities and repositories. Submit a short report.",
+  "deadline": "2026-11-20T23:00:00Z",
+  "allowLateSubmission": false
+}
+
+### 20. Get Assignment
+GET {{baseUrl}}/api/assignments/18
+
+### 21. Get Week 2 Contents
+GET {{baseUrl}}/api/courses/{{assignmentCourseId}}/modules/{{assignmentModuleId}}/contents
+
+### 22. Nonexistent Assignment - expect 404
+GET {{baseUrl}}/api/assignments/999999999
+
+# ### 23. StaticPage is not Assignment - expect 404
+# GET {{baseUrl}}/api/assignments/{{springPageId}}
+
+# ### 24. Invalid Assignment - expect 400
+# POST {{baseUrl}}/api/courses/{{courseId}}/modules/{{springModuleId}}/contents/assignments
+# Content-Type: application/json
+
+# {
+#   "title": "Invalid Assignment",
+#   "position": 2,
+#   "instructions": "   ",
+#   "deadline": null,
+#   "allowLateSubmission": true
+# }
