@@ -7,6 +7,8 @@ import java.util.Objects;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.oauth2.core.OAuth2AuthenticatedPrincipal;
 
+import no.hvl.dat250.lms.security.token.TokenService;
+
 /**
  * Identity of the caller for the current API request: the local user ID and the
  * authorities (ROLE_&lt;access&gt;) read from the database when the token was checked.

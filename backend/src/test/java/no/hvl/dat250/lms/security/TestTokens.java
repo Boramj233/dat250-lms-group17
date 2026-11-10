@@ -1,6 +1,8 @@
 package no.hvl.dat250.lms.security;
 
 import java.util.List;
+
+import no.hvl.dat250.lms.security.token.TokenService;
 import no.hvl.dat250.lms.user.domain.Access;
 import no.hvl.dat250.lms.user.domain.User;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;

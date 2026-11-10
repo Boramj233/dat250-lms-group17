@@ -1,4 +1,4 @@
-package no.hvl.dat250.lms.security;
+package no.hvl.dat250.lms.security.token;
 
 import org.springframework.http.CacheControl;
 import org.springframework.http.HttpStatus;
@@ -9,6 +9,8 @@ import org.springframework.security.oauth2.core.oidc.user.OidcUser;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
+
+import no.hvl.dat250.lms.security.login.AuthService;
 
 /**
  * GET /token: exchanges the login session (cookie) for an API token.

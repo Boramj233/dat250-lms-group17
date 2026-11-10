@@ -2,6 +2,9 @@ package no.hvl.dat250.lms.security;
 
 import java.time.Instant;
 import java.util.Set;
+
+import no.hvl.dat250.lms.security.login.AuthService;
+import no.hvl.dat250.lms.security.login.LmsOidcUserService;
 import no.hvl.dat250.lms.user.domain.User;
 import no.hvl.dat250.lms.user.service.UserService;
 import org.junit.jupiter.api.Test;

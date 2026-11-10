@@ -1,4 +1,4 @@
-package no.hvl.dat250.lms.security;
+package no.hvl.dat250.lms.security.token;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -11,6 +11,8 @@ import java.util.Base64;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
+
+import no.hvl.dat250.lms.security.AuthenticatedUser;
 import no.hvl.dat250.lms.user.domain.User;
 import no.hvl.dat250.lms.user.service.UserService;
 import org.springframework.beans.factory.annotation.Value;

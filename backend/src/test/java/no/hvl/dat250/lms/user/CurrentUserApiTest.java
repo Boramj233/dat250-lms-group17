@@ -2,13 +2,13 @@ package no.hvl.dat250.lms.user;
 
 import no.hvl.dat250.lms.user.domain.User;
 import no.hvl.dat250.lms.security.TestTokens;
+import no.hvl.dat250.lms.security.token.TokenService;
 import no.hvl.dat250.lms.user.repository.UserRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
-import no.hvl.dat250.lms.security.TokenService;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;

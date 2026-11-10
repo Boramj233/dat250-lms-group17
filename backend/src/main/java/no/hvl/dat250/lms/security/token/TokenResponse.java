@@ -1,4 +1,4 @@
-package no.hvl.dat250.lms.security;
+package no.hvl.dat250.lms.security.token;
 
 import java.time.Instant;
 

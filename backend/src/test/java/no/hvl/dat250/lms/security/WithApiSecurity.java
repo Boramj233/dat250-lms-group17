@@ -8,6 +8,10 @@ import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
+import no.hvl.dat250.lms.security.login.LmsOidcUserService;
+import no.hvl.dat250.lms.security.token.TokenRevokingLogoutHandler;
+import no.hvl.dat250.lms.security.token.TokenService;
+
 /**
  * For {@code @WebMvcTest} controller tests: runs them with the application's real
  * {@link SecurityConfig} (both filter chains and method security) instead of turning the

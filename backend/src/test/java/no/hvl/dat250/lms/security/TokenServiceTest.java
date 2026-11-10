@@ -9,6 +9,9 @@ import java.time.ZoneOffset;
 import java.util.HexFormat;
 import java.util.Map;
 import java.util.Optional;
+
+import no.hvl.dat250.lms.security.token.TokenResponse;
+import no.hvl.dat250.lms.security.token.TokenService;
 import no.hvl.dat250.lms.user.domain.Access;
 import no.hvl.dat250.lms.user.domain.User;
 import no.hvl.dat250.lms.user.service.UserService;

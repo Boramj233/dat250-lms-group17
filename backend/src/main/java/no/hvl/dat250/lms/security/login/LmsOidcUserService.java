@@ -1,4 +1,4 @@
-package no.hvl.dat250.lms.security;
+package no.hvl.dat250.lms.security.login;
 
 import org.springframework.security.oauth2.client.oidc.userinfo.OidcUserRequest;
 import org.springframework.security.oauth2.client.oidc.userinfo.OidcUserService;

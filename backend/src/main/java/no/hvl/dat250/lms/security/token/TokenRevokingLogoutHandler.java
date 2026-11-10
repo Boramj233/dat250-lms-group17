@@ -1,7 +1,9 @@
-package no.hvl.dat250.lms.security;
+package no.hvl.dat250.lms.security.token;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import no.hvl.dat250.lms.security.login.AuthService;
+
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
 import org.springframework.security.oauth2.core.oidc.user.OidcUser;
