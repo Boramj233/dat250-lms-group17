@@ -4,6 +4,7 @@ import no.hvl.dat250.lms.content.domain.Content;
 import no.hvl.dat250.lms.content.domain.StaticPage;
 import no.hvl.dat250.lms.content.domain.Quiz;
 import no.hvl.dat250.lms.content.domain.Assignment;
+import no.hvl.dat250.lms.content.domain.CodingExercise;
 
 public record ContentSummaryResponse(
     Long id,
@@ -36,6 +37,15 @@ public record ContentSummaryResponse(
             return new ContentSummaryResponse(
                 content.getId(),
                 "Assignment",
+                content.getTitle(),
+                content.getPosition()
+            );
+        }
+
+        if (content instanceof CodingExercise) {
+            return new ContentSummaryResponse(
+                content.getId(),
+                "CODING_EXERCISE",
                 content.getTitle(),
                 content.getPosition()
             );
