@@ -13,9 +13,8 @@ import jakarta.validation.constraints.Size;
 public class User {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "user_id_generator")
-    @SequenceGenerator(name = "user_id_generator", sequenceName = "user_id_seq", allocationSize = 1)
-    @Column(name = "user_id", updatable = false)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id", updatable = false)
     private Long userId;
 
     @NotBlank

@@ -74,6 +74,12 @@ services:
       KEYCLOAK_PUBLIC_URL: http://localhost:8081
       KEYCLOAK_INTERNAL_URL: http://keycloak:8080
 
+    # H2 file database (jdbc:h2:file:./data/backend, i.e. /app/data). Kept in a named
+    # volume so users and courses survive "docker compose up --build backend".
+    # "docker compose down -v" erases it.
+    volumes:
+      - backend-data:/app/data
+
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -95,5 +101,6 @@ services:
 volumes:
   keycloak-data:
   rabbitmq-data:
+  backend-data:
 
 # TODO: Add SQL and NoSQL database volumes
