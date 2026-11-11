@@ -120,7 +120,7 @@ class AdminUserApiTest {
                 .andExpect(content().string(not(containsString("private-user-hash"))));
         entities.flush();
         entities.clear();
-        User stored = users.findByUserId(user.getUserId()).orElseThrow();
+        User stored = users.findById(user.getUserId()).orElseThrow();
         assertEquals(access, stored.getAccess());
         assertEquals("Sara", stored.getFirstName());
         assertEquals(user.getEmail(), stored.getEmail());
@@ -133,7 +133,7 @@ class AdminUserApiTest {
                 .andExpect(status().isForbidden());
         entities.flush();
         entities.clear();
-        assertEquals(Access.ADMIN, users.findByUserId(admin.getUserId()).orElseThrow().getAccess());
+        assertEquals(Access.ADMIN, users.findById(admin.getUserId()).orElseThrow().getAccess());
     }
 
     @ParameterizedTest
@@ -146,7 +146,7 @@ class AdminUserApiTest {
         mvc.perform(as(user, patch("/api/admin/users/{id}/access", other.getUserId()))
                         .content("{\"access\":\"ADMIN\"}"))
                 .andExpect(status().isForbidden());
-        assertEquals(Access.STANDARD, users.findByUserId(other.getUserId()).orElseThrow().getAccess());
+        assertEquals(Access.STANDARD, users.findById(other.getUserId()).orElseThrow().getAccess());
     }
 
     @Test
@@ -163,7 +163,7 @@ class AdminUserApiTest {
     void outdatedAdminTokenCannotRetainPrivileges() throws Exception {
         entities.flush();
         entities.detach(admin);
-        User storedAdmin = users.findByUserId(admin.getUserId()).orElseThrow();
+        User storedAdmin = users.findById(admin.getUserId()).orElseThrow();
         storedAdmin.setAccess(Access.STANDARD);
         assertEquals(Access.ADMIN, admin.getAccess());
         mvc.perform(as(admin, get("/api/admin/users"))).andExpect(status().isForbidden());
@@ -187,7 +187,7 @@ class AdminUserApiTest {
     void invalidAccessRequestsDoNotChangeUser(String body) throws Exception {
         mvc.perform(as(admin, patch("/api/admin/users/{id}/access", user.getUserId())).content(body))
                 .andExpect(status().isBadRequest());
-        assertEquals(Access.STANDARD, users.findByUserId(user.getUserId()).orElseThrow().getAccess());
+        assertEquals(Access.STANDARD, users.findById(user.getUserId()).orElseThrow().getAccess());
     }
 
     @Test
@@ -266,7 +266,7 @@ class AdminUserApiTest {
         other.setAccess(Access.COURSE_MANAGER);
         entities.flush();
         entities.detach(other);
-        users.findByUserId(other.getUserId()).orElseThrow().setAccess(Access.STANDARD);
+        users.findById(other.getUserId()).orElseThrow().setAccess(Access.STANDARD);
         assertEquals(Access.COURSE_MANAGER, other.getAccess());
         mvc.perform(as(other, get("/api/users/search").param("search", "Sara")))
                 .andExpect(status().isForbidden());

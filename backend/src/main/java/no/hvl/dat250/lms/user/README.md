@@ -7,25 +7,26 @@ endpoint, or mustChangePassword flag.
 
 `User(email, firstName, lastName)` requires a valid, non-blank email and non-blank
 names, all at most 255 characters. The email must match the external identity;
-it is unique and cannot be changed through profile updates. Only `userId` is
-generated locally. It remains the Long primary key backed by `user_id_seq`.
-`User` implements Principal for a mapped local identity, not UserDetails.
+it is unique, stored in lower case (as Keycloak reports it), and cannot be changed
+through profile updates. Only `userId` is generated locally. It remains the Long
+primary key backed by `user_id_seq`.
 
-## Authentication integration still required
+## Division of work with the security feature
 
-The auth feature must validate Keycloak OIDC/token identities and map them to
-local profiles using the verified email claim. The current user controllers and
-service expect the resulting local User as the authenticated principal. They do
-not accept an unverified email from an HTTP header as proof of identity.
-Direct OidcUser/Jwt principal mapping, OAuth login, bearer-token validation,
-token issuance/revocation, and public/static asset rules are not implemented by
-this cleanup. API tests inject local authenticated principals to test profile and
-access policies; they do not prove Keycloak or bearer-token integration.
+The security feature (`no.hvl.dat250.lms.security`) authenticates every request
+(Keycloak access token, verified email -> local profile) and decides who may call
+what: `@IsAdmin` and `@IsCourseManager` on the controllers, with the caller's access
+read from the database on every request. It also decides who may log in at all
+(invite-only) and bootstraps the first admin.
 
-The exercise's optional local-profile creation on first verified OIDC login is
-not implemented yet. The administrator operation below pre-provisions a local
-profile only; it neither creates a Keycloak account nor changes its credentials.
-The first local administrator still requires trusted setup.
+This feature only owns the profiles: their data, validation, unique emails, the
+class-list import, and the rule that an admin cannot demote themselves. The
+service does not read the security context; controllers pass the caller's ID
+from `@AuthenticationPrincipal AuthenticatedUser` when a rule needs it.
+
+Profiles come from an admin (single profile or CSV import) before the first login.
+They never create Keycloak accounts or credentials: users register in Keycloak
+themselves with the same email.
 
 ## Profile endpoints
 
@@ -44,11 +45,12 @@ profile is authoritative for display names.
 
 ## Administrator endpoints
 
-All operations below require current stored Access.ADMIN, checked by the service.
+All operations below require ADMIN access (`@IsAdmin`).
 
 | Method | Endpoint | Purpose |
 | --- | --- | --- |
 | POST | `/api/admin/users` | Create a local profile for an external identity |
+| POST | `/api/admin/users/import` | Create profiles from a CSV class list (multipart field `file`) |
 | GET | `/api/admin/users?search=&page=0&size=20` | List/search local profiles |
 | GET | `/api/admin/users/{userId}` | Read one profile |
 | PATCH | `/api/admin/users/{userId}/access` | Set global application access |
@@ -56,8 +58,14 @@ All operations below require current stored Access.ADMIN, checked by the service
 Creation accepts firstName, lastName, and email. It returns 201, a Location
 header, and the profile. It defaults to STANDARD and cannot accept a chosen
 userId or access level. Duplicate emails return 409. No credentials are accepted
-or stored. `UserService.createUser(firstName, lastName, email)` performs the
-administrator check, validation, uniqueness check, and persistence.
+or stored. `UserService.createUser(firstName, lastName, email)` performs
+validation, the uniqueness check, and persistence.
+
+The CSV import takes a header row `email,firstName,lastName,access` (access is
+optional, blank = STANDARD; commas or semicolons; UTF-8). Each row is validated
+like a single profile; existing emails are skipped, so a file can be uploaded
+again. The response reports every row as CREATED, ALREADY_EXISTS,
+DUPLICATE_IN_FILE, or INVALID (with the errors); an unreadable file returns 400.
 
 Access updates accept {"access":"COURSE_MANAGER"}. Allowed values are STANDARD,
 COURSE_MANAGER, and ADMIN. An administrator cannot remove their own ADMIN access.
@@ -69,9 +77,8 @@ matching name/email substrings without case sensitivity or an exact numeric ID.
 Blank search lists all users; percent and underscore are literal characters.
 
 Invalid requests return 400, missing authentication 401, insufficient access 403,
-and missing target profiles 404. Access is reloaded from the database to reject
-outdated privileges. Current session-based test scaffolding requires CSRF tokens
-for writes; the future stateless bearer API needs its own security configuration.
+and missing target profiles 404. The security feature reads access from the
+database on every request, so outdated privileges are rejected.
 
 ## Restricted lookup for enrollment
 

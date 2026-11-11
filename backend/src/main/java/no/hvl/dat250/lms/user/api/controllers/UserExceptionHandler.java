@@ -2,18 +2,20 @@ package no.hvl.dat250.lms.user.api.controllers;
 
 import jakarta.validation.ConstraintViolationException;
 import no.hvl.dat250.lms.user.api.InvalidUserCsvException;
+import no.hvl.dat250.lms.user.service.CannotRemoveOwnAdminAccessException;
 import no.hvl.dat250.lms.user.service.UserNotFoundException;
 import no.hvl.dat250.lms.user.service.UserAlreadyExistsException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
-import org.springframework.security.authentication.AuthenticationCredentialsNotFoundException;
-import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
-/** Maps user failures without exposing stored credentials or database messages. */
+/**
+ * Maps the user feature's own failures without exposing database messages. Missing or
+ * insufficient credentials (401/403) are answered by the security feature.
+ */
 @RestControllerAdvice(assignableTypes = {UserController.class, AdminUserController.class})
 public class UserExceptionHandler {
     @ExceptionHandler({UserAlreadyExistsException.class, DataIntegrityViolationException.class})
@@ -26,14 +28,9 @@ public class UserExceptionHandler {
         return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, "Invalid request body");
     }
 
-    @ExceptionHandler(AuthenticationCredentialsNotFoundException.class)
-    public ProblemDetail unauthenticated() {
-        return ProblemDetail.forStatusAndDetail(HttpStatus.UNAUTHORIZED, "Authentication required");
-    }
-
-    @ExceptionHandler(AccessDeniedException.class)
-    public ProblemDetail forbidden() {
-        return ProblemDetail.forStatusAndDetail(HttpStatus.FORBIDDEN, "Operation not permitted");
+    @ExceptionHandler(CannotRemoveOwnAdminAccessException.class)
+    public ProblemDetail cannotRemoveOwnAdminAccess(CannotRemoveOwnAdminAccessException ex) {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.FORBIDDEN, ex.getMessage());
     }
 
     @ExceptionHandler(UserNotFoundException.class)

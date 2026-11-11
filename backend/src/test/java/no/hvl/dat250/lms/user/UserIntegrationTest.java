@@ -2,7 +2,6 @@ package no.hvl.dat250.lms.user;
 
 import jakarta.persistence.EntityManager;
 import no.hvl.dat250.lms.user.domain.Access;
-import no.hvl.dat250.lms.security.AuthenticatedUser;
 import no.hvl.dat250.lms.user.domain.User;
 import no.hvl.dat250.lms.user.repository.UserRepository;
 import no.hvl.dat250.lms.user.service.UserService;
@@ -13,9 +12,6 @@ import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.junit.jupiter.api.AfterEach;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -31,16 +27,8 @@ class UserIntegrationTest {
     @Autowired private EntityManager entities;
     @Autowired private UserService service;
 
-    @AfterEach
-    void clearAuthentication() { SecurityContextHolder.clearContext(); }
-
     @Test
     void serviceCreatesUserWithGeneratedIdentityAndStandardAccess() {
-        User administrator = new User("admin@example.com", "System", "Administrator");
-        administrator.setAccess(Access.ADMIN);
-        users.save(administrator);
-        SecurityContextHolder.getContext().setAuthentication(
-                UsernamePasswordAuthenticationToken.authenticated(new AuthenticatedUser(administrator.getUserId()), null, java.util.List.of()));
         User created = service.createUser("Sara", "Nordmann", "sara@example.com");
         Long userId = created.getUserId();
         org.junit.jupiter.api.Assertions.assertNotNull(userId);
@@ -48,7 +36,7 @@ class UserIntegrationTest {
         entities.flush();
         entities.clear();
 
-        User stored = users.findByUserId(userId).orElseThrow();
+        User stored = users.findById(userId).orElseThrow();
         assertEquals("Sara", stored.getFirstName());
         assertEquals("Nordmann", stored.getLastName());
         assertEquals(Access.STANDARD, stored.getAccess());
@@ -67,7 +55,6 @@ class UserIntegrationTest {
 
         User stored = users.findById(user.getUserId()).orElseThrow();
         assertEquals(user.getUserId(), stored.getUserId());
-        assertEquals(user.getEmail(), stored.getName());
         assertEquals("Sara", stored.getFirstName());
         assertEquals("Nordmann", stored.getLastName());
         assertEquals(user.getEmail(), stored.getEmail());

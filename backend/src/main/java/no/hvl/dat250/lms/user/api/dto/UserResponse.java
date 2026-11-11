@@ -4,7 +4,7 @@ import no.hvl.dat250.lms.user.domain.Access;
 import no.hvl.dat250.lms.user.domain.User;
 
 /**
- * User information returned by the API, excluding the password hash.
+ * User information returned by the API.
  *
  * @param userId the user's generated primary key
  * @param email the user's email address

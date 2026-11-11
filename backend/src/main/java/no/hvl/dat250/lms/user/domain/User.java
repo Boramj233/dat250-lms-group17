@@ -4,14 +4,13 @@ import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.Size;
-import java.security.Principal;
 
 /**
  * Local application profile. Credentials and login belong to the identity provider.
  */
 @Entity
 @Table(name = "users")
-public class User implements Principal {
+public class User {
 
     @Id
     @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "user_id_generator")
@@ -54,10 +53,6 @@ public class User implements Principal {
         this.firstName = firstName;
         this.lastName = lastName;
     }
-
-    /** Local principal name; auth must map the verified external identity to this profile. */
-    @Override
-    public String getName() { return this.email; }
 
     /** Returns the database-generated ID, or null before persistence. */
     public Long getUserId() { return this.userId; }

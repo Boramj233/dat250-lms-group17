@@ -4,7 +4,7 @@ import java.util.List;
 import no.hvl.dat250.lms.user.domain.User;
 import org.springframework.data.domain.Page;
 
-/** Stable pagination contract that exposes profiles without password hashes. */
+/** A page of profiles for administrators. */
 public record UserPageResponse(List<UserResponse> users, int page, int size,
                                long totalElements, int totalPages) {
     public static UserPageResponse from(Page<User> page) {
