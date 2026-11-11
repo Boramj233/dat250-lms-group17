@@ -1,6 +1,22 @@
 import type { ContentId, CourseId, GroupId, UserId } from "../shared/types";
 
 export type SubmissionId = string | number;
+
+// Matches the backend's SubmissionType.
+export type SubmissionKind = "TEXT" | "GIT_URL";
+
+// Matches the backend's SubmissionResponse, from
+// GET /api/contents/{contentId}/submissions/me (the user's own submission history).
+export interface MySubmission {
+  id: SubmissionId;
+  contentId: ContentId;
+  type: SubmissionKind;
+  /** The text, or the repository URL for GIT_URL. */
+  payload: string;
+  /** ISO 8601 instant. */
+  submittedAt: string;
+  late: boolean;
+}
 export type SubmissionStatus = "SUBMITTED" | "GRADING" | "GRADED" | "GRADING_FAILED";
 
 export type SubmissionOwner =

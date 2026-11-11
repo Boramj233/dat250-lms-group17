@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router'
 import { paths } from '../../app/paths'
 import type { DeadlineContentType, UpcomingDeadline } from '../../data/deadlines/types'
+import { TrailLink } from '../navigation/Trail'
+import MandatoryBadge from './MandatoryBadge'
 import { formatDateTime, formatDayMonth, formatTimeLeft, isSoon } from './dateFormat'
 import './DeadlineList.css'
 
@@ -42,15 +43,18 @@ export default function DeadlineList({ deadlines }: DeadlineListProps) {
               <span className="deadline-month">{month}</span>
             </div>
             <div className="deadline-body">
-              {/* TODO: Link the title to the assignment / coding exercise page once it
-                  exists (route by item.type and item.contentId). */}
               {/* TODO: Show whether the user has submitted, once UpcomingDeadline has
                   `submitted` (see data/deadlines/types.ts). */}
-              <p className="deadline-title">{item.title}</p>
+              <p className="deadline-title">
+                <TrailLink to={paths.courseContent(item.courseId, item.moduleId, item.contentId)}>
+                  {item.title}
+                </TrailLink>
+              </p>
               <p className="deadline-meta">
+                {item.mandatory && <><MandatoryBadge />{' '}</>}
                 <span>{TYPE_LABEL[item.type]}</span>
                 <span aria-hidden="true"> · </span>
-                <Link to={paths.course(item.courseId)}>{item.courseTitle}</Link>
+                <TrailLink to={paths.course(item.courseId)}>{item.courseTitle}</TrailLink>
               </p>
               <p className="deadline-time">
                 <time dateTime={item.deadline}>{formatDateTime(due)}</time>

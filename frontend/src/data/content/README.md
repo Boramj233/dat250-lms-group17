@@ -1,18 +1,63 @@
-# Content API contract (proposed)
+# Content API contract
 
-These endpoints and DTOs are frontend assumptions until the backend is implemented.
-The supported content types are `TEXT` and `QUIZ`. `Content` is a union of
-`TextContent` and `QuizContent`. Assignment and coding exercise types are not yet
-implemented.
+The read endpoints below exist in the backend, and the types in `types.ts` match its
+DTOs. The write and completion endpoints further down are still frontend proposals.
 
-`ContentSummary` contains `id`, `moduleId`, `title`, zero-based `position`, and
-`type`. `TextContent` also contains `body`, treated as plain text. Render it as text
-in React; do not insert it as raw HTML. Module lists return summaries without body.
+The content types are `STATIC_PAGE`, `QUIZ`, `ASSIGNMENT` and `CODING_EXERCISE`.
+The backend's content list sends `"Assignment"` for assignments; `getModuleContent`
+normalizes it to `ASSIGNMENT` (the backend should send `ASSIGNMENT` too).
+
+`ContentSummary` (backend `ContentSummaryResponse`) contains `id`, `type`, `title`
+and zero-based `position`. The detail responses have no `type` field, and there is
+one endpoint per type, so `getContent(type, contentId)` takes the type from the
+summary and adds it to the result. `StaticPageContent.body` is plain text: render it
+as text in React; do not insert it as raw HTML.
 
 | Method | Endpoint | Request body | Response |
 | --- | --- | --- | --- |
-| GET | `/api/modules/{moduleId}/content` | — | `ContentSummary[]` |
-| GET | `/api/content/{contentId}` | — | `Content` |
+| GET | `/api/courses/{courseId}/modules/{moduleId}/contents` | — | `ContentSummary[]` |
+| GET | `/api/contents/{contentId}` | — | `StaticPageContent` (without `type`) |
+| GET | `/api/quizzes/{quizId}` | — | `QuizContent` (without `type`) |
+| GET | `/api/assignments/{assignmentId}` | — | `AssignmentContent` (without `type`) |
+| GET | `/api/coding-exercises/{exerciseId}` | — | `CodingExerciseContent` (without `type`) |
+
+## Mandatory assignments (proposed)
+
+`AssignmentContent.mandatory` (boolean) says whether the assignment must be passed.
+It is not in the backend's `AssignmentResponse` (or the `Assignment` entity) yet; the
+backend should add it to the entity, `CreateAssignmentRequest` and
+`AssignmentResponse`. Until then the field is missing and the UI does not show it.
+
+## Completions (proposed)
+
+Assignments, coding exercises and quizzes are shown as "To do" or "Completed". One
+request per course gives the status of all of them:
+
+| Method | Endpoint | Request body | Response |
+| --- | --- | --- | --- |
+| GET | `/api/courses/{courseId}/completions/me` | — | `CompletedContent[]` |
+
+`CompletedContent` is `{ contentId, completedAt }`. The list contains, for the
+logged-in user:
+
+- assignments and coding exercises with at least one submission (by the user, or
+  by their group), `completedAt` = first submission;
+- quizzes with at least one submitted attempt, `completedAt` = first attempt.
+
+Static pages are not included. The backend has `GET /api/contents/{id}/submissions/me`,
+but that would be one request per item.
+
+```tsx
+const completed = useCourseCompletions(courseId); // Set of content ids (strings)
+completed.data?.has(String(item.id));
+```
+
+## Other endpoints
+
+Proposed (not in the backend yet):
+
+| Method | Endpoint | Request body | Response |
+| --- | --- | --- | --- |
 | POST | `/api/modules/{moduleId}/content` | Text or quiz fields from `CreateContentInput` | `Content` |
 | PATCH | `/api/content/{contentId}` | Updated `title`, `position`, and/or `body` | `Content` |
 | DELETE | `/api/content/{contentId}` | — | `204 No Content` |
@@ -47,8 +92,9 @@ access to other modules. It must persist and recalculate progress before returni
 a successful completion response; the frontend does not calculate or grant access.
 
 ```tsx
-const items = useModuleContent(moduleId);
-const content = useContent(contentId);
+const items = useModuleContent(courseId, moduleId);
+const content = useContent(summary.type, contentId);
+const all = useCourseContent(courseId, moduleIds); // several modules at once
 const completion = useContentCompletion(contentId, userId);
 const moduleProgress = useUserModuleProgress(courseId, userId);
 const createContent = useCreateContent();
@@ -57,7 +103,7 @@ const moveContent = useMoveContent();
 const deleteContent = useDeleteContent();
 const setCompletion = useSetContentCompletion();
 
-createContent.mutate({ moduleId, type: "TEXT", title: "Welcome", position: 0, body: "Hello" });
+createContent.mutate({ moduleId, type: "STATIC_PAGE", title: "Welcome", position: 0, body: "Hello" });
 updateContent.mutate({ contentId, moduleId, changes: { body: "Updated text" } });
 moveContent.mutate({ contentId, sourceModuleId: moduleId, targetModuleId, position: 0 });
 deleteContent.mutate({ contentId, moduleId });

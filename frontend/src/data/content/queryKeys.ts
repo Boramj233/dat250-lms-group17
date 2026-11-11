@@ -1,7 +1,9 @@
-import type { ContentId, ModuleId, UserId } from "../shared/types";
+import type { ContentId, CourseId, ModuleId, UserId } from "../shared/types";
 
 export const contentKeys = {
   all: ["content"] as const,
+  courseCompletions: (courseId: CourseId) =>
+    ["content", "courseCompletions", String(courseId)] as const,
   moduleContent: (moduleId: ModuleId) =>
     ["content", "module", String(moduleId)] as const,
   content: (contentId: ContentId) =>

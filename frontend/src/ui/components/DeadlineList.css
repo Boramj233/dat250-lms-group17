@@ -70,6 +70,7 @@
   font-size: var(--text-small);
 }
 
+.deadline-title a,
 .deadline-meta a {
   color: var(--color-text);
 }

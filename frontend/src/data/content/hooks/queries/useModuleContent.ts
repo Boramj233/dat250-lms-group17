@@ -1,13 +1,15 @@
-// Fetches and caches content summaries for a specific module.
+// Fetches and caches the content summaries of a module, sorted by position.
 
 import { useQuery } from "@tanstack/react-query";
-import type { ModuleId } from "../../../shared/types";
+import type { CourseId, ModuleId } from "../../../shared/types";
 import { getModuleContent } from "../../api/contentQueries";
 import { contentKeys } from "../../queryKeys";
 
-export function useModuleContent(moduleId: ModuleId) {
+/** Does nothing while `moduleId` is undefined (e.g. no module selected). */
+export function useModuleContent(courseId: CourseId, moduleId: ModuleId | undefined) {
   return useQuery({
-    queryKey: contentKeys.moduleContent(moduleId),
-    queryFn: () => getModuleContent(moduleId),
+    queryKey: contentKeys.moduleContent(moduleId ?? ""),
+    queryFn: () => getModuleContent(courseId, moduleId!),
+    enabled: moduleId !== undefined,
   });
 }

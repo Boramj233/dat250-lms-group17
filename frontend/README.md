@@ -21,12 +21,19 @@ Place components used by one page next to that page in a `components/` folder.
 Use `src/shared/components/` for components shared across unrelated route areas.
 Folder placement organizes the source; `src/app/routes.tsx` defines routing.
 
+## Running
+
+Run `npm install` first, then from this directory:
+
+- `npm run dev:mock`: frontend only, with test data and test users instead of the
+  backend and Keycloak. No Docker needed. See [mock/README.md](mock/README.md).
+- `npm run dev`: frontend against the real backend (start it with Docker first).
+
 ## Navigation
 
-Run `npm install` and `npm run dev` from this directory to start the frontend.
-
-- `/` shows a temporary home page.
-- `/login` shows a placeholder for login inside the shared layout.
+- `/` shows the landing page with a Log in button, or the overview after login.
+- `/courses/:courseId` shows a course.
+- `/login` redirects to `/`.
 - Unknown URLs show the not-found page inside the shared layout.
 
 Define URL patterns in `src/app/paths.ts` and register pages in `src/app/routes.tsx`.

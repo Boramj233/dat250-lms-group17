@@ -56,6 +56,10 @@ export default function Sidebar({ isOpen }: SidebarProps) {
         Courses
       </button>
 
+      <NavLink to={paths.grades} onClick={() => setCoursesOpen(false)}>
+        Grades
+      </NavLink>
+
       {coursesOpen && (
         <CoursesPanel
           onClose={() => {

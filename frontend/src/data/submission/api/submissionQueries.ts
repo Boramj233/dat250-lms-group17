@@ -1,6 +1,13 @@
 import { apiClient } from "../../shared/apiClient";
 import type { ContentId, UserId } from "../../shared/types";
-import type { Submission, SubmissionId, SubmissionResult, SubmissionSummary } from "../types";
+import type { MySubmission, Submission, SubmissionId, SubmissionResult, SubmissionSummary } from "../types";
+
+/** The logged-in user's submissions for an assignment or coding exercise (backend). */
+export function getMySubmissionHistory(contentId: ContentId): Promise<MySubmission[]> {
+  return apiClient<MySubmission[]>(
+    `/api/contents/${encodeURIComponent(String(contentId))}/submissions/me`
+  );
+}
 
 // Proposed endpoints. Backend restricts reads to owners/group members and course teachers.
 // A user's list includes both individual submissions and submissions on their group's behalf.

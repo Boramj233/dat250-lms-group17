@@ -32,7 +32,8 @@ sorted by `deadline`, earliest first.
 ]
 ```
 
-`type` is `ASSIGNMENT` or `CODING_EXERCISE`. `deadline` is an ISO 8601 instant
+`type` is `ASSIGNMENT` or `CODING_EXERCISE`. Assignments also have `mandatory`
+(boolean, see the content README); it is left out for coding exercises. `deadline` is an ISO 8601 instant
 (Java `Instant`); the frontend shows it in the user's time zone.
 
 ```tsx
@@ -44,6 +45,6 @@ const deadlines = useUpcomingDeadlines(userId);
 - **Submitted status:** add `submitted: boolean` to `UpcomingDeadline`, so the
   overview can show whether the user has already handed in. The backend can take
   it from the submission package.
-- **Link to the assignment:** link each deadline directly to its assignment or
-  coding exercise page. `type` and `contentId` are enough to build the link, but
-  the frontend has no such page yet.
+
+Each deadline links to its content page,
+`/courses/{courseId}/modules/{moduleId}/content/{contentId}`, so `moduleId` is required.

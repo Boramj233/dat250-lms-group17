@@ -1,0 +1,16 @@
+.course-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 16rem), 1fr));
+  gap: var(--space-5);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.course-grid > li {
+  display: flex;
+}
+
+.course-grid > li > * {
+  flex: 1;
+}

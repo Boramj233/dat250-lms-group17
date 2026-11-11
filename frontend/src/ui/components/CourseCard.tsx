@@ -1,6 +1,6 @@
-import { Link } from 'react-router'
 import { paths } from '../../app/paths'
 import type { CourseRole, EnrolledCourse } from '../../data/courses/types'
+import { TrailLink } from '../navigation/Trail'
 import { formatTerm } from './courseFormat'
 import './CourseCard.css'
 
@@ -33,9 +33,9 @@ export default function CourseCard({ course, upcomingDeadlines }: CourseCardProp
               : `${upcomingDeadlines} upcoming deadline${upcomingDeadlines === 1 ? '' : 's'}`}
           </span>
         )}
-        <Link className="course-card-link" to={paths.course(course.id)}>
+        <TrailLink className="course-card-link" to={paths.course(course.id)}>
           Go to course<span className="visually-hidden"> {course.title}</span>
-        </Link>
+        </TrailLink>
       </footer>
     </article>
   )

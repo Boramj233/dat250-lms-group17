@@ -5,6 +5,8 @@ export const submissionKeys = {
   all: ["submissions"] as const,
   contentSubmissions: (contentId: ContentId) =>
     ["submissions", "content", String(contentId)] as const,
+  myHistory: (contentId: ContentId) =>
+    ["submissions", "content", String(contentId), "me"] as const,
   mySubmissions: (contentId: ContentId, userId: UserId) =>
     ["submissions", "content", String(contentId), "user", String(userId)] as const,
   assignmentSubmissions: (contentId: ContentId, viewerId: UserId) =>
