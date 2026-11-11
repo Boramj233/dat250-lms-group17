@@ -28,6 +28,15 @@ services:
       timeout: 5s
       start_period: 90s
       retries: 12
+    depends_on:
+      - mailpit
+
+  # Development mail server: catches every email Keycloak sends (verify email at
+  # registration, forgot password). Read them at http://localhost:8025.
+  mailpit:
+    image: axllent/mailpit:v1.21.8
+    ports:
+      - "127.0.0.1:8025:8025"
 
   rabbitmq:
     image: rabbitmq:4.4.0-management

@@ -1,10 +1,21 @@
 {
   "realm": "lms",
   "enabled": true,
-  "registrationAllowed": false,
+  "registrationAllowed": true,
+  "registrationEmailAsUsername": true,
+  "verifyEmail": true,
   "loginWithEmailAllowed": true,
   "duplicateEmailsAllowed": false,
-  "resetPasswordAllowed": false,
+  "resetPasswordAllowed": true,
+  "smtpServer": {
+    "host": "mailpit",
+    "port": "1025",
+    "from": "noreply@lms.localhost",
+    "fromDisplayName": "DAT250 LMS",
+    "auth": "false",
+    "ssl": "false",
+    "starttls": "false"
+  },
   "accessTokenLifespan": 300,
   "clients": [
     {

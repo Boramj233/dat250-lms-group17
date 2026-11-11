@@ -1,6 +1,7 @@
 package no.hvl.dat250.lms.user.api.controllers;
 
 import jakarta.validation.ConstraintViolationException;
+import no.hvl.dat250.lms.user.api.InvalidUserCsvException;
 import no.hvl.dat250.lms.user.service.UserNotFoundException;
 import no.hvl.dat250.lms.user.service.UserAlreadyExistsException;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -43,6 +44,12 @@ public class UserExceptionHandler {
     @ExceptionHandler(ConstraintViolationException.class)
     public ProblemDetail invalidProfile() {
         return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, "Invalid profile details");
+    }
+
+    /** The message is written by UserCsvReader and contains no stored data. */
+    @ExceptionHandler(InvalidUserCsvException.class)
+    public ProblemDetail invalidCsv(InvalidUserCsvException ex) {
+        return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
     }
 
     @ExceptionHandler(IllegalArgumentException.class)

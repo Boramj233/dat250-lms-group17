@@ -3,13 +3,19 @@ package no.hvl.dat250.lms.user.service;
 import jakarta.validation.ConstraintViolationException;
 import jakarta.validation.Validator;
 import no.hvl.dat250.lms.user.api.dto.UpdateUserRequest;
+import no.hvl.dat250.lms.user.api.dto.UserImportResponse;
 import no.hvl.dat250.lms.user.api.dto.UserLookupResponse;
 import no.hvl.dat250.lms.user.repository.UserRepository;
 import no.hvl.dat250.lms.user.domain.User;
 import no.hvl.dat250.lms.user.domain.Access;
 import no.hvl.dat250.lms.security.AuthenticatedUser;
-import java.util.Optional;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Locale;
+import java.util.Optional;
+import java.util.Set;
 import org.springframework.security.authentication.AuthenticationCredentialsNotFoundException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -55,6 +61,74 @@ public class UserService {
             throw new UserAlreadyExistsException();
         }
         return userRepository.save(user);
+    }
+
+    /**
+     * Administrator only: creates local profiles for a list of users, e.g. a class list.
+     * Each row is checked like {@link #createUser} (same validation of email and names),
+     * plus its access level (blank = STANDARD). Emails are stored in lower case, as
+     * Keycloak reports them at login. Rows with an email that already has a profile are
+     * skipped and left unchanged, so the same file can be uploaded again. Invalid rows
+     * are reported and do not stop the other rows.
+     *
+     * <p>Only profiles are created, never login accounts: the users register in Keycloak
+     * themselves with the same email, and their first login finds the profile.
+     */
+    @Transactional
+    public UserImportResponse importUsers(List<UserImportRow> rows) {
+        requireAdministrator();
+        List<UserImportResponse.Row> report = new ArrayList<>();
+        Set<String> seen = new HashSet<>();
+        int created = 0;
+        int skipped = 0;
+        int failed = 0;
+        for (UserImportRow row : rows) {
+            String email = row.email() == null ? "" : row.email().trim().toLowerCase(Locale.ROOT);
+            List<String> errors = new ArrayList<>();
+
+            Access access = Access.STANDARD;
+            if (row.access() != null && !row.access().isBlank()) {
+                try {
+                    access = Access.valueOf(row.access().trim().toUpperCase(Locale.ROOT));
+                } catch (IllegalArgumentException ex) {
+                    errors.add("access: must be one of " + Arrays.toString(Access.values()));
+                }
+            }
+            User user = new User(email, trimmed(row.firstName()), trimmed(row.lastName()));
+            user.setAccess(access);
+            validator.validate(user).stream()
+                    .map(violation -> violation.getPropertyPath() + ": " + violation.getMessage())
+                    .sorted()
+                    .forEach(errors::add);
+
+            UserImportResponse.Row result;
+            if (!errors.isEmpty()) {
+                result = new UserImportResponse.Row(row.line(), email, UserImportResponse.Status.INVALID, null, errors);
+                failed++;
+            } else if (!seen.add(email)) {
+                result = new UserImportResponse.Row(row.line(), email,
+                        UserImportResponse.Status.DUPLICATE_IN_FILE, null, List.of());
+                failed++;
+            } else {
+                var existing = userRepository.findByEmail(email);
+                if (existing.isPresent()) {
+                    result = new UserImportResponse.Row(row.line(), email,
+                            UserImportResponse.Status.ALREADY_EXISTS, existing.get().getUserId(), List.of());
+                    skipped++;
+                } else {
+                    User saved = userRepository.save(user);
+                    result = new UserImportResponse.Row(row.line(), email,
+                            UserImportResponse.Status.CREATED, saved.getUserId(), List.of());
+                    created++;
+                }
+            }
+            report.add(result);
+        }
+        return new UserImportResponse(created, skipped, failed, report);
+    }
+
+    private static String trimmed(String value) {
+        return value == null ? "" : value.trim();
     }
 
     /** Reads current stored access so an outdated session cannot retain admin privileges. */

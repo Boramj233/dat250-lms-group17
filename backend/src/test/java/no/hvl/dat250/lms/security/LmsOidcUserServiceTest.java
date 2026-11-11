@@ -25,7 +25,7 @@ import static org.mockito.Mockito.*;
 class LmsOidcUserServiceTest {
     private final UserService users = mock(UserService.class);
     private final LmsOidcUserService service = new LmsOidcUserService(
-            new AuthService(users, new InitialAdmins(List.of())));
+            new AuthService(users, new InitialAdmins(List.of()), false));
 
     private static OidcUserRequest request(boolean emailVerified) {
         var registration = ClientRegistration.withRegistrationId("keycloak")

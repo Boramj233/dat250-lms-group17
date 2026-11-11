@@ -9,6 +9,7 @@ import no.hvl.dat250.lms.user.repository.UserRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
 import org.springframework.security.oauth2.core.oidc.OidcIdToken;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
@@ -16,8 +17,9 @@ import org.springframework.transaction.annotation.Transactional;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Bootstrap admin end to end: the first login of a configured email creates the profile
- * with ADMIN in the database; existing profiles and other emails are untouched.
+ * Login with the application's default (invite-only) settings against the real database:
+ * the configured initial admin is created as ADMIN, invited users get in with the profile
+ * an admin prepared, and everyone else is refused without a profile being created.
  */
 @SpringBootTest(properties = "lms.security.initial-admin-emails=boss@example.com")
 @ActiveProfiles("test")
@@ -42,9 +44,24 @@ class InitialAdminIntegrationTest {
     }
 
     @Test
-    void firstLoginOfOtherEmailCreatesAStandardUser() {
-        auth.provisionUser(login("sara@example.com"));
-        assertEquals(Access.STANDARD, users.findByEmail("sara@example.com").orElseThrow().getAccess());
+    void invitedUserLogsInWithThePreparedProfile() {
+        User invited = new User("kari@example.com", "Kari", "Hansen");
+        invited.setAccess(Access.COURSE_MANAGER);
+        users.save(invited);
+
+        User result = auth.provisionUser(login("kari@example.com"));
+
+        assertEquals(invited.getUserId(), result.getUserId());
+        assertEquals(Access.COURSE_MANAGER, result.getAccess());
+        assertEquals("Kari", result.getFirstName(), "names from Keycloak do not overwrite the profile");
+    }
+
+    @Test
+    void uninvitedAccountIsRefusedAndNoProfileIsCreated() {
+        var ex = assertThrows(OAuth2AuthenticationException.class,
+                () -> auth.provisionUser(login("stranger@example.com")));
+        assertEquals("not_invited", ex.getError().getErrorCode());
+        assertTrue(users.findByEmail("stranger@example.com").isEmpty());
     }
 
     @Test

@@ -1,8 +1,8 @@
 # Local Keycloak and RabbitMQ
 
 Run commands from the project root (`dat250-lms-group17`). Docker Desktop must be
-running with Linux containers. This setup starts infrastructure only; backend
-OAuth/token handling and event publishing/consumption still need implementation.
+running with Linux containers. This setup starts Keycloak, Mailpit and RabbitMQ;
+event publishing/consumption still needs implementation.
 
 ## Start and stop
 
@@ -39,15 +39,36 @@ initialization. Manage existing settings through the admin consoles afterwards.
 - Demo users: `admin`, `teacher`, `student1`, `student2`, or their `@example.com` emails.
 - Demo password: `KEYCLOAK_DEMO_PASSWORD` in `.env` (same for all four).
 - `admin@example.com` is the backend's bootstrap admin (`lms.security.initial-admin-emails`):
-  its local profile gets ADMIN when it is created at the first login. All other new
-  profiles start as STANDARD.
+  its local profile gets ADMIN when it is created at the first login.
 
-The realm is imported on first start. Self-registration and password grant are
-disabled; authorization-code flow is enabled. Demo passwords are non-temporary,
-as requested by the exercise. Usernames do not assign local Access or course
-roles. Keycloak's master administrator is also not automatically an LMS ADMIN.
-No local backend profiles are created by this infrastructure setup; they are created
-at the first login.
+The realm is imported on first start. Password grant is disabled; authorization-code
+flow is enabled. Demo passwords are non-temporary, as requested by the exercise.
+Usernames do not assign local Access or course roles. Keycloak's master
+administrator is also not automatically an LMS ADMIN.
+
+## Who can log in (invite-only)
+
+Keycloak owns accounts and passwords; the LMS owns the class list. Nobody sets
+passwords for other people:
+
+1. An LMS admin uploads a CSV file with the users (email, names, access) to
+   `POST /api/admin/users/import`. This creates LMS profiles only, no accounts.
+2. Each user registers in Keycloak themselves ("Register" on the login page) with
+   the same email, chooses a password, and confirms the email via the link Keycloak
+   sends. Forgotten passwords are reset the same way.
+3. At the first login the backend finds the profile by the verified email.
+
+Anyone can register in Keycloak, but only emails on the class list (plus the
+bootstrap admin) get into the LMS (`lms.security.require-invitation=true`); others
+are refused at login and no profile is created.
+
+For the demo users, log in as `admin` and import `infra/demo-users.csv`
+(see `backend/http/content.http`).
+
+## Mailpit (development email)
+
+Keycloak sends its emails (verify email, reset password) to Mailpit, which keeps
+them instead of delivering them: http://localhost:8025/.
 
 When implementing backend OAuth, use these application settings and pass the
 client secret as an environment variable rather than copying it into Git:
