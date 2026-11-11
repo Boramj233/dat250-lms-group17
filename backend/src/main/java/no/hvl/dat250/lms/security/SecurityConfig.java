@@ -35,10 +35,10 @@ import org.springframework.security.oauth2.server.resource.web.BearerTokenAuthen
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.authentication.logout.LogoutSuccessHandler;
-import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
-import org.springframework.web.util.UriComponentsBuilder;
 
+import no.hvl.dat250.lms.security.login.KeycloakLogout;
 import no.hvl.dat250.lms.security.login.LmsOidcUserService;
+import no.hvl.dat250.lms.security.login.LoginFailureHandler;
 import no.hvl.dat250.lms.security.token.LmsJwtAuthenticationConverter;
 
 /**
@@ -117,7 +117,10 @@ public class SecurityConfig {
                 .userInfoEndpoint(userInfo -> userInfo.oidcUserService(oidcUsers))
                 // Back to the SPA, on the address the browser used (Vite or nginx).
                 .defaultSuccessUrl("/", true)
-                .failureUrl("/?login_error"))
+                // Back to the SPA with "login failed"; if the LMS refused a user that
+                // Keycloak had logged in, via Keycloak's logout so the next try shows
+                // the login form again instead of reusing that Keycloak session.
+                .failureHandler(new LoginFailureHandler(issuerUri, clientId)))
             // POST /logout: 1) invalidate the session, and with it the Keycloak tokens
             // stored there, 2) redirect to Keycloak's logout, which ends the SSO session and
             // its refresh tokens; otherwise the next login would not ask for the password.
@@ -134,14 +137,10 @@ public class SecurityConfig {
     /** Redirects to Keycloak's end-session endpoint, which then returns to the SPA. */
     private static LogoutSuccessHandler keycloakLogout(String issuerUri, String clientId) {
         return (request, response, authentication) -> {
-            String home = ServletUriComponentsBuilder.fromContextPath(request).path("/").toUriString();
-            var uri = UriComponentsBuilder.fromUriString(issuerUri + "/protocol/openid-connect/logout")
-                    .queryParam("client_id", clientId)
-                    .queryParam("post_logout_redirect_uri", home);
-            if (authentication != null && authentication.getPrincipal() instanceof OidcUser user) {
-                uri.queryParam("id_token_hint", user.getIdToken().getTokenValue());
-            }
-            response.sendRedirect(uri.encode().build().toUriString());
+            String idTokenHint = authentication != null && authentication.getPrincipal() instanceof OidcUser user
+                    ? user.getIdToken().getTokenValue()
+                    : null;
+            response.sendRedirect(KeycloakLogout.uri(request, issuerUri, clientId, idTokenHint, null));
         };
     }
 

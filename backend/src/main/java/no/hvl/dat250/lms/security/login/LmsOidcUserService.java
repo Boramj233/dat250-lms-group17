@@ -26,7 +26,13 @@ public class LmsOidcUserService extends OidcUserService {
     public OidcUser loadUser(OidcUserRequest request) throws OAuth2AuthenticationException {
         // No user-info-uri is configured, so this builds the user from the id_token alone.
         OidcUser identity = super.loadUser(request);
-        auth.provisionUser(identity.getIdToken());
+        try {
+            auth.provisionUser(identity.getIdToken());
+        } catch (OAuth2AuthenticationException ex) {
+            // Keycloak has logged the user in; keep the id_token so the failure handler
+            // can end that Keycloak session (see LoginFailureHandler).
+            throw new LoginRejectedException(ex, identity.getIdToken());
+        }
         return identity;
     }
 }

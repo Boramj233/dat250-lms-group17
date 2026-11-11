@@ -4,8 +4,11 @@ import LoginButton from '../components/LoginButton'
 export default function HomePage() {
   const loginRequired = useLoginRequired()
   const profile = useCurrentUser()
-  // Spring Boot sends the browser to /?login_error when the Keycloak login fails.
-  const loginFailed = new URLSearchParams(window.location.search).has('login_error')
+  // Spring Boot sends the browser to /?login_error when the login fails. If the LMS
+  // refused the user, it first ends the Keycloak session, and Keycloak returns to
+  // /?state=login_error (Keycloak does not allow a query on the return address itself).
+  const query = new URLSearchParams(window.location.search)
+  const loginFailed = query.has('login_error') || query.get('state') === 'login_error'
   return (
     <>
       <h1>Welcome to DAT250 LMS</h1>

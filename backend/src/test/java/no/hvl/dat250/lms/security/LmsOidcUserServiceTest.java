@@ -7,6 +7,7 @@ import java.util.Set;
 import no.hvl.dat250.lms.security.login.AuthService;
 import no.hvl.dat250.lms.security.login.InitialAdmins;
 import no.hvl.dat250.lms.security.login.LmsOidcUserService;
+import no.hvl.dat250.lms.security.login.LoginRejectedException;
 import no.hvl.dat250.lms.user.domain.Access;
 import no.hvl.dat250.lms.user.domain.User;
 import no.hvl.dat250.lms.user.service.UserService;
@@ -63,5 +64,12 @@ class LmsOidcUserServiceTest {
     void unverifiedEmailMakesTheLoginFail() {
         assertThrows(OAuth2AuthenticationException.class, () -> service.loadUser(request(false)));
         verifyNoInteractions(users);
+    }
+
+    @Test
+    void refusedLoginKeepsTheIdTokenSoTheKeycloakSessionCanBeEnded() {
+        var rejected = assertThrows(LoginRejectedException.class, () -> service.loadUser(request(false)));
+        assertEquals("verified_email_required", rejected.getError().getErrorCode());
+        assertEquals("id-token", rejected.getIdToken().getTokenValue());
     }
 }
