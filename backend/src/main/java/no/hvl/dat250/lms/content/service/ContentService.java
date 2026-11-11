@@ -18,13 +18,22 @@ public class ContentService {
     private final ContentRepository contentRepository;
     private final ModuleService moduleService;
 
-    public ContentService(ContentRepository contentRepository, ModuleService moduleService){
+    public ContentService(
+            ContentRepository contentRepository,
+            ModuleService moduleService) {
+
         this.contentRepository = contentRepository;
         this.moduleService = moduleService;
     }
 
+    // Create a StaticPage in a specific Course and Module.
     @Transactional
-    public StaticPage createStaticPage(Long courseId, Long moduleId,  String title, int position, String body){
+    public StaticPage createStaticPage(
+            Long courseId,
+            Long moduleId,
+            String title,
+            int position,
+            String body) {
 
         if (moduleId == null) {
             throw new IllegalArgumentException(
@@ -34,75 +43,90 @@ public class ContentService {
 
         if (title == null || title.isBlank()) {
             throw new IllegalArgumentException(
-                "Content title must not be blank");
+                "Content title must not be blank"
+            );
         }
 
         if (position < 0) {
             throw new IllegalArgumentException(
-                "Content position must not be negative");
+                "Content position must not be negative"
+            );
         }
 
         if (body == null || body.isBlank()) {
             throw new IllegalArgumentException(
-                "Static page body must not be blank");
+                "Static page body must not be blank"
+            );
         }
 
-        // Module module = moduleService.findModuleById(moduleId)
-        //         .orElseThrow(() -> new NoSuchElementException(
-        //             "Module not found: " + moduleId));
-
         Module module = moduleService
-        .findModuleInCourse(courseId, moduleId)
-        .orElseThrow(() -> new NoSuchElementException(
-            "Module not found in course"
-        ));
+            .findModuleInCourse(courseId, moduleId)
+            .orElseThrow(() -> new NoSuchElementException(
+                "Module not found in course"
+            ));
 
-        StaticPage page = new StaticPage(module, title, position, body);
+        StaticPage page = new StaticPage(
+            module,
+            title,
+            position,
+            body
+        );
 
         return contentRepository.save(page);
     }
 
+    // List all Content items in a specific Module.
     @Transactional(readOnly = true)
-    public List<Content> findContentsByModule(Long courseId, Long moduleId) {
+    public List<Content> findContentsByModule(
+            Long courseId,
+            Long moduleId) {
+
         if (moduleId == null) {
             throw new IllegalArgumentException(
-                "Module ID must not be null");
+                "Module ID must not be null"
+            );
         }
 
-        // moduleService.findModuleById(moduleId)
-        //         .orElseThrow(() -> new NoSuchElementException(
-        //             "Module not found: " + moduleId));
-
         Module module = moduleService
-        .findModuleInCourse(courseId, moduleId)
-        .orElseThrow(() -> new NoSuchElementException(
-            "Module not found in course"
-        ));
+            .findModuleInCourse(courseId, moduleId)
+            .orElseThrow(() -> new NoSuchElementException(
+                "Module not found in course"
+            ));
 
         return contentRepository
-                .findByModule_IdOrderByPositionAsc(moduleId);
-
-
+            .findByModule_IdOrderByPositionAsc(moduleId);
     }
 
+    // Find any Content subtype by ID.
+    // Shared lookup method for other feature services.
+    @Transactional(readOnly = true)
+    public Content requireContent(Long contentId) {
+
+        if (contentId == null || contentId <= 0) {
+            throw new IllegalArgumentException(
+                "Content ID must be positive"
+            );
+        }
+
+        return contentRepository
+            .findById(contentId)
+            .orElseThrow(() -> new NoSuchElementException(
+                "Content not found: " + contentId
+            ));
+    }
+
+    // Find a Content item only if it is a StaticPage.
     @Transactional(readOnly = true)
     public StaticPage findStaticPageById(Long contentId) {
 
-        if (contentId == null) {
-            throw new IllegalArgumentException(
-                "Content ID must not be null");
-        }
-
-        Content content = contentRepository.findById(contentId)
-                .orElseThrow(() -> new NoSuchElementException(
-                    "Content not found: " + contentId));
+        Content content = requireContent(contentId);
 
         if (!(content instanceof StaticPage page)) {
             throw new NoSuchElementException(
-                "Static page not found: " + contentId);
+                "Static page not found: " + contentId
+            );
         }
 
         return page;
     }
-
 }
