@@ -206,3 +206,28 @@ GET {{baseUrl}}/api/assignments/999999999
 #   "deadline": null,
 #   "allowLateSubmission": true
 # }
+
+@codingCourseId = 1
+@codingModuleId = 2
+
+### Create Coding Exercise
+# @name createCodingExercise
+POST http://localhost:8080/api/courses/{{codingCourseId}}/modules/{{codingModuleId}}/contents/coding-exercises
+Content-Type: application/json
+
+{
+  "title": "Spring Boot REST Exercise",
+  "position": 2,
+  "instructions": "Implement GET and POST endpoints using Spring Boot.",
+  "starterRepositoryUrl": "https://gitlab.com/example/java-rest-starter",
+  "deadline": null,
+  "allowLateSubmission": true
+}
+### Get contents
+GET {{baseUrl}}/api/courses/1/modules/2/contents
+
+### Get Coding Exercise
+GET http://localhost:8080/api/coding-exercises/23
+
+### Check mixed module contents
+GET http://localhost:8080/api/courses/{{codingCourseId}}/modules/{{codingModuleId}}/contents
