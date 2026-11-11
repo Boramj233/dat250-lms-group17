@@ -23,10 +23,16 @@ public class CourseAccess {
                 && roles.map(lookup -> lookup.isTeacher(userId, courseId)).orElse(false);
     }
 
-    public boolean isMember(Authentication authentication, Long courseId) {
+    public boolean isStudent(Authentication authentication, Long courseId) {
         Long userId = userId(authentication);
         return userId != null && courseId != null
-                && roles.map(lookup -> lookup.isMember(userId, courseId)).orElse(false);
+                && roles.map(lookup -> lookup.isStudent(userId, courseId)).orElse(false);
+    }
+
+    public boolean isEnrolled(Authentication authentication, Long courseId) {
+        Long userId = userId(authentication);
+        return userId != null && courseId != null
+                && roles.map(lookup -> lookup.isEnrolled(userId, courseId)).orElse(false);
     }
 
     /** The caller's user ID, or null without an API token. Also used by GroupAccess. */

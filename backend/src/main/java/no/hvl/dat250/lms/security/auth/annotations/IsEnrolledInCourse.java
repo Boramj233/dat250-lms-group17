@@ -17,5 +17,5 @@ import org.springframework.security.access.prepost.PreAuthorize;
 @Target(ElementType.METHOD)
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
-@PreAuthorize("@courseAccess.isMember(authentication, #courseId)")
-public @interface IsCourseMember {}
+@PreAuthorize("@courseAccess.isEnrolled(authentication, #courseId)")
+public @interface IsEnrolledInCourse {}

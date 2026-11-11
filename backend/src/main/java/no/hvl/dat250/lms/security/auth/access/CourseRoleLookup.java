@@ -11,6 +11,9 @@ public interface CourseRoleLookup {
     /** True if the user has role TEACHER in the course. */
     boolean isTeacher(Long userId, Long courseId);
 
+    /** True if the user has role STUDENT in the course. */
+    boolean isStudent(Long userId, Long courseId);
+
     /** True if the user is enrolled in the course, as TEACHER or STUDENT. */
-    boolean isMember(Long userId, Long courseId);
+    boolean isEnrolled(Long userId, Long courseId);
 }
