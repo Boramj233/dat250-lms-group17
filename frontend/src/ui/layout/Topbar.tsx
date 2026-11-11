@@ -1,8 +1,7 @@
 import { Link } from 'react-router'
 import { paths } from '../../app/paths'
 import { logout } from '../../data/auth/auth'
-import { useCurrentUser, useLoginRequired } from '../../data/auth/useAuth'
-import LoginButton from '../components/LoginButton'
+import { useCurrentUser } from '../../data/auth/useAuth'
 import './Topbar.css'
 
 type TopbarProps = {
@@ -11,7 +10,6 @@ type TopbarProps = {
 }
 
 export default function Topbar({ sidebarOpen, onToggleSidebar }: TopbarProps) {
-  const loginRequired = useLoginRequired()
   const currentUser = useCurrentUser()
   return (
     <header className="topbar">
@@ -43,8 +41,7 @@ export default function Topbar({ sidebarOpen, onToggleSidebar }: TopbarProps) {
       </button>
       <Link className="brand" to={paths.home}>DAT250 LMS</Link>
       <nav className="main-nav" aria-label="Main navigation">
-        {loginRequired && <LoginButton />}
-        {!loginRequired && currentUser.data && (
+        {currentUser.data && (
           <>
             <span className="current-user">
               {currentUser.data.firstName} {currentUser.data.lastName}

@@ -1,6 +1,13 @@
-import { login } from '../../data/auth/auth'
+type LoginButtonProps = {
+  onClick: () => void
+  waiting?: boolean
+}
 
-/** Starts the Keycloak login with a full page navigation (not fetch). */
-export default function LoginButton() {
-  return <button type="button" onClick={login}>Log in</button>
+/** The Log in button. The login itself is started by useLogin(). */
+export default function LoginButton({ onClick, waiting = false }: LoginButtonProps) {
+  return (
+    <button type="button" className="login-button" onClick={onClick} aria-busy={waiting}>
+      {waiting ? 'Waiting for login…' : 'Log in'}
+    </button>
+  )
 }

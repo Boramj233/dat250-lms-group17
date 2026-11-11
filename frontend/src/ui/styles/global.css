@@ -45,3 +45,10 @@ img {
   max-width: 100%;
   height: auto;
 }
+
+/* Short full-page messages while the login state is being checked. */
+.auth-status {
+  margin: 0;
+  padding: var(--spacing-content);
+  font-family: var(--font-ui);
+}
