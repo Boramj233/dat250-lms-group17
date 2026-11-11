@@ -144,7 +144,7 @@ public class SubmissionService {
         }
 
         return submissionRepository
-            .findByIdAndSubmittedBy_User_Id(
+            .findByIdAndSubmittedBy_User_UserId(
                 submissionId,
                 userId
             )
@@ -175,7 +175,7 @@ public class SubmissionService {
         }
 
         return submissionRepository
-            .findByContent_IdAndSubmittedBy_User_IdOrderBySubmittedAtDescIdDesc(
+            .findByContent_IdAndSubmittedBy_User_UserIdOrderBySubmittedAtDescIdDesc(
                 contentId,
                 userId
             );

@@ -81,9 +81,9 @@ class SubmissionServiceIntegrationTest {
 
         User user = userRepository.save(
             new User(
-                "student_" + suffix,
                 "student_" + suffix + "@example.com",
-                "test-password"
+                "Test",
+                "Student"
             )
         );
 
