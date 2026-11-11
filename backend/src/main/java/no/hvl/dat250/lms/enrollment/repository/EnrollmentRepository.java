@@ -10,12 +10,12 @@ import org.springframework.data.jpa.repository.JpaRepository;
 public interface EnrollmentRepository
         extends JpaRepository<Enrollment, Long> {
 
-    Optional<Enrollment> findByUser_IdAndCourse_Id(
+    Optional<Enrollment> findByUser_UserIdAndCourse_Id(
         Long userId,
         Long courseId
     );
 
-    boolean existsByUser_IdAndCourse_Id(
+    boolean existsByUser_UserIdAndCourse_Id(
         Long userId,
         Long courseId
     );

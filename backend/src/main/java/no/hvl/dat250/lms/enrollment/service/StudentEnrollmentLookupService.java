@@ -35,7 +35,7 @@ public class StudentEnrollmentLookupService {
 
         // Return the Enrollment needed for the Submission FK.
         return enrollmentRepository
-            .findByUser_IdAndCourse_Id(userId, courseId)
+            .findByUser_UserIdAndCourse_Id(userId, courseId)
             .orElseThrow(() -> new NoSuchElementException(
                 "Enrollment not found for user "
                     + userId + " in course " + courseId

@@ -32,7 +32,7 @@ public class EnrollmentService {
         }
 
         Enrollment enrollment = enrollmentRepository
-            .findByUser_IdAndCourse_Id(userId, courseId)
+            .findByUser_UserIdAndCourse_Id(userId, courseId)
             .orElseThrow(() -> new NoSuchElementException(
                 "Enrollment not found"
             ));

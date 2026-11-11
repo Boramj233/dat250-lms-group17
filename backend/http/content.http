@@ -3,11 +3,56 @@
 @courseId = 1
 @moduleId = 1
 
+# ---- LOGIN (OAuth 2.0 device flow against Keycloak, as a third-party client) ----
+# Keycloak must be running (docker compose up keycloak).
+# A. Send request A, open "verification_uri_complete" from the response in a browser
+#    and log in (e.g. teacher / KEYCLOAK_DEMO_PASSWORD from .env).
+# B. Then send request B. Every request below uses its access token via {{token}}.
+# The token lives 5 minutes; when you get 401, run A and B again.
+# The user must be on the LMS class list (request C in content.http imports the demo users).
+
+@keycloakUrl = http://localhost:8081/realms/lms/protocol/openid-connect
+@token = {{login.response.body.$.access_token}}
+# lms-cli requires PKCE, also in the device flow. A fixed pair is fine for this
+# development file: the device flow is protected by the user's approval in the browser.
+@pkceVerifier = lms-http-client-dev-only-verifier-0123456789abcdefghijklmnopqrstuv
+@pkceChallenge = 1gtkZbQDSQppQudg22Jeydpbypl4KzjRT0GF1ZCsWVc
+
+### A. Start login (device flow)
+# @name device
+POST {{keycloakUrl}}/auth/device
+Content-Type: application/x-www-form-urlencoded
+
+client_id=lms-cli&scope=openid&code_challenge={{pkceChallenge}}&code_challenge_method=S256
+
+### B. Fetch the access token (after logging in in the browser)
+# @name login
+POST {{keycloakUrl}}/token
+Content-Type: application/x-www-form-urlencoded
+
+client_id=lms-cli&grant_type=urn:ietf:params:oauth:grant-type:device_code&device_code={{device.response.body.$.device_code}}&code_verifier={{pkceVerifier}}
+
+### C. Import the demo users (log in as admin in A/B first; expect 200 with a report per row)
+# Creates LMS profiles only: the users then register in Keycloak themselves with the
+# same email. Safe to repeat: existing emails are reported as ALREADY_EXISTS.
+POST {{baseUrl}}/api/admin/users/import
+Authorization: Bearer {{token}}
+Content-Type: multipart/form-data; boundary=LmsBoundary
+
+--LmsBoundary
+Content-Disposition: form-data; name="file"; filename="demo-users.csv"
+Content-Type: text/csv
+
+< ../../infra/demo-users.csv
+--LmsBoundary--
+
 ### 1. List course modules
 GET {{baseUrl}}/api/courses/{{courseId}}/modules
+Authorization: Bearer {{token}}
 
 ### 2. Create StaticPage
 POST {{baseUrl}}/api/courses/{{courseId}}/modules/{{moduleId}}/contents/pages
+Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
@@ -18,9 +63,11 @@ Content-Type: application/json
 
 ### 3. List content summaries
 GET {{baseUrl}}/api/courses/{{courseId}}/modules/{{moduleId}}/contents
+Authorization: Bearer {{token}}
 
 ### 4. Test invalid request
 POST {{baseUrl}}/api/courses/{{courseId}}/modules/{{moduleId}}/contents/pages
+Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
@@ -31,12 +78,15 @@ Content-Type: application/json
 
 ### 5. Test wrong Course ID
 GET {{baseUrl}}/api/courses/999999/modules/{{moduleId}}/contents
+Authorization: Bearer {{token}}
 
 
 @contentId = 5
 
 ### 6. Get StaticPage detail
 GET {{baseUrl}}/api/contents/{{contentId}}
+Authorization: Bearer {{token}}
 
 ### 7. Get nonexistent StaticPage
 GET {{baseUrl}}/api/contents/999999
+Authorization: Bearer {{token}}

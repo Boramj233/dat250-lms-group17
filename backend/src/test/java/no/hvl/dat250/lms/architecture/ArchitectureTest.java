@@ -28,7 +28,7 @@ class ArchitectureTest {
     static final ArchRule domainShouldNotDependOnApplicationLayers = noClasses()
             .that().resideInAPackage("..domain..")
             .should().dependOnClassesThat().resideInAnyPackage(
-                    "..api..", "..service..", "..repository..", "..config..", "..auth..")
+                    "..api..", "..service..", "..repository..", ROOT + "security..")
             .because("domain types should be independent of HTTP handling and application orchestration");
 
     @ArchTest
@@ -41,10 +41,10 @@ class ArchitectureTest {
     @ArchTest
     static void repositoriesShouldOnlyBeUsedWithinTheirFeature(JavaClasses classes) {
         // Cross-feature collaboration goes through services, using ordinary Java calls.
-        // Include auth explicitly: authentication should use the user service rather
+        // Include security explicitly: authentication should use the user service rather
         // than bypassing it to access the user repository.
         for (String feature : new String[] {
-                "auth", "user", "course", "module", "content", "submission", "enrollment", "group"
+                "security", "user", "course", "module", "content", "submission", "enrollment", "group"
         }) {
             noClasses()
                     .that().resideOutsideOfPackage(ROOT + feature + "..")

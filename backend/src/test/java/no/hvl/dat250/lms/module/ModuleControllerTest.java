@@ -12,18 +12,19 @@ import no.hvl.dat250.lms.module.service.ModuleService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
-import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import no.hvl.dat250.lms.security.WithApiSecurity;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.servlet.MockMvc;
 
+import static no.hvl.dat250.lms.security.TestTokens.apiUser;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(ModuleController.class)
-@AutoConfigureMockMvc(addFilters = false)
+@WithApiSecurity
 class ModuleControllerTest {
 
     @Autowired
@@ -68,7 +69,7 @@ class ModuleControllerTest {
                       "title": "Java Refresh",
                       "position": 0
                     }
-                    """))
+                    """).with(apiUser()))
             .andExpect(status().isCreated())
             .andExpect(jsonPath("$.id").value(7))
             .andExpect(jsonPath("$.courseId").value(42))
@@ -89,7 +90,7 @@ class ModuleControllerTest {
                       "title": "",
                       "position": -1
                     }
-                    """))
+                    """).with(apiUser()))
             .andExpect(status().isBadRequest());
 
         verifyNoInteractions(moduleService);
@@ -110,7 +111,7 @@ class ModuleControllerTest {
                       "title": "Java Refresh",
                       "position": 0
                     }
-                    """))
+                    """).with(apiUser()))
             .andExpect(status().isNotFound());
     }
 
@@ -126,7 +127,7 @@ class ModuleControllerTest {
         when(moduleService.findModulesByCourse(42L))
             .thenReturn(List.of(first, second));
 
-        mockMvc.perform(get("/api/courses/42/modules"))
+        mockMvc.perform(get("/api/courses/42/modules").with(apiUser()))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.length()").value(2))
             .andExpect(jsonPath("$[0].title").value("Java Refresh"))
@@ -140,7 +141,7 @@ class ModuleControllerTest {
         when(moduleService.findModulesByCourse(42L))
             .thenReturn(List.of());
 
-        mockMvc.perform(get("/api/courses/42/modules"))
+        mockMvc.perform(get("/api/courses/42/modules").with(apiUser()))
             .andExpect(status().isOk())
             .andExpect(content().json("[]"));
     }
@@ -152,7 +153,7 @@ class ModuleControllerTest {
             .thenThrow(new NoSuchElementException(
                 "Course not found: 999"));
 
-        mockMvc.perform(get("/api/courses/999/modules"))
+        mockMvc.perform(get("/api/courses/999/modules").with(apiUser()))
             .andExpect(status().isNotFound());
     }
 }

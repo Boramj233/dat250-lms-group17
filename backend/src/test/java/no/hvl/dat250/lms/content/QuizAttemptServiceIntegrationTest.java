@@ -29,11 +29,13 @@ import no.hvl.dat250.lms.content.service.QuizSubmissionEvaluator.AnswerInput;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 @SpringBootTest
+@ActiveProfiles("test")
 @Transactional
 class QuizAttemptServiceIntegrationTest {
 
@@ -64,9 +66,9 @@ class QuizAttemptServiceIntegrationTest {
         // 1. Create a User
         User user = userRepository.save(
             new User(
-                "quiz_it_alice",
                 "quiz_it_alice@example.com",
-                "test-password"
+                "Alice",
+                "Test"
             )
         );
 

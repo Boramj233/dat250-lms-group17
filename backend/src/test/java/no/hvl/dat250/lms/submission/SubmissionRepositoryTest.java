@@ -68,9 +68,9 @@ class SubmissionRepositoryTest {
 
         User user = userRepository.save(
             new User(
-                "submission_alice",
                 "submission_alice@example.com",
-                "test-password"
+                "Alice",
+                "Submission"
             )
         );
 

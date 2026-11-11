@@ -8,11 +8,12 @@ import no.hvl.dat250.lms.course.service.CourseService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
-import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import no.hvl.dat250.lms.security.WithApiSecurity;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import static no.hvl.dat250.lms.security.TestTokens.apiUser;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -22,7 +23,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import java.util.Optional;
 
 @WebMvcTest(CourseController.class)
-@AutoConfigureMockMvc(addFilters = false)
+@WithApiSecurity
 class CourseControllerTest {
 
     @Autowired
@@ -61,7 +62,7 @@ class CourseControllerTest {
             post("/api/courses")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(json)
-        )
+        .with(apiUser()))
         .andExpect(status().isCreated())
         .andExpect(jsonPath("$.title").value("DAT250"));
     }
@@ -83,7 +84,7 @@ class CourseControllerTest {
             post("/api/courses")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(json)
-        )
+        .with(apiUser()))
         .andExpect(status().isBadRequest());
 
         verifyNoInteractions(service);
@@ -106,7 +107,7 @@ class CourseControllerTest {
         // Act + Assert
         mockMvc.perform(
             get("/api/courses/42")
-        )
+        .with(apiUser()))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.title").value("DAT250"))
         .andExpect(jsonPath("$.term").value("AUTUMN"))
@@ -123,7 +124,15 @@ class CourseControllerTest {
         // Act + Assert
         mockMvc.perform(
             get("/api/courses/999")
-        )
+        .with(apiUser()))
         .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void requestWithoutTokenIsRejectedBeforeReachingTheController() throws Exception {
+        mockMvc.perform(get("/api/courses/1"))
+            .andExpect(status().isUnauthorized());
+
+        verifyNoInteractions(service);
     }
 }

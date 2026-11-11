@@ -24,14 +24,14 @@ public interface SubmissionRepository
     );
 
     // New: retrieve a submission only if the given User owns it.
-    Optional<Submission> findByIdAndSubmittedBy_User_Id(
+    Optional<Submission> findByIdAndSubmittedBy_User_UserId(
         Long submissionId,
         Long userId
     );
 
     // New: retrieve the current user's submission history.
     List<Submission>
-        findByContent_IdAndSubmittedBy_User_IdOrderBySubmittedAtDescIdDesc(
+        findByContent_IdAndSubmittedBy_User_UserIdOrderBySubmittedAtDescIdDesc(
             Long contentId,
             Long userId
         );

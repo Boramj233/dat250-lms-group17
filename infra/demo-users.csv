@@ -1,0 +1,4 @@
+email,firstName,lastName,access
+teacher@example.com,Demo,Teacher,COURSE_MANAGER
+student1@example.com,Demo,Student One,STANDARD
+student2@example.com,Demo,Student Two,STANDARD

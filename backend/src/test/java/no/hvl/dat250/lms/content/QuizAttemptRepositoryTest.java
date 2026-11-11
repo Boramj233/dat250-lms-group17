@@ -64,9 +64,9 @@ class QuizAttemptRepositoryTest {
         // 1. Set up User, Course and Enrollment
         User user = userRepository.save(
             new User(
-                "alice",
                 "alice@example.com",
-                "test-password"
+                "Alice",
+                "Test"
             )
         );
 

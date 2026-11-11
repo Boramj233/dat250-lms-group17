@@ -1,0 +1,17 @@
+# Build context for backend/Dockerfile (compose uses context: .).
+# The frontend image uses ./frontend as context and frontend/.dockerignore.
+
+.git
+.gradle
+**/.gradle
+**/build
+**/node_modules
+.env
+.env.*
+.idea
+.vscode
+
+# Not needed by the backend image
+frontend/
+backend/data/
+README.local.md

@@ -39,9 +39,9 @@ class EnrollmentRepositoryTest {
     private User createUser() {
         User user = userRepository.save(
             new User(
-                "alice",
                 "alice@example.com",
-                "test-password"
+                "Alice",
+                "Test"
             )
         );
 
@@ -128,13 +128,13 @@ class EnrollmentRepositoryTest {
         entityManager.clear();
 
         Enrollment found = enrollmentRepository
-            .findByUser_IdAndCourse_Id(uid, cid)
+            .findByUser_UserIdAndCourse_Id(uid, cid)
             .orElseThrow();
 
         assertEquals(CourseRole.STUDENT, found.getRole());
 
         assertTrue(enrollmentRepository
-            .existsByUser_IdAndCourse_Id(uid, cid));
+            .existsByUser_UserIdAndCourse_Id(uid, cid));
     }
 
     @Test
@@ -167,13 +167,13 @@ class EnrollmentRepositoryTest {
 
         Enrollment studentEnrollment =
             enrollmentRepository
-                .findByUser_IdAndCourse_Id(
+                .findByUser_UserIdAndCourse_Id(
                     uid, dat250.getId())
                 .orElseThrow();
 
         Enrollment teacherEnrollment =
             enrollmentRepository
-                .findByUser_IdAndCourse_Id(
+                .findByUser_UserIdAndCourse_Id(
                     uid, inf264.getId())
                 .orElseThrow();
 
