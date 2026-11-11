@@ -36,14 +36,18 @@ initialization. Manage existing settings through the admin consoles afterwards.
 - Discovery: http://localhost:8081/realms/lms/.well-known/openid-configuration.
 - Client secret: `KEYCLOAK_CLIENT_SECRET` in `.env`.
 - Account console: http://localhost:8081/realms/lms/account/.
-- Demo users: `teacher`, `student1`, `student2`, or their `@example.com` emails.
-- Demo password: `KEYCLOAK_DEMO_PASSWORD` in `.env` (same for all three).
+- Demo users: `admin`, `teacher`, `student1`, `student2`, or their `@example.com` emails.
+- Demo password: `KEYCLOAK_DEMO_PASSWORD` in `.env` (same for all four).
+- `admin@example.com` is the backend's bootstrap admin (`lms.security.initial-admin-emails`):
+  its local profile gets ADMIN when it is created at the first login. All other new
+  profiles start as STANDARD.
 
 The realm is imported on first start. Self-registration and password grant are
 disabled; authorization-code flow is enabled. Demo passwords are non-temporary,
 as requested by the exercise. Usernames do not assign local Access or course
 roles. Keycloak's master administrator is also not automatically an LMS ADMIN.
-No local backend profiles are created by this infrastructure setup.
+No local backend profiles are created by this infrastructure setup; they are created
+at the first login.
 
 When implementing backend OAuth, use these application settings and pass the
 client secret as an environment variable rather than copying it into Git:

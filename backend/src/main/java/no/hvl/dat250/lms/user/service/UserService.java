@@ -159,8 +159,20 @@ public class UserService {
     /** Trusted auth callers only: the email must come from a verified OIDC identity. */
     @Transactional
     public User findOrCreateOidcUser(String email, String firstName, String lastName) {
+        return findOrCreateOidcUser(email, firstName, lastName, Access.STANDARD);
+    }
+
+    /**
+     * Trusted auth callers only: the email must come from a verified OIDC identity.
+     * {@code initialAccess} is used only when the profile is created; an existing
+     * profile's access is never changed here.
+     */
+    @Transactional
+    public User findOrCreateOidcUser(String email, String firstName, String lastName,
+                                     Access initialAccess) {
         return userRepository.findByEmail(email).orElseGet(() -> {
             User user = new User(email, firstName, lastName);
+            user.setAccess(initialAccess);
             var violations = validator.validate(user);
             if (!violations.isEmpty()) {
                 throw new ConstraintViolationException(violations);

@@ -74,6 +74,15 @@
   ],
   "users": [
     {
+      "username": "admin",
+      "enabled": true,
+      "emailVerified": true,
+      "email": "admin@example.com",
+      "firstName": "Demo",
+      "lastName": "Admin",
+      "credentials": [{"type": "password", "value": "${KEYCLOAK_DEMO_PASSWORD}", "temporary": false}]
+    },
+    {
       "username": "teacher",
       "enabled": true,
       "emailVerified": true,

@@ -1,10 +1,13 @@
 package no.hvl.dat250.lms.security;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Set;
 
 import no.hvl.dat250.lms.security.login.AuthService;
+import no.hvl.dat250.lms.security.login.InitialAdmins;
 import no.hvl.dat250.lms.security.login.LmsOidcUserService;
+import no.hvl.dat250.lms.user.domain.Access;
 import no.hvl.dat250.lms.user.domain.User;
 import no.hvl.dat250.lms.user.service.UserService;
 import org.junit.jupiter.api.Test;
@@ -21,7 +24,8 @@ import static org.mockito.Mockito.*;
 /** Step 4 of the login: the id_token decides who the user is. */
 class LmsOidcUserServiceTest {
     private final UserService users = mock(UserService.class);
-    private final LmsOidcUserService service = new LmsOidcUserService(new AuthService(users));
+    private final LmsOidcUserService service = new LmsOidcUserService(
+            new AuthService(users, new InitialAdmins(List.of())));
 
     private static OidcUserRequest request(boolean emailVerified) {
         var registration = ClientRegistration.withRegistrationId("keycloak")
@@ -48,11 +52,11 @@ class LmsOidcUserServiceTest {
 
     @Test
     void firstLoginCreatesTheLocalUserFromTheIdToken() {
-        when(users.findOrCreateOidcUser("teacher@example.com", "Demo", "Teacher"))
+        when(users.findOrCreateOidcUser("teacher@example.com", "Demo", "Teacher", Access.STANDARD))
                 .thenReturn(new User("teacher@example.com", "Demo", "Teacher"));
         var identity = service.loadUser(request(true));
         assertEquals("teacher@example.com", identity.getEmail());
-        verify(users).findOrCreateOidcUser("teacher@example.com", "Demo", "Teacher");
+        verify(users).findOrCreateOidcUser("teacher@example.com", "Demo", "Teacher", Access.STANDARD);
     }
 
     @Test

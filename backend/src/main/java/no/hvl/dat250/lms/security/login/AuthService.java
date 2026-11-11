@@ -1,6 +1,7 @@
 package no.hvl.dat250.lms.security.login;
 
 import jakarta.validation.ConstraintViolationException;
+import no.hvl.dat250.lms.user.domain.Access;
 import no.hvl.dat250.lms.user.domain.User;
 import no.hvl.dat250.lms.user.service.UserService;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -18,14 +19,17 @@ import org.springframework.stereotype.Service;
 @Service
 public class AuthService {
     private final UserService users;
+    private final InitialAdmins initialAdmins;
 
-    public AuthService(UserService users) {
+    public AuthService(UserService users, InitialAdmins initialAdmins) {
         this.users = users;
+        this.initialAdmins = initialAdmins;
     }
 
     /**
      * Finds the local profile for the token's verified email, creating a STANDARD
-     * profile on first login. Existing access is never changed here.
+     * profile on first login (ADMIN for a configured initial admin, see
+     * {@link InitialAdmins}). Existing access is never changed here.
      *
      * @throws OAuth2AuthenticationException (login fails) if the email is missing or
      *         not verified, or the profile data from Keycloak is invalid
@@ -44,8 +48,10 @@ public class AuthService {
         if (lastName == null || lastName.isBlank()) {
             lastName = firstName;
         }
+        // The initial access only applies if this login creates the profile.
+        Access initialAccess = initialAdmins.initialAccessFor(email);
         try {
-            return users.findOrCreateOidcUser(email, firstName, lastName);
+            return users.findOrCreateOidcUser(email, firstName, lastName, initialAccess);
         } catch (DataIntegrityViolationException ex) {
             // Two first requests for the same new user raced; the other one created it.
             return users.findByEmail(email).orElseThrow(() -> ex);
