@@ -1,6 +1,6 @@
 package no.hvl.dat250.lms.security;
 
-import java.time.Clock;
+import java.util.List;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -11,13 +11,26 @@ import org.springframework.security.access.hierarchicalroles.RoleHierarchyImpl;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.oauth2.client.OAuth2AuthorizedClientManager;
+import org.springframework.security.oauth2.client.OAuth2AuthorizedClientProviderBuilder;
 import org.springframework.security.oauth2.client.oidc.authentication.OidcIdTokenDecoderFactory;
 import org.springframework.security.oauth2.client.oidc.authentication.OidcIdTokenValidator;
 import org.springframework.security.oauth2.client.registration.ClientRegistration;
+import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
+import org.springframework.security.oauth2.client.web.DefaultOAuth2AuthorizedClientManager;
+import org.springframework.security.oauth2.client.web.HttpSessionOAuth2AuthorizedClientRepository;
+import org.springframework.security.oauth2.client.web.OAuth2AuthorizedClientRepository;
 import org.springframework.security.oauth2.core.DelegatingOAuth2TokenValidator;
+import org.springframework.security.oauth2.core.OAuth2TokenValidator;
 import org.springframework.security.oauth2.core.oidc.user.OidcUser;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.jwt.JwtClaimNames;
+import org.springframework.security.oauth2.jwt.JwtClaimValidator;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.JwtDecoderFactory;
 import org.springframework.security.oauth2.jwt.JwtIssuerValidator;
+import org.springframework.security.oauth2.jwt.JwtValidators;
+import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.server.resource.web.BearerTokenAuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
@@ -26,19 +39,21 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import no.hvl.dat250.lms.security.login.LmsOidcUserService;
-import no.hvl.dat250.lms.security.token.TokenRevokingLogoutHandler;
-import no.hvl.dat250.lms.security.token.TokenService;
+import no.hvl.dat250.lms.security.token.LmsJwtAuthenticationConverter;
 
 /**
  * Two filter chains. Spring Security picks the first chain (lowest {@code @Order}) whose
  * {@code securityMatcher} matches the request, and only that chain runs.
  *
  * <ol>
- *   <li>{@link #apiSecurity}: {@code /api/**}. Stateless; the only credential is
- *       {@code Authorization: Bearer <token>} with a token from GET /token.</li>
+ *   <li>{@link #apiSecurity}: {@code /api/**}. Stateless OAuth 2.0 resource server; the
+ *       only credential is {@code Authorization: Bearer <JWT>} with an access token issued
+ *       by Keycloak. The SPA gets it from GET /token; third-party clients get it from
+ *       Keycloak directly (client {@code lms-cli}: authorization code + PKCE, or device
+ *       flow).</li>
  *   <li>{@link #loginSecurity}: everything else. Spring Boot is an OAuth 2.0 client that
- *       lets Keycloak log the user in; the result is a session cookie, which is only
- *       good for fetching an API token from GET /token.</li>
+ *       lets Keycloak log the user in (backend-for-frontend); the result is a session
+ *       cookie, which is only good for fetching the access token from GET /token.</li>
  * </ol>
  */
 @Configuration
@@ -47,7 +62,8 @@ public class SecurityConfig {
 
     @Bean
     @Order(1)
-    SecurityFilterChain apiSecurity(HttpSecurity http, TokenService tokens) throws Exception {
+    SecurityFilterChain apiSecurity(HttpSecurity http, JwtDecoder apiJwtDecoder,
+                                    LmsJwtAuthenticationConverter jwtToUser) throws Exception {
         http
             .securityMatcher("/api/**")
             // Never create a session and never read the SecurityContext from one: every
@@ -57,8 +73,11 @@ public class SecurityConfig {
             // The credential is an explicit header, never a cookie, so CSRF is not possible.
             .csrf(csrf -> csrf.disable())
             .authorizeHttpRequests(auth -> auth.anyRequest().authenticated())
-            // Bearer token -> TokenService.introspect -> AuthenticatedUser + ROLE_<access>.
-            .oauth2ResourceServer(server -> server.opaqueToken(opaque -> opaque.introspector(tokens)))
+            // Bearer JWT -> signature, expiry, issuer, audience (apiJwtDecoder)
+            // -> verified email -> AuthenticatedUser + ROLE_<access> from the database.
+            .oauth2ResourceServer(server -> server.jwt(jwt -> jwt
+                .decoder(apiJwtDecoder)
+                .jwtAuthenticationConverter(jwtToUser::convert)))
             // Missing, invalid or expired token: 401 with WWW-Authenticate: Bearer, never a
             // redirect to the login page.
             .exceptionHandling(exceptions -> exceptions
@@ -69,7 +88,6 @@ public class SecurityConfig {
     @Bean
     @Order(2)
     SecurityFilterChain loginSecurity(HttpSecurity http, LmsOidcUserService oidcUsers,
-                                      TokenRevokingLogoutHandler revokeTokens,
                                       @Value("${lms.security.issuer-uri}") String issuerUri,
                                       @Value("${spring.security.oauth2.client.registration.keycloak.client-id}")
                                       String clientId) throws Exception {
@@ -100,11 +118,12 @@ public class SecurityConfig {
                 // Back to the SPA, on the address the browser used (Vite or nginx).
                 .defaultSuccessUrl("/", true)
                 .failureUrl("/?login_error"))
-            // POST /logout: 1) revoke the user's API tokens, 2) invalidate the session
-            // (Spring's own handler, which runs after the ones added here), 3) redirect to
-            // Keycloak's logout; otherwise the next login would not ask for the password.
+            // POST /logout: 1) invalidate the session, and with it the Keycloak tokens
+            // stored there, 2) redirect to Keycloak's logout, which ends the SSO session and
+            // its refresh tokens; otherwise the next login would not ask for the password.
+            // Access tokens already handed out stay valid until they expire (the realm's
+            // accessTokenLifespan: 5 minutes).
             .logout(logout -> logout
-                .addLogoutHandler(revokeTokens)
                 .logoutSuccessHandler(keycloakLogout(issuerUri, clientId)))
             // The session cookie is SameSite=Lax, so a cross-site form cannot send it to
             // /logout. The SPA has no CSRF token to send.
@@ -141,10 +160,48 @@ public class SecurityConfig {
         return factory;
     }
 
-    /** Time source for token expiry; replaceable in tests. */
+    /**
+     * Validates the access tokens on /api: signature (keys from Keycloak's JWK set, fetched
+     * on first use and cached), expiry, issuer and audience. The audience check makes sure
+     * the token was issued for this API, not just for any client of the realm.
+     */
     @Bean
-    Clock clock() {
-        return Clock.systemUTC();
+    JwtDecoder apiJwtDecoder(
+            @Value("${spring.security.oauth2.client.provider.keycloak.jwk-set-uri}") String jwkSetUri,
+            @Value("${lms.security.issuer-uri}") String issuerUri,
+            @Value("${lms.security.audience}") String audience) {
+        NimbusJwtDecoder decoder = NimbusJwtDecoder.withJwkSetUri(jwkSetUri).build();
+        decoder.setJwtValidator(apiTokenValidator(issuerUri, audience));
+        return decoder;
+    }
+
+    /** The checks on an API access token besides its signature; shared with the tests. */
+    static OAuth2TokenValidator<Jwt> apiTokenValidator(String issuerUri, String audience) {
+        return new DelegatingOAuth2TokenValidator<>(
+                JwtValidators.createDefaultWithIssuer(issuerUri),
+                new JwtClaimValidator<List<String>>(JwtClaimNames.AUD,
+                        aud -> aud != null && aud.contains(audience)));
+    }
+
+    /**
+     * Keeps the Keycloak tokens of a login (access and refresh token) in the HTTP session,
+     * so they disappear with it at logout or session timeout.
+     */
+    @Bean
+    OAuth2AuthorizedClientRepository authorizedClientRepository() {
+        return new HttpSessionOAuth2AuthorizedClientRepository();
+    }
+
+    /** For GET /token: the stored access token, refreshed when it is about to expire. */
+    @Bean
+    OAuth2AuthorizedClientManager authorizedClientManager(ClientRegistrationRepository registrations,
+                                                          OAuth2AuthorizedClientRepository authorizedClients) {
+        var manager = new DefaultOAuth2AuthorizedClientManager(registrations, authorizedClients);
+        manager.setAuthorizedClientProvider(OAuth2AuthorizedClientProviderBuilder.builder()
+                .authorizationCode()
+                .refreshToken()
+                .build());
+        return manager;
     }
 
     /** A higher access level includes everything the lower levels may do. */

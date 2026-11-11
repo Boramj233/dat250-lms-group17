@@ -1,17 +1,29 @@
 package no.hvl.dat250.lms.security;
 
+import java.time.Instant;
+
 import no.hvl.dat250.lms.user.domain.User;
 import no.hvl.dat250.lms.user.repository.UserRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.mock.web.MockHttpServletRequest;
+import org.springframework.mock.web.MockHttpServletResponse;
+import org.springframework.mock.web.MockHttpSession;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.oauth2.client.OAuth2AuthorizedClient;
+import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
+import org.springframework.security.oauth2.client.web.OAuth2AuthorizedClientRepository;
+import org.springframework.security.oauth2.core.OAuth2AccessToken;
+import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.databind.json.JsonMapper;
 
 import static org.hamcrest.Matchers.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.oidcLogin;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -26,6 +38,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class LoginSecurityIntegrationTest {
     @Autowired private MockMvc mvc;
     @Autowired private UserRepository users;
+    @Autowired private ClientRegistrationRepository registrations;
+    @Autowired private OAuth2AuthorizedClientRepository authorizedClients;
 
     @Test
     void loginStartsTheAuthorizationCodeFlowAtThePublicKeycloakUrl() throws Exception {
@@ -46,24 +60,50 @@ class LoginSecurityIntegrationTest {
                 .andExpect(header().doesNotExist("Location"));
     }
 
+    /**
+     * A login session as after the code exchange: the security context plus the Keycloak
+     * tokens, which the login chain stores in the session.
+     */
+    private MockHttpSession loginSessionWithKeycloakTokens(String email, String accessToken) {
+        MockHttpSession session = TestTokens.loginSession(email);
+        var context = (SecurityContext) session.getAttribute(
+                HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY);
+        var authentication = context.getAuthentication();
+        Instant now = Instant.now();
+        var client = new OAuth2AuthorizedClient(registrations.findByRegistrationId("keycloak"),
+                authentication.getName(),
+                new OAuth2AccessToken(OAuth2AccessToken.TokenType.BEARER, accessToken, now, now.plusSeconds(300)));
+        var request = new MockHttpServletRequest();
+        request.setSession(session);
+        authorizedClients.saveAuthorizedClient(client, authentication, request, new MockHttpServletResponse());
+        return session;
+    }
+
     @Test
-    void tokenWithSessionReturnsAnUncachedTokenThatWorksOnTheApi() throws Exception {
+    void tokenWithSessionReturnsTheKeycloakAccessTokenUncachedAndItWorksOnTheApi() throws Exception {
         User user = users.save(new User("student1@example.com", "Demo", "Student One"));
-        String body = mvc.perform(get("/token").with(oidcLogin().idToken(token -> token
-                        .claim("email", user.getEmail()).claim("email_verified", true))))
+        String keycloakToken = TestTokens.accessToken(user.getEmail());
+        String body = mvc.perform(get("/token").session(loginSessionWithKeycloakTokens(user.getEmail(), keycloakToken)))
                 .andExpect(status().isOk())
                 .andExpect(header().string("Cache-Control", containsString("no-store")))
                 .andExpect(jsonPath("$.tokenType").value("Bearer"))
                 .andExpect(jsonPath("$.expiresAt").exists())
                 .andReturn().getResponse().getContentAsString();
         String token = JsonMapper.builder().build().readTree(body).get("accessToken").asString();
-        // 32 random bytes, base64url without padding.
-        assertTrue(token.matches("[A-Za-z0-9_-]{43}"), token);
+        assertEquals(keycloakToken, token);
 
         mvc.perform(get("/api/users/me").header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.userId").value(user.getUserId()))
                 .andExpect(jsonPath("$.firstName").value("Demo"));
+    }
+
+    @Test
+    void tokenWithSessionButWithoutStoredKeycloakTokensIs401WithoutRedirect() throws Exception {
+        users.save(new User("student1@example.com", "Demo", "Student One"));
+        mvc.perform(get("/token").session(TestTokens.loginSession("student1@example.com")))
+                .andExpect(status().isUnauthorized())
+                .andExpect(header().doesNotExist("Location"));
     }
 
     @Test
@@ -92,7 +132,7 @@ class LoginSecurityIntegrationTest {
 
     @Test
     void logoutEndsTheSessionAndTheKeycloakSession() throws Exception {
-        var session = ApiSecurityIntegrationTest.loginSession("student1@example.com");
+        var session = TestTokens.loginSession("student1@example.com");
         mvc.perform(post("/logout").session(session))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(header().string("Location", allOf(

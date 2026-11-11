@@ -7,13 +7,14 @@ import java.util.Objects;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.oauth2.core.OAuth2AuthenticatedPrincipal;
 
-import no.hvl.dat250.lms.security.token.TokenService;
+import no.hvl.dat250.lms.security.token.LmsJwtAuthenticationConverter;
 
 /**
  * Identity of the caller for the current API request: the local user ID and the
  * authorities (ROLE_&lt;access&gt;) read from the database when the token was checked.
  *
- * <p>This is the principal that {@link TokenService} returns from introspection, so
+ * <p>This is the principal that {@link LmsJwtAuthenticationConverter} builds from the
+ * Keycloak access token, so
  * controllers get it with {@code @AuthenticationPrincipal AuthenticatedUser}.
  *
  * <p>Deliberately not the {@code User} entity. Services load the user through the

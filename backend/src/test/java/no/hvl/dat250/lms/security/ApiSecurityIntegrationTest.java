@@ -1,64 +1,40 @@
 package no.hvl.dat250.lms.security;
 
 import jakarta.persistence.EntityManager;
-import java.time.Clock;
-import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 
-import no.hvl.dat250.lms.security.token.TokenService;
 import no.hvl.dat250.lms.user.domain.Access;
 import no.hvl.dat250.lms.user.domain.User;
 import no.hvl.dat250.lms.user.repository.UserRepository;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.mock.web.MockHttpSession;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.core.context.SecurityContextImpl;
-import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
-import org.springframework.security.oauth2.core.oidc.OidcIdToken;
-import org.springframework.security.oauth2.core.oidc.user.DefaultOidcUser;
-import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
 import static org.hamcrest.Matchers.startsWith;
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 /**
- * The API filter chain (@Order(1), /api/**) with real tokens from {@link TokenService}:
- * 401 without/with an invalid/with an expired token, 200 with a valid one, no session,
- * and authorization from the stored access level.
+ * The API filter chain (@Order(1), /api/**) as an OAuth 2.0 resource server for Keycloak
+ * access tokens: 401 without a token or with one that is malformed, expired, signed with
+ * an unknown key, for another issuer or audience, or without a verified email; 200 with a
+ * valid one, no session, and authorization from the stored access level.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 @Transactional
 class ApiSecurityIntegrationTest {
-    private static final Instant START = Instant.parse("2026-11-09T12:00:00Z");
-
     @Autowired private MockMvc mvc;
-    @Autowired private TokenService tokens;
     @Autowired private UserRepository users;
     @Autowired private EntityManager entities;
-    @MockitoBean private Clock clock;
-
-    private Instant now;
-
-    @BeforeEach
-    void startClock() {
-        now = START;
-        when(clock.instant()).thenAnswer(call -> now);
-    }
 
     private User saveUser(String email, Access access) {
         User user = new User(email, "Test", "User");
@@ -66,8 +42,15 @@ class ApiSecurityIntegrationTest {
         return users.save(user);
     }
 
-    private String bearer(User user) {
-        return TestTokens.bearer(tokens, user);
+    private static String bearer(User user) {
+        return TestTokens.bearer(user);
+    }
+
+    private void expectRejected(String token) throws Exception {
+        mvc.perform(get("/api/users/me").header("Authorization", "Bearer " + token))
+                .andExpect(status().isUnauthorized())
+                .andExpect(header().string("WWW-Authenticate", startsWith("Bearer")))
+                .andExpect(header().doesNotExist("Location"));
     }
 
     @Test
@@ -79,8 +62,8 @@ class ApiSecurityIntegrationTest {
     }
 
     @Test
-    void invalidTokenIsRejectedWith401() throws Exception {
-        mvc.perform(get("/api/users/me").header("Authorization", "Bearer not-a-token-we-issued"))
+    void malformedTokenIsRejectedWith401() throws Exception {
+        mvc.perform(get("/api/users/me").header("Authorization", "Bearer not-a-jwt"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(header().string("WWW-Authenticate", startsWith("Bearer error=\"invalid_token\"")))
                 .andExpect(header().doesNotExist("Location"));
@@ -88,17 +71,49 @@ class ApiSecurityIntegrationTest {
 
     @Test
     void expiredTokenIsRejectedWith401() throws Exception {
-        User student = saveUser("student1@example.com", Access.STANDARD);
-        String header = bearer(student);
+        saveUser("student1@example.com", Access.STANDARD);
+        Instant now = Instant.now();
+        // Beyond the validator's 60 seconds of allowed clock skew.
+        expectRejected(TestTokens.accessToken(claims -> claims
+                .claim("email", "student1@example.com")
+                .issuedAt(now.minusSeconds(600))
+                .expiresAt(now.minusSeconds(120))));
+    }
 
-        now = START.plus(Duration.ofMinutes(15)).minusSeconds(1);
-        mvc.perform(get("/api/users/me").header("Authorization", header))
-                .andExpect(status().isOk());
+    @Test
+    void tokenSignedWithAnUnknownKeyIsRejectedWith401() throws Exception {
+        saveUser("student1@example.com", Access.STANDARD);
+        expectRejected(TestTokens.accessTokenWithUnknownKey("student1@example.com"));
+    }
 
-        now = START.plus(Duration.ofMinutes(15));
-        mvc.perform(get("/api/users/me").header("Authorization", header))
-                .andExpect(status().isUnauthorized())
-                .andExpect(header().doesNotExist("Location"));
+    @Test
+    void tokenFromAnotherIssuerIsRejectedWith401() throws Exception {
+        saveUser("student1@example.com", Access.STANDARD);
+        expectRejected(TestTokens.accessToken(claims -> claims
+                .claim("email", "student1@example.com")
+                .issuer("http://localhost:8081/realms/other")));
+    }
+
+    @Test
+    void tokenForAnotherAudienceIsRejectedWith401() throws Exception {
+        // A valid token of the realm, but not issued for this API (no lms-api audience).
+        saveUser("student1@example.com", Access.STANDARD);
+        expectRejected(TestTokens.accessToken(claims -> claims
+                .claim("email", "student1@example.com")
+                .audience(List.of("account"))));
+    }
+
+    @Test
+    void tokenWithUnverifiedEmailIsRejectedWith401() throws Exception {
+        saveUser("student1@example.com", Access.STANDARD);
+        expectRejected(TestTokens.accessToken(claims -> claims
+                .claim("email", "student1@example.com")
+                .claim("email_verified", false)));
+    }
+
+    @Test
+    void tokenForAnEmailWithoutLocalProfileIsRejectedWith401() throws Exception {
+        expectRejected(TestTokens.accessToken("nobody@example.com"));
     }
 
     @Test
@@ -118,11 +133,9 @@ class ApiSecurityIntegrationTest {
     @Test
     void apiChainDoesNotAcceptTheLoginSession() throws Exception {
         User student = saveUser("student1@example.com", Access.STANDARD);
-        MockHttpSession session = loginSession(student.getEmail());
+        MockHttpSession session = TestTokens.loginSession(student.getEmail());
 
-        // The session is valid for the login chain ...
-        mvc.perform(get("/token").session(session)).andExpect(status().isOk());
-        // ... but the API chain never reads it: only the Bearer token counts.
+        // The API chain never reads the session: only the Bearer token counts.
         mvc.perform(get("/api/users/me").session(session))
                 .andExpect(status().isUnauthorized());
     }
@@ -165,41 +178,5 @@ class ApiSecurityIntegrationTest {
         entities.flush();
         mvc.perform(get("/api/users/me").header("Authorization", header))
                 .andExpect(status().isUnauthorized());
-    }
-
-    @Test
-    void logoutRevokesTheUsersTokensButNotOtherUsersTokens() throws Exception {
-        User student = saveUser("student1@example.com", Access.STANDARD);
-        User other = saveUser("student2@example.com", Access.STANDARD);
-        String studentToken = bearer(student);
-        String otherToken = bearer(other);
-        mvc.perform(get("/api/users/me").header("Authorization", studentToken))
-                .andExpect(status().isOk());
-
-        mvc.perform(post("/logout").session(loginSession(student.getEmail())))
-                .andExpect(status().is3xxRedirection());
-
-        // Same token, still within its lifetime: revoked by the logout.
-        mvc.perform(get("/api/users/me").header("Authorization", studentToken))
-                .andExpect(status().isUnauthorized())
-                .andExpect(header().doesNotExist("Location"));
-        mvc.perform(get("/api/users/me").header("Authorization", otherToken))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.userId").value(other.getUserId()));
-    }
-
-    /** A session as the login chain stores it after a successful Keycloak login. */
-    static MockHttpSession loginSession(String email) {
-        Instant issued = Instant.now();
-        var idToken = OidcIdToken.withTokenValue("id-token")
-                .issuer("http://localhost:8081/realms/lms").subject("keycloak-id")
-                .claim("email", email).claim("email_verified", true)
-                .issuedAt(issued).expiresAt(issued.plusSeconds(300)).build();
-        var user = new DefaultOidcUser(List.of(new SimpleGrantedAuthority("OIDC_USER")), idToken);
-        var authentication = new OAuth2AuthenticationToken(user, user.getAuthorities(), "keycloak");
-        var session = new MockHttpSession();
-        session.setAttribute(HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY,
-                new SecurityContextImpl(authentication));
-        return session;
     }
 }

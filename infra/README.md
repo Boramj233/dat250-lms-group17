@@ -28,7 +28,10 @@ initialization. Manage existing settings through the admin consoles afterwards.
 
 - Admin console: http://localhost:8081/admin/ (master realm).
 - Admin username/password: `KEYCLOAK_ADMIN_USERNAME` / `KEYCLOAK_ADMIN_PASSWORD` in `.env`.
-- Application realm: `lms`; confidential OIDC client: `spring`.
+- Application realm: `lms`; confidential OIDC client: `spring` (the backend's web login).
+- Public client for third-party API clients: `lms-cli` (authorization code + PKCE,
+  or device flow). Access tokens of both clients carry the audience `lms-api`, which
+  `/api/**` requires, and live 5 minutes.
 - Issuer: `http://localhost:8081/realms/lms`.
 - Discovery: http://localhost:8081/realms/lms/.well-known/openid-configuration.
 - Client secret: `KEYCLOAK_CLIENT_SECRET` in `.env`.

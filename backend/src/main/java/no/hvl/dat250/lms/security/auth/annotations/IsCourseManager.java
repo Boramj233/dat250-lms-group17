@@ -16,4 +16,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @PreAuthorize("hasRole('COURSE_MANAGER')")
-public @interface IsCourseManager {}
+public @interface IsCourseManager {
+    
+
+}

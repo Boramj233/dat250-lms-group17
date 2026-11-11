@@ -4,7 +4,6 @@ import jakarta.persistence.EntityManager;
 import no.hvl.dat250.lms.user.domain.Access;
 import no.hvl.dat250.lms.user.domain.User;
 import no.hvl.dat250.lms.security.TestTokens;
-import no.hvl.dat250.lms.security.token.TokenService;
 import no.hvl.dat250.lms.user.repository.UserRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -29,7 +28,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @Transactional
 class UserProfileApiTest {
     @Autowired private MockMvc mvc;
-    @Autowired private TokenService tokenService;
     @Autowired private UserRepository users;
     @Autowired private EntityManager entities;
 
@@ -38,7 +36,7 @@ class UserProfileApiTest {
         var builder = put("/api/users/me").contentType(MediaType.APPLICATION_JSON)
                 .accept(MediaType.APPLICATION_JSON);
         if (user != null) {
-            builder.header("Authorization", TestTokens.bearer(tokenService, user));
+            builder.header("Authorization", TestTokens.bearer(user));
         }
         return builder;
     }

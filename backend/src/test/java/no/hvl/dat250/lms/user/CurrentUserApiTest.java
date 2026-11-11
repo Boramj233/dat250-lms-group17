@@ -2,7 +2,6 @@ package no.hvl.dat250.lms.user;
 
 import no.hvl.dat250.lms.user.domain.User;
 import no.hvl.dat250.lms.security.TestTokens;
-import no.hvl.dat250.lms.security.token.TokenService;
 import no.hvl.dat250.lms.user.repository.UserRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,7 +22,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @Transactional
 class CurrentUserApiTest {
     @Autowired private MockMvc mvc;
-    @Autowired private TokenService tokenService;
     @Autowired private UserRepository users;
 
     @Test
@@ -32,7 +30,7 @@ class CurrentUserApiTest {
         // A second account must not affect which profile is returned.
         users.save(new User("other@example.com", "Sara", "Nordmann"));
         mvc.perform(get("/api/users/me").accept(MediaType.APPLICATION_JSON)
-                        .header("Authorization", TestTokens.bearer(tokenService, user)))
+                        .header("Authorization", TestTokens.bearer(user)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", aMapWithSize(5)))
                 .andExpect(jsonPath("$.username").doesNotExist())
