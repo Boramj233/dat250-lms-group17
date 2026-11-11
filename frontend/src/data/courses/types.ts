@@ -1,10 +1,15 @@
 import type { CourseId, UserId } from "../shared/types";
 
+// Matches the backend's Term enum (course/domain/Term.java).
+export type Term = "SPRING" | "AUTUMN";
+
+// Matches the backend's CourseResponse (course/api/dto/CourseResponse.java).
 export interface Course {
   id: CourseId;
-  code: string;
-  name: string;
-  description?: string;
+  title: string;
+  description: string;
+  term: Term;
+  year: number;
 }
 
 export type CourseRole = "STUDENT" | "TEACHER";
@@ -18,10 +23,12 @@ export interface CourseEnrollment {
   role: CourseRole;
 }
 
+// Matches the backend's CreateCourseRequest (course/api/dto/CreateCourseRequest.java).
 export interface CreateCourseInput {
-  code: string;
-  name: string;
-  description?: string;
+  title: string;
+  description: string;
+  term: Term;
+  year: number;
 }
 
 export interface UpdateCourseInput {

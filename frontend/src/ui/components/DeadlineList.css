@@ -1,0 +1,79 @@
+.deadline-list {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.deadline {
+  display: flex;
+  gap: var(--space-5);
+  padding: var(--space-5) 0;
+  border-bottom: var(--border-width-sm) solid var(--color-border);
+}
+
+.deadline:last-child {
+  border-bottom: none;
+}
+
+/* Calendar-style badge with day and month. */
+.deadline-date {
+  flex-shrink: 0;
+  width: 3.25rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  align-self: flex-start;
+  padding: var(--space-3) 0;
+  border-radius: var(--radius-md);
+  font-family: var(--font-ui);
+  line-height: 1.1;
+  background: var(--color-surface);
+}
+
+.deadline-day {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+}
+
+.deadline-month {
+  font-size: var(--text-small);
+  text-transform: uppercase;
+}
+
+.deadline.is-soon .deadline-date {
+  color: var(--color-on-accent);
+  background: var(--color-accent);
+}
+
+.deadline-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.deadline-body p {
+  margin: 0;
+}
+
+.deadline-title {
+  font-weight: var(--font-weight-bold);
+  overflow-wrap: anywhere;
+}
+
+.deadline-meta,
+.deadline-time {
+  font-family: var(--font-ui);
+  font-size: var(--text-small);
+}
+
+.deadline-meta a {
+  color: var(--color-text);
+}
+
+.deadline.is-soon .deadline-left {
+  font-weight: var(--font-weight-bold);
+}

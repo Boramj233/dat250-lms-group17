@@ -1,7 +1,8 @@
 import { Navigate, Route, Routes } from 'react-router'
 import AuthGate from '../ui/layout/AuthGate'
-import HomePage from '../ui/pages/HomePage'
+import CoursePage from '../ui/pages/CoursePage'
 import NotFoundPage from '../ui/pages/NotFoundPage'
+import OverviewPage from '../ui/pages/OverviewPage'
 import { paths } from './paths'
 
 export default function AppRoutes() {
@@ -12,7 +13,8 @@ export default function AppRoutes() {
 
       {/* Logged in: topbar, sidebar and page content. Otherwise: the landing page. */}
       <Route element={<AuthGate />}>
-        <Route path={paths.home} element={<HomePage />} />
+        <Route path={paths.home} element={<OverviewPage />} />
+        <Route path={paths.courseRoute} element={<CoursePage />} />
         <Route path="*" element={<NotFoundPage />} />
       </Route>
     </Routes>

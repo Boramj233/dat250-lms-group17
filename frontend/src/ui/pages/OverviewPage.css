@@ -1,0 +1,59 @@
+.overview h1 {
+  margin-top: 0;
+}
+
+/* Courses and deadlines side by side on wide screens, stacked on narrow ones. */
+.overview-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-7);
+  align-items: start;
+}
+
+@media (min-width: 64rem) {
+  .overview-grid {
+    grid-template-columns: minmax(0, 2fr) minmax(18rem, 1fr);
+  }
+}
+
+.overview-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  min-width: 0;
+}
+
+.overview-section h2 {
+  margin: 0;
+  font-size: var(--font-size-md);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.overview-section > p {
+  margin: 0;
+}
+
+.overview-deadlines {
+  padding: var(--space-5);
+  border: var(--border-width-sm) solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-background);
+}
+
+.course-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 16rem), 1fr));
+  gap: var(--space-5);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.course-grid > li {
+  display: flex;
+}
+
+.course-grid > li > * {
+  flex: 1;
+}

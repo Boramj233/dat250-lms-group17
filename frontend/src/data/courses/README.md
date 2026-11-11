@@ -1,6 +1,7 @@
 # Courses API contract (proposed)
 
-The backend controllers are not implemented yet. These endpoints and DTO shapes
+`GET /api/courses/{courseId}` and `POST /api/courses` exist in the backend; the
+others are not implemented yet (the home page uses `GET /api/users/{userId}/courses`). These endpoints and DTO shapes
 are frontend assumptions to agree on when implementing the backend.
 
 | Method | Endpoint | Request body | Response |
@@ -16,8 +17,8 @@ are frontend assumptions to agree on when implementing the backend.
 | DELETE | `/api/courses/{courseId}/enrollments/{userId}` | — | `204 No Content` |
 | PATCH | `/api/courses/{courseId}/enrollments/{userId}` | `{ role }` | `204 No Content` |
 
-Types are defined in `types.ts`. A course has `id`, `code`, `name`, and an
-optional `description`. An enrolled course also includes the specified user's
+Types are defined in `types.ts`. A course has `id`, `title`, `description`,
+`term` (`SPRING` or `AUTUMN`) and `year`, as in the backend's `CourseResponse`. An enrolled course also includes the specified user's
 `role`. A course enrollment has `userId` and `role`. New enrollments default to
 `STUDENT` on the backend; promotion uses the role endpoint. Authentication and
 authorization must be enforced by the backend, including who may create courses
