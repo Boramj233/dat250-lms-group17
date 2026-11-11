@@ -43,7 +43,7 @@ class EnrollmentServiceTest {
         when(enrollment.getRole()).thenReturn(CourseRole.STUDENT);
 
         when(enrollmentRepository
-                .findByUser_IdAndCourse_Id(1L, 2L))
+                .findByUser_UserIdAndCourse_Id(1L, 2L))
             .thenReturn(Optional.of(enrollment));
 
         Enrollment result = enrollmentService
@@ -56,7 +56,7 @@ class EnrollmentServiceTest {
     void missingEnrollmentIsRejected() {
 
         when(enrollmentRepository
-                .findByUser_IdAndCourse_Id(1L, 2L))
+                .findByUser_UserIdAndCourse_Id(1L, 2L))
             .thenReturn(Optional.empty());
 
         assertThrows(
@@ -74,7 +74,7 @@ class EnrollmentServiceTest {
         when(enrollment.isActive()).thenReturn(false);
 
         when(enrollmentRepository
-                .findByUser_IdAndCourse_Id(1L, 2L))
+                .findByUser_UserIdAndCourse_Id(1L, 2L))
             .thenReturn(Optional.of(enrollment));
 
         assertThrows(
@@ -93,7 +93,7 @@ class EnrollmentServiceTest {
         when(enrollment.getRole()).thenReturn(CourseRole.TEACHER);
 
         when(enrollmentRepository
-                .findByUser_IdAndCourse_Id(1L, 2L))
+                .findByUser_UserIdAndCourse_Id(1L, 2L))
             .thenReturn(Optional.of(enrollment));
 
         assertThrows(

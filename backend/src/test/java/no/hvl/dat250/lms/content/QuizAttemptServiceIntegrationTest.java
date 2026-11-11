@@ -64,9 +64,9 @@ class QuizAttemptServiceIntegrationTest {
         // 1. Create a User
         User user = userRepository.save(
             new User(
-                "quiz_it_alice",
                 "quiz_it_alice@example.com",
-                "test-password"
+                "Alice",
+                "Test"
             )
         );
 
