@@ -1,6 +1,5 @@
 package no.hvl.dat250.lms.group.service;
 
-import jakarta.transaction.Transactional;
 import no.hvl.dat250.lms.course.domain.Course;
 import no.hvl.dat250.lms.course.repository.CourseRepository;
 import no.hvl.dat250.lms.group.api.dto.GroupDTO;
@@ -8,20 +7,19 @@ import no.hvl.dat250.lms.group.domain.Group;
 import no.hvl.dat250.lms.group.repository.GroupRepository;
 import no.hvl.dat250.lms.user.domain.User;
 import no.hvl.dat250.lms.user.repository.UserRepository;
+
 import org.springframework.http.HttpStatus;
-import org.springframework.http.HttpStatusCode;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-
-/**
- * GroupService is responsible for business logic
- */
 
 @Service
 @Transactional
 public class GroupService {
+
+    // TODO: As of now there is no check if a user is enrolled in a course
 
     private final GroupRepository groupRepository;
     private final CourseRepository courseRepository;
@@ -36,6 +34,7 @@ public class GroupService {
         this.userRepository = userRepository;
     }
 
+    @Transactional(readOnly = true)
     public List<GroupDTO> getAllGroups(Long courseId) {
         return groupRepository.findByCourseId(courseId)
                 .stream()
@@ -43,56 +42,76 @@ public class GroupService {
                 .toList();
     }
 
-    public GroupDTO getGroupById(Long groupId, Long courseId) {
-        Group group = groupRepository.findByIdAndCourseId(groupId, courseId)
-                .orElseThrow(() ->
-                        new RuntimeException("Group Not Found"));
+    @Transactional(readOnly = true)
+    public GroupDTO getGroupById(Long courseId, Long groupId) {
+        Group group = findGroupByGroupIdAndCourseId(groupId, courseId);
         return GroupDTO.from(group);
     }
 
-    public GroupDTO createGroup(Integer groupNumber, Long courseId) {
+    public GroupDTO createGroup(Long courseId, Integer groupNumber) {
         Course course = courseRepository.findById(courseId)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "Course not found"
                 ));
+
+        if (groupNumber == null || groupNumber < 1) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Group number must be a positive integer"
+            );
+        }
+
+        if (groupRepository.existsByCourseIdAndGroupNumber(courseId, groupNumber)) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "Group number already exists in this course"
+            );
+        }
+
         Group group = new Group(groupNumber, course);
-        Group savedGroup = groupRepository.save(group);
-
-        return GroupDTO.from(savedGroup);
-    }
-
-    public void deleteGroup(Long groupId, Long courseId) {
-        Group group = findGroupByGroupIdAndCourseId(groupId, courseId)
-        groupRepository.delete(group);
-    }
-
-    public GroupDTO addGroupMember(Long courseId, Long groupId, String email) {
-        Group group = findGroupByGroupIdAndCourseId(groupId, courseId);
-
-        User user = findUserByEmail(email);
-
-        // TODO: implement the following User methods:
-        // is the user enrolled in the course?
-        // does the user already belong to a group?
-
-        group.addGroupMember(user);
 
         return GroupDTO.from(groupRepository.save(group));
     }
 
-
-    public void deleteMemberFromGroup(Long courseId, Long groupId, String email) {
+    public void deleteGroup(Long courseId, Long groupId) {
         Group group = findGroupByGroupIdAndCourseId(groupId, courseId);
-        User user = findUserByEmail(email);
+        groupRepository.delete(group);
+    }
 
-        if (!group.getGroupMembers().contains(user)) {
+    public GroupDTO addGroupMember(Long courseId, Long groupId, Long userId) {
+        Group group = findGroupByGroupIdAndCourseId(groupId, courseId);
+        User user = findByUserId(userId);
+
+        if (group.getGroupMembers().contains(user)) {
             throw new ResponseStatusException(
-                    HttpStatus.CONFLICT, "User is not a member of this group"
+                    HttpStatus.CONFLICT,
+                    "User is already a member of this group"
             );
         }
 
-        group.removeGroupMember(user);
-        groupRepository.save(group);
+        if (groupRepository.existsUserInCourseGroup(courseId, user.getId())) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "User already belongs to another group in this course"
+            );
+        }
+
+        group.addGroupMember(user);
+
+        return GroupDTO.from(group);
+    }
+
+
+    public void removeGroupMember(Long courseId, Long groupId, Long userId) {
+        Group group = findGroupByGroupIdAndCourseId(groupId, courseId);
+        User user = findByUserId(userId);
+
+        if (!group.getGroupMembers().remove(user)) { // <- .remove depends on User.equals() + User.hashCode()
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "User is not a member of this group"
+            );
+        }
     }
 
     // ---------------------------------------------------------------- helpers
@@ -105,13 +124,11 @@ public class GroupService {
                         ));
     }
 
-    private User findUserByEmail(String email) {
-        return userRepository.findByEmail(email)
+    private User findByUserId(Long userId) {
+        return userRepository.findById(userId)
                 .orElseThrow(() ->
                         new ResponseStatusException(
                                 HttpStatus.NOT_FOUND, "User not found"
                         ));
     }
-
-    private boolean isUserPartOfGroup() { return false; }
 }

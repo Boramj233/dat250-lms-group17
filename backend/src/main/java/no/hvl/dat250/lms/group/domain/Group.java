@@ -7,30 +7,33 @@ import no.hvl.dat250.lms.user.domain.User;
 import java.util.HashSet;
 import java.util.Set;
 
-/**
- * Group domain represents the database entity
- */
-
 @Entity
-@Table(name = "groups")
+@Table(
+    name = "groups",
+    uniqueConstraints = {
+        @UniqueConstraint(columnNames = {"course_id", "group_number"})
+    }
+)
 public class Group {
 
-    /**
-     * conflicted on how to store groups, but for the time being the vision is to let groups be tied
-     * to courses instead of modules;
-     * Thus, a group should be stored with the corresponding course, it's group number, and it's members;
-     * This way, the identity can simply be {group_number, course};
-     * Why then opt for an id? -> Easier to tie the groups to a module later on;
-     */
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(name = "group_number", nullable = false)
     private Integer groupNumber;
 
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "course_id", nullable = false)
     private Course course;
 
-    private Set<User> members = new HashSet<>();
+    @ManyToMany
+    @JoinTable(
+            name = "group_members",
+            joinColumns = @JoinColumn(name = "group_id"),
+            inverseJoinColumns = @JoinColumn(name = "user_id")
+    )
+    private final Set<User> members = new HashSet<>();
 
     protected Group() {} // JPA needs this
 
@@ -43,9 +46,7 @@ public class Group {
         return this.id;
     }
 
-    public int getGroupNumber() {
-        return this.groupNumber;
-    }
+    public int getGroupNumber() { return this.groupNumber; }
 
     public Course getCourse() {
         return this.course;

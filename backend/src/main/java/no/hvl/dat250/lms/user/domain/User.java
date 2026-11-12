@@ -35,6 +35,8 @@ public class User {
 
     public String getEmail() { return this.email; }
 
+    public Long getId() { return this.id; }
+
     public Access getAccess() { return this.access; }
 
     public void setAccess(Access access) { this.access = access; }

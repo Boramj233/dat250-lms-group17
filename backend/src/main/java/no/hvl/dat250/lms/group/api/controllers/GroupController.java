@@ -3,18 +3,13 @@ package no.hvl.dat250.lms.group.api.controllers;
 import no.hvl.dat250.lms.group.api.dto.GroupDTO;
 import no.hvl.dat250.lms.group.domain.Group;
 import no.hvl.dat250.lms.group.service.GroupService;
-import no.hvl.dat250.lms.user.domain.User;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import java.net.URI;
 import java.util.List;
-
-
-/**
- * GroupController is responsible for HTTP communication
- */
 
 @RestController
 @RequestMapping("/api/courses/{courseId}/groups")
@@ -33,12 +28,12 @@ public class GroupController {
 
     @GetMapping("/{groupId}")
     public GroupDTO getGroup(@PathVariable Long courseId, @PathVariable Long groupId) {
-        return groupService.getGroupById(groupId, courseId);
+        return groupService.getGroupById(courseId, groupId);
     }
 
     @PostMapping()
     public ResponseEntity<GroupDTO> createGroup(@PathVariable Long courseId, @RequestBody Group group) {
-        GroupDTO createdGroup = groupService.createGroup(group.getGroupNumber(), courseId);
+        GroupDTO createdGroup = groupService.createGroup(courseId, group.getGroupNumber());
         URI location = ServletUriComponentsBuilder
                 .fromCurrentRequest()
                 .path("/{id}")
@@ -56,24 +51,24 @@ public class GroupController {
         return ResponseEntity.noContent().build();
     }
 
-    @PostMapping("{groupId}/members")
+    @PostMapping("/{groupId}/members")
     public ResponseEntity<GroupDTO> addGroupMember(
             @PathVariable Long courseId,
             @PathVariable Long groupId,
-            @RequestBody String email // <- or user id
+            @RequestBody Long userId
     ) {
         GroupDTO updatedGroup = groupService.addGroupMember(
-                courseId, groupId, email);
+                courseId, groupId, userId);
         return ResponseEntity.ok(updatedGroup);
     }
 
-    @DeleteMapping("{groupId}/members/{userId}")
+    @DeleteMapping("/{groupId}/members/{userId}")
     public ResponseEntity<Void> deleteUserFromGroup(
             @PathVariable Long courseId,
             @PathVariable Long groupId,
-            @RequestBody String email // <- or user id
+            @PathVariable Long userId
     ) {
-        groupService.deleteMemberFromGroup(courseId, groupId, email);
+        groupService.removeGroupMember(courseId, groupId, userId);
         return ResponseEntity.noContent().build();
     }
 }
