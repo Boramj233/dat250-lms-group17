@@ -1,11 +1,12 @@
 package no.hvl.dat250.lms.group.service;
 
 import no.hvl.dat250.lms.course.domain.Course;
-import no.hvl.dat250.lms.course.repository.CourseRepository;
+import no.hvl.dat250.lms.course.service.CourseService;
 import no.hvl.dat250.lms.group.domain.Group;
 import no.hvl.dat250.lms.group.repository.GroupRepository;
 import no.hvl.dat250.lms.user.domain.User;
-import no.hvl.dat250.lms.user.repository.UserRepository;
+import no.hvl.dat250.lms.user.service.UserNotFoundException;
+import no.hvl.dat250.lms.user.service.UserService;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -35,10 +36,10 @@ class GroupServiceTest {
     private GroupRepository groupRepository;
 
     @Mock
-    private CourseRepository courseRepository;
+    private CourseService courseService;
 
     @Mock
-    private UserRepository userRepository;
+    private UserService userService;
 
     @InjectMocks
     private GroupService service;
@@ -64,8 +65,8 @@ class GroupServiceTest {
     }
 
     private void givenUserExists() {
-        when(userRepository.findById(USER_ID))
-                .thenReturn(Optional.of(user));
+        when(userService.getUser(USER_ID))
+                .thenReturn(user);
     }
 
     private static void assertStatus(
@@ -136,7 +137,7 @@ class GroupServiceTest {
 
     @Test
     void createGroupSavesNewGroup() {
-        when(courseRepository.findById(COURSE_ID))
+        when(courseService.findCourseById(COURSE_ID))
                 .thenReturn(Optional.of(course));
 
         when(groupRepository.save(any(Group.class)))
@@ -157,7 +158,7 @@ class GroupServiceTest {
 
     @Test
     void createGroupReturns404WhenCourseMissing() {
-        when(courseRepository.findById(COURSE_ID))
+        when(courseService.findCourseById(COURSE_ID))
                 .thenReturn(Optional.empty());
 
         assertStatus(
@@ -170,7 +171,7 @@ class GroupServiceTest {
 
     @Test
     void createGroupRejectsInvalidNumber() {
-        when(courseRepository.findById(COURSE_ID))
+        when(courseService.findCourseById(COURSE_ID))
                 .thenReturn(Optional.of(course));
 
         assertStatus(
@@ -188,7 +189,7 @@ class GroupServiceTest {
 
     @Test
     void createGroupRejectsDuplicateNumber() {
-        when(courseRepository.findById(COURSE_ID))
+        when(courseService.findCourseById(COURSE_ID))
                 .thenReturn(Optional.of(course));
 
         when(groupRepository.existsByCourseIdAndGroupNumber(COURSE_ID, 2))
@@ -304,8 +305,8 @@ class GroupServiceTest {
     void addGroupMemberReturns404WhenUserMissing() {
         givenGroupExists();
 
-        when(userRepository.findById(USER_ID))
-                .thenReturn(Optional.empty());
+        when(userService.getUser(USER_ID))
+                .thenThrow(new UserNotFoundException());
 
         assertStatus(
                 HttpStatus.NOT_FOUND,
@@ -315,6 +316,7 @@ class GroupServiceTest {
                         USER_ID
                 )
         );
+    verify(userService).getUser(USER_ID);
     }
 
     // ---------------------------------------------------------
