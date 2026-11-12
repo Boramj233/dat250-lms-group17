@@ -308,8 +308,8 @@ class GroupServiceTest {
         when(userService.getUser(USER_ID))
                 .thenThrow(new UserNotFoundException());
 
-        assertStatus(
-                HttpStatus.NOT_FOUND,
+        assertThrows(
+                UserNotFoundException.class,
                 () -> service.addGroupMember(
                         COURSE_ID,
                         GROUP_ID,
@@ -318,6 +318,7 @@ class GroupServiceTest {
         );
     verify(userService).getUser(USER_ID);
     }
+
 
     // ---------------------------------------------------------
     // REMOVE GROUP MEMBER
