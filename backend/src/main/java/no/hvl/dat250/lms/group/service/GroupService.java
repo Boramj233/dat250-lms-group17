@@ -89,7 +89,7 @@ public class GroupService {
             );
         }
 
-        if (groupRepository.existsUserInCourseGroup(courseId, user.getId())) {
+        if (groupRepository.existsUserInCourseGroup(courseId, user.getUserId())) {
             throw new ResponseStatusException(
                     HttpStatus.CONFLICT,
                     "User already belongs to another group in this course"

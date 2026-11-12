@@ -15,8 +15,8 @@ class GroupDTOTest {
         Group group = new Group(4, null);
         User alice = mock(User.class);
         User bob = mock(User.class);
-        when(alice.getId()).thenReturn(11L);
-        when(bob.getId()).thenReturn(12L);
+        when(alice.getUserId()).thenReturn(11L);
+        when(bob.getUserId()).thenReturn(12L);
         group.addGroupMember(alice);
         group.addGroupMember(bob);
 

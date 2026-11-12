@@ -237,7 +237,7 @@ class GroupServiceTest {
         givenGroupExists();
         givenUserExists();
 
-        when(user.getId()).thenReturn(USER_ID);
+        when(user.getUserId()).thenReturn(USER_ID);
 
         var result = service.addGroupMember(
                 COURSE_ID,
@@ -283,7 +283,7 @@ class GroupServiceTest {
         givenGroupExists();
         givenUserExists();
 
-        when(user.getId()).thenReturn(USER_ID);
+        when(user.getUserId()).thenReturn(USER_ID);
 
         when(groupRepository.existsUserInCourseGroup(COURSE_ID, USER_ID))
                 .thenReturn(true);

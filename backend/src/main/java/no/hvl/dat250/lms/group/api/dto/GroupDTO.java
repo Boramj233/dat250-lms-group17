@@ -19,7 +19,7 @@ public record GroupDTO(
                 //group.getCourse().getId(),
                 group.getGroupMembers()
                         .stream()
-                        .map(User::getId)
+                        .map(User::getUserId)
                         .collect(Collectors.toSet())
         );
     }
