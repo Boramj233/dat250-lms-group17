@@ -18,3 +18,11 @@
 
 # OS
 .DS_Store
+
+# Local H2 database files
+/backend/data/*.mv.db
+/backend/data/*.trace.db
+/backend/data/*.lock.db
+
+# Personal local notes
+/README.local.md

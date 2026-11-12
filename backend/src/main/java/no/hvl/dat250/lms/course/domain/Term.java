@@ -1,5 +1,6 @@
 package no.hvl.dat250.lms.course.domain;
 
-public class Term {
-    
+public enum Term {
+    SPRING,
+    AUTUMN
 }

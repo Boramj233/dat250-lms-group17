@@ -1,144 +1,339 @@
+
 package no.hvl.dat250.lms.submission;
 
-import org.junit.jupiter.api.Disabled;
-import org.junit.jupiter.api.Test;
-import static org.junit.jupiter.api.Assertions.fail;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneOffset;
+import java.util.NoSuchElementException;
 
+import no.hvl.dat250.lms.content.domain.Assignment;
+import no.hvl.dat250.lms.content.domain.CodingExercise;
+import no.hvl.dat250.lms.content.domain.Content;
+import no.hvl.dat250.lms.content.domain.StaticPage;
+import no.hvl.dat250.lms.content.service.ContentService;
+import no.hvl.dat250.lms.course.domain.Course;
+import no.hvl.dat250.lms.module.domain.Module;
+
+import no.hvl.dat250.lms.enrollment.domain.Enrollment;
+import no.hvl.dat250.lms.enrollment.service.StudentEnrollmentLookupService;
+
+import no.hvl.dat250.lms.submission.domain.Submission;
+import no.hvl.dat250.lms.submission.domain.SubmissionType;
+import no.hvl.dat250.lms.submission.repository.SubmissionRepository;
+import no.hvl.dat250.lms.submission.service.SubmissionService;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+
+import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class SubmissionServiceTest {
-    // Mock repositories and construct SubmissionService when its API is defined.
-    // Duplicate means the same student submitting for the same assignment,
-    // regardless of submission ID or whether the submission is individual or group-based.
 
-    @Test
-    @Disabled("Not implemented yet")
-    void submissionDeadlinePolicyIsEnforced() {
-        // Use a fixed/injected clock: test before, exactly at, and after the deadline.
-        // Define the exact boundary rule. Without a deadline, allow otherwise valid
-        // submissions. After the deadline, reject if late submissions are disabled;
-        // otherwise accept and mark the submission as late.
-        fail("Not implemented yet");
+    @Mock
+    ContentService contentService;
+
+    @Mock
+    StudentEnrollmentLookupService enrollmentLookupService;
+
+    @Mock
+    SubmissionRepository submissionRepository;
+
+    private SubmissionService service;
+
+    private static final Instant NOW =
+        Instant.parse("2026-11-11T10:00:00Z");
+
+    @BeforeEach
+    void setUp() {
+
+        Clock fixedClock = Clock.fixed(
+            NOW,
+            ZoneOffset.UTC
+        );
+
+        service = new SubmissionService(
+            contentService,
+            enrollmentLookupService,
+            submissionRepository,
+            fixedClock
+        );
+    }
+
+    private void stubContentInCourse(Content content) {
+
+        Module module = mock(Module.class);
+        Course course = mock(Course.class);
+
+        when(contentService.requireContent(30L))
+            .thenReturn(content);
+
+        when(content.getModule()).thenReturn(module);
+        when(module.getCourse()).thenReturn(course);
+        when(course.getId()).thenReturn(10L);
+    }
+
+    private Assignment prepareAssignment() {
+
+        Assignment assignment = mock(Assignment.class);
+
+        stubContentInCourse(assignment);
+
+        return assignment;
+    }
+
+    private Enrollment prepareEnrollment() {
+
+        Enrollment enrollment = mock(Enrollment.class);
+
+        when(enrollmentLookupService
+                .requireActiveStudentEnrollment(5L, 10L))
+            .thenReturn(enrollment);
+
+        return enrollment;
+    }
+
+    private void mockSaving() {
+
+        when(submissionRepository.save(any(Submission.class)))
+            .thenAnswer(invocation ->
+                invocation.getArgument(0)
+            );
     }
 
     @Test
-    @Disabled("Not implemented yet")
-    void onlyCourseTeacherCanGradeAndGiveFeedback() {
-        // Allow the submission's course teacher to record a grade and written
-        // feedback. Reject students and teachers assigned only to other courses.
-        fail("Not implemented yet");
+    void studentCanSubmitBeforeDeadline() {
+
+        Assignment assignment = prepareAssignment();
+
+        when(assignment.getDeadline()).thenReturn(
+            Instant.parse("2026-11-12T10:00:00Z")
+        );
+
+        Enrollment enrollment = prepareEnrollment();
+        mockSaving();
+
+        Submission result = service.submitIndividual(
+            30L,
+            5L,
+            SubmissionType.TEXT,
+            "My assignment answer"
+        );
+
+        assertSame(assignment, result.getContent());
+        assertSame(enrollment, result.getSubmittedBy());
+
+        assertEquals(
+            SubmissionType.TEXT,
+            result.getType()
+        );
+
+        assertEquals(
+            "My assignment answer",
+            result.getPayload()
+        );
+
+        assertEquals(NOW, result.getSubmittedAt());
+        assertFalse(result.isLate());
+
+        verify(enrollmentLookupService)
+            .requireActiveStudentEnrollment(5L, 10L);
+
+        verify(submissionRepository).save(result);
     }
 
     @Test
-    @Disabled("Not implemented yet")
-    void gradesRemainHiddenUntilTeacherPublishesThem() {
-        // Keep grades/feedback hidden from students until release. After release,
-        // students can read their own results, never another student's private results.
-        fail("Not implemented yet");
+    void lateSubmissionIsAllowedWhenConfigured() {
+
+        Assignment assignment = prepareAssignment();
+
+        when(assignment.getDeadline()).thenReturn(
+            Instant.parse("2026-11-10T10:00:00Z")
+        );
+
+        when(assignment.isAllowLateSubmission())
+            .thenReturn(true);
+
+        prepareEnrollment();
+        mockSaving();
+
+        Submission result = service.submitIndividual(
+            30L,
+            5L,
+            SubmissionType.TEXT,
+            "Late report"
+        );
+
+        assertTrue(result.isLate());
+
+        assertEquals(
+            NOW,
+            result.getSubmittedAt()
+        );
+
+        verify(submissionRepository).save(result);
     }
 
     @Test
-    @Disabled("Not implemented yet")
-    void groupGradeAppliesToEverySubmissionParticipant() {
-        // Verify every participant in the group submission receives the same grade
-        // and feedback under the same visibility policy.
-        fail("Not implemented yet");
+    void lateSubmissionIsRejectedWhenNotAllowed() {
+
+        Assignment assignment = prepareAssignment();
+
+        when(assignment.getDeadline()).thenReturn(
+            Instant.parse("2026-11-10T10:00:00Z")
+        );
+
+        // Default mock boolean is false.
+        prepareEnrollment();
+
+        assertThrows(
+            IllegalStateException.class,
+            () -> service.submitIndividual(
+                30L,
+                5L,
+                SubmissionType.TEXT,
+                "Too late"
+            )
+        );
+
+        verifyNoInteractions(submissionRepository);
     }
 
     @Test
-    @Disabled("Not implemented yet")
-    void quizAttemptsUseTheirOwnAttemptLimit() {
-        // Do not apply the one-submission-per-assignment rule to quiz attempts:
-        // quizzes may explicitly allow multiple attempts.
-        fail("Not implemented yet");
+    void inactiveOrUnauthorizedStudentIsRejected() {
+
+        prepareAssignment();
+
+        when(enrollmentLookupService
+                .requireActiveStudentEnrollment(5L, 10L))
+            .thenThrow(new IllegalStateException(
+                "Not an active student"
+            ));
+
+        assertThrows(
+            IllegalStateException.class,
+            () -> service.submitIndividual(
+                30L,
+                5L,
+                SubmissionType.TEXT,
+                "Unauthorized submission"
+            )
+        );
+
+        verifyNoInteractions(submissionRepository);
     }
 
     @Test
-    @Disabled("Not implemented yet")
-    void submissionMustBelongToExistingModule() {
-        // Reject submissions without a module or referencing an unknown module.
-        // Verify no submission is saved. The association may be through the assignment.
-        fail("Not implemented yet");
+    void codingExerciseAcceptsGitUrlSubmission() {
+
+        CodingExercise exercise =
+            mock(CodingExercise.class);
+
+        stubContentInCourse(exercise);
+
+        prepareEnrollment();
+        mockSaving();
+
+        Submission result = service.submitIndividual(
+            30L,
+            5L,
+            SubmissionType.GIT_URL,
+            "https://gitlab.com/example/my-solution"
+        );
+
+        assertSame(exercise, result.getContent());
+
+        assertEquals(
+            SubmissionType.GIT_URL,
+            result.getType()
+        );
+
+        assertFalse(result.isLate());
+
+        verify(submissionRepository).save(result);
     }
 
     @Test
-    @Disabled("Not implemented yet")
-    void studentMustBeEnrolledInModulesCourse() {
-        // Resolve the course from the submission's module on the server. Accept
-        // submission by a student enrolled in that course; reject a student with
-        // no enrollment or enrollment only in a different course.
-        fail("Not implemented yet");
+    void staticPageDoesNotAcceptSubmissions() {
+
+        StaticPage page = mock(StaticPage.class);
+
+        when(contentService.requireContent(30L))
+            .thenReturn(page);
+
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> service.submitIndividual(
+                30L,
+                5L,
+                SubmissionType.TEXT,
+                "Some text"
+            )
+        );
+
+        verifyNoInteractions(
+            enrollmentLookupService,
+            submissionRepository
+        );
     }
 
     @Test
-    @Disabled("Not implemented yet")
-    void everyGroupParticipantMustBeEnrolledInModulesCourse() {
-        // Accept when all participating students are enrolled in the module's course.
-        // Reject the whole group submission if even one participant is not enrolled;
-        // verify no submission or participant records are saved.
-        fail("Not implemented yet");
+    void missingContentIsRejected() {
+
+        when(contentService.requireContent(30L))
+            .thenThrow(new NoSuchElementException(
+                "Content not found"
+            ));
+
+        assertThrows(
+            NoSuchElementException.class,
+            () -> service.submitIndividual(
+                30L,
+                5L,
+                SubmissionType.TEXT,
+                "Some answer"
+            )
+        );
+
+        verifyNoInteractions(
+            enrollmentLookupService,
+            submissionRepository
+        );
     }
 
     @Test
-    @Disabled("Not implemented yet")
-    void studentCanSubmitIndividually() {
-        // Accept an individual submission when the student has not submitted that assignment.
-        fail("Not implemented yet");
-    }
+    void invalidIdsAreRejectedBeforeLookup() {
 
-    @Test
-    @Disabled("Not implemented yet")
-    void groupCanSubmitForItsMembers() {
-        // Accept a group submission when none of its members has already submitted
-        // that assignment. Count the submission for every participating member.
-        fail("Not implemented yet");
-    }
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> service.submitIndividual(
+                -1L,
+                5L,
+                SubmissionType.TEXT,
+                "Some answer"
+            )
+        );
 
-    @Test
-    @Disabled("Not implemented yet")
-    void studentCannotSubmitIndividuallyTwice() {
-        // Reject a second individual submission for the same student and assignment.
-        fail("Not implemented yet");
-    }
+        assertThrows(
+            IllegalArgumentException.class,
+            () -> service.submitIndividual(
+                30L,
+                null,
+                SubmissionType.TEXT,
+                "Some answer"
+            )
+        );
 
-    @Test
-    @Disabled("Not implemented yet")
-    void studentCannotSubmitIndividuallyAfterGroupSubmission() {
-        // Reject an individual submission if the student participated in a previous
-        // group submission for that assignment.
-        fail("Not implemented yet");
-    }
-
-    @Test
-    @Disabled("Not implemented yet")
-    void groupCannotSubmitIfAnyMemberAlreadySubmittedIndividually() {
-        // Reject the entire group submission if even one member already submitted
-        // individually. Verify no submission or participant records are saved.
-        fail("Not implemented yet");
-    }
-
-    @Test
-    @Disabled("Not implemented yet")
-    void groupCannotSubmitSameAssignmentTwice() {
-        // Reject a repeat group submission with participants who already submitted.
-        fail("Not implemented yet");
-    }
-
-    @Test
-    @Disabled("Not implemented yet")
-    void overlappingGroupsCannotSubmitSameAssignment() {
-        // Reject a second group's submission if any member participated in another
-        // group's submission for that assignment, even if other members are new.
-        fail("Not implemented yet");
-    }
-
-    @Test
-    @Disabled("Not implemented yet")
-    void studentCanSubmitDifferentAssignments() {
-        // Verify an existing submission does not block the student from submitting
-        // a different assignment, individually or through a group.
-        fail("Not implemented yet");
+        verifyNoInteractions(
+            contentService,
+            enrollmentLookupService,
+            submissionRepository
+        );
     }
 }

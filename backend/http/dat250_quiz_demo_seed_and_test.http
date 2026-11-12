@@ -1,0 +1,292 @@
+# DAT250 Group 17 LMS - Quiz demo data + read tests
+# Use in VS Code REST Client / REST Client CE.
+# Start backend first: ./gradlew :backend:bootRun
+# IMPORTANT: Click 'Send Request' from TOP TO BOTTOM for the POST requests once.
+# Each named request's response supplies the actual database ID to later requests.
+# POST is NOT idempotent. Re-running a POST creates another record in file-backed H2.
+
+@baseUrl = http://localhost:8080
+@courseId = {{seedCourse.response.body.$.id}}
+@javaModuleId = {{seedJavaModule.response.body.$.id}}
+@springModuleId = {{seedSpringModule.response.body.$.id}}
+@javaPageId = {{seedJavaPage.response.body.$.id}}
+@quizId = {{seedQuiz.response.body.$.id}}
+@springPageId = {{seedSpringPage.response.body.$.id}}
+
+@assignmentCourseId = 1
+@assignmentModuleId = 2
+
+# ---- LOGIN (OAuth 2.0 device flow against Keycloak, as a third-party client) ----
+# Keycloak must be running (docker compose up keycloak).
+# A. Send request A, open "verification_uri_complete" from the response in a browser
+#    and log in (e.g. teacher / KEYCLOAK_DEMO_PASSWORD from .env).
+# B. Then send request B. Every request below uses its access token via {{token}}.
+# The token lives 5 minutes; when you get 401, run A and B again.
+# The user must be on the LMS class list (request C in content.http imports the demo users).
+
+@keycloakUrl = http://localhost:8081/realms/lms/protocol/openid-connect
+@token = {{login.response.body.$.access_token}}
+# lms-cli requires PKCE, also in the device flow. A fixed pair is fine for this
+# development file: the device flow is protected by the user's approval in the browser.
+@pkceVerifier = lms-http-client-dev-only-verifier-0123456789abcdefghijklmnopqrstuv
+@pkceChallenge = 1gtkZbQDSQppQudg22Jeydpbypl4KzjRT0GF1ZCsWVc
+
+### A. Start login (device flow)
+# @name device
+POST {{keycloakUrl}}/auth/device
+Content-Type: application/x-www-form-urlencoded
+
+client_id=lms-cli&scope=openid&code_challenge={{pkceChallenge}}&code_challenge_method=S256
+
+### B. Fetch the access token (after logging in in the browser)
+# @name login
+POST {{keycloakUrl}}/token
+Content-Type: application/x-www-form-urlencoded
+
+client_id=lms-cli&grant_type=urn:ietf:params:oauth:grant-type:device_code&device_code={{device.response.body.$.device_code}}&code_verifier={{pkceVerifier}}
+
+### 1. Create a demo course (expect 201)
+# @name seedCourse
+POST {{baseUrl}}/api/courses
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "title": "DAT250 Demo - Java and Spring",
+  "description": "Local demo course for StaticPage and Quiz API integration testing.",
+  "term": "AUTUMN",
+  "year": 2026
+}
+
+### 2. Create Week 1 module (expect 201)
+# @name seedJavaModule
+POST {{baseUrl}}/api/courses/{{courseId}}/modules
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "title": "Week 1 - Java Basics",
+  "position": 0
+}
+
+### 3. Create Week 2 module (expect 201)
+# @name seedSpringModule
+POST {{baseUrl}}/api/courses/{{courseId}}/modules
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "title": "Week 2 - Spring Boot",
+  "position": 1
+}
+
+### 4. Create StaticPage in Week 1 (expect 201)
+# @name seedJavaPage
+POST {{baseUrl}}/api/courses/{{courseId}}/modules/{{javaModuleId}}/contents/pages
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "title": "Java Basics - Reading Notes",
+  "position": 0,
+  "body": "This lesson introduces classes, inheritance, interfaces, and access modifiers. After reading it, complete the Java Fundamentals Quiz in this module."
+}
+
+### 5. Create Quiz in Week 1 (expect 201)
+# @name seedQuiz
+POST {{baseUrl}}/api/courses/{{courseId}}/modules/{{javaModuleId}}/contents/quizzes
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "title": "Java Fundamentals Quiz",
+  "position": 1,
+  "maxAttempts": 2
+}
+
+### 6. Question 1: exactly ONE correct option (expect 201)
+# @name seedQuestionOne
+POST {{baseUrl}}/api/quizzes/{{quizId}}/questions
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "questionText": "Which keyword is used to extend a Java class?",
+  "position": 0,
+  "hint": "Think about how a subclass declares its parent class.",
+  "options": [
+    { "optionText": "extends", "position": 0, "correct": true },
+    { "optionText": "implements", "position": 1, "correct": false },
+    { "optionText": "import", "position": 2, "correct": false },
+    { "optionText": "package", "position": 3, "correct": false }
+  ]
+}
+
+### 7. Question 2: THREE correct options (expect 201)
+# @name seedQuestionTwo
+POST {{baseUrl}}/api/quizzes/{{quizId}}/questions
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "questionText": "Which of these are Java access modifiers?",
+  "position": 1,
+  "hint": "Consider which keywords control the accessibility of members.",
+  "options": [
+    { "optionText": "public", "position": 0, "correct": true },
+    { "optionText": "private", "position": 1, "correct": true },
+    { "optionText": "static", "position": 2, "correct": false },
+    { "optionText": "protected", "position": 3, "correct": true }
+  ]
+}
+
+### 8. Question 3: TWO correct options (expect 201)
+# @name seedQuestionThree
+POST {{baseUrl}}/api/quizzes/{{quizId}}/questions
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "questionText": "Which statements about Java are true?",
+  "position": 2,
+  "hint": "Think about the JVM and the structure of Java programs.",
+  "options": [
+    { "optionText": "Java source code can be compiled into bytecode.", "position": 0, "correct": true },
+    { "optionText": "Java supports interfaces.", "position": 1, "correct": true },
+    { "optionText": "Every Java class must declare a main method.", "position": 2, "correct": false },
+    { "optionText": "Java uses indentation instead of braces to delimit code blocks.", "position": 3, "correct": false }
+  ]
+}
+
+### 9. Create a StaticPage in Week 2 (expect 201)
+# @name seedSpringPage
+POST {{baseUrl}}/api/courses/{{courseId}}/modules/{{springModuleId}}/contents/pages
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "title": "Introduction to Spring Boot",
+  "position": 0,
+  "body": "Spring Boot makes it easier to create stand-alone Spring applications. In our LMS, controllers handle HTTP, services implement business rules, and repositories manage persistence."
+}
+
+# ---- READ TESTS: run after all nine POST requests above ----
+
+### 10. Read the demo course (expect 200)
+GET {{baseUrl}}/api/courses/{{courseId}}
+Authorization: Bearer {{token}}
+
+### 11. Read both modules in position order (expect 200)
+GET {{baseUrl}}/api/courses/{{courseId}}/modules
+Authorization: Bearer {{token}}
+
+### 12. Week 1 content summaries (expect STATIC_PAGE then QUIZ, no body)
+GET {{baseUrl}}/api/courses/{{courseId}}/modules/{{javaModuleId}}/contents
+Authorization: Bearer {{token}}
+
+### 13. Week 1 StaticPage detail (expect 200, includes body)
+GET {{baseUrl}}/api/contents/{{javaPageId}}
+Authorization: Bearer {{token}}
+
+### 14. Read student-safe Quiz detail (expect 200, 3 ordered questions)
+# VERY IMPORTANT: no 'correct' and no 'hint' in this response.
+GET {{baseUrl}}/api/quizzes/{{quizId}}
+Authorization: Bearer {{token}}
+
+### 15. Week 2 content summaries (expect 1 STATIC_PAGE)
+GET {{baseUrl}}/api/courses/{{courseId}}/modules/{{springModuleId}}/contents
+Authorization: Bearer {{token}}
+
+### 16. Week 2 StaticPage detail (expect 200)
+GET {{baseUrl}}/api/contents/{{springPageId}}
+Authorization: Bearer {{token}}
+
+### 17. Nonexistent quiz (expect 404)
+GET {{baseUrl}}/api/quizzes/999999999
+Authorization: Bearer {{token}}
+
+### 18. StaticPage ID is not a Quiz (expect 404)
+GET {{baseUrl}}/api/quizzes/{{javaPageId}}
+Authorization: Bearer {{token}}
+
+
+### Assignment
+
+### Check existing Course
+GET http://localhost:8080/api/courses/1
+Authorization: Bearer {{token}}
+
+### Check existing Modules
+GET http://localhost:8080/api/courses/1/modules
+Authorization: Bearer {{token}}
+### 19. Create Assignment
+# @name createWeek2Assignment
+POST {{baseUrl}}/api/courses/{{assignmentCourseId}}/modules/{{assignmentModuleId}}/contents/assignments
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "title": "Spring Boot and JPA Assignment",
+  "position": 1,
+  "instructions": "Implement JPA entities and repositories. Submit a short report.",
+  "deadline": "2026-11-20T23:00:00Z",
+  "allowLateSubmission": false
+}
+
+### 20. Get Assignment
+GET {{baseUrl}}/api/assignments/18
+Authorization: Bearer {{token}}
+
+### 21. Get Week 2 Contents
+GET {{baseUrl}}/api/courses/{{assignmentCourseId}}/modules/{{assignmentModuleId}}/contents
+Authorization: Bearer {{token}}
+
+### 22. Nonexistent Assignment - expect 404
+GET {{baseUrl}}/api/assignments/999999999
+Authorization: Bearer {{token}}
+
+# ### 23. StaticPage is not Assignment - expect 404
+# GET {{baseUrl}}/api/assignments/{{springPageId}}
+# Authorization: Bearer {{token}}
+
+# ### 24. Invalid Assignment - expect 400
+# POST {{baseUrl}}/api/courses/{{courseId}}/modules/{{springModuleId}}/contents/assignments
+# Authorization: Bearer {{token}}
+# Content-Type: application/json
+
+# {
+#   "title": "Invalid Assignment",
+#   "position": 2,
+#   "instructions": "   ",
+#   "deadline": null,
+#   "allowLateSubmission": true
+# }
+
+@codingCourseId = 1
+@codingModuleId = 2
+
+### Create Coding Exercise
+# @name createCodingExercise
+POST http://localhost:8080/api/courses/{{codingCourseId}}/modules/{{codingModuleId}}/contents/coding-exercises
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "title": "Spring Boot REST Exercise",
+  "position": 2,
+  "instructions": "Implement GET and POST endpoints using Spring Boot.",
+  "starterRepositoryUrl": "https://gitlab.com/example/java-rest-starter",
+  "deadline": null,
+  "allowLateSubmission": true
+}
+### Get contents
+GET {{baseUrl}}/api/courses/1/modules/2/contents
+Authorization: Bearer {{token}}
+
+### Get Coding Exercise
+GET http://localhost:8080/api/coding-exercises/23
+Authorization: Bearer {{token}}
+
+### Check mixed module contents
+GET http://localhost:8080/api/courses/{{codingCourseId}}/modules/{{codingModuleId}}/contents
+Authorization: Bearer {{token}}

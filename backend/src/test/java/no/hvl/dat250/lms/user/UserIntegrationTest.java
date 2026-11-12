@@ -1,49 +1,104 @@
 package no.hvl.dat250.lms.user;
 
-import org.junit.jupiter.api.Disabled;
+import jakarta.persistence.EntityManager;
+import no.hvl.dat250.lms.user.domain.Access;
+import no.hvl.dat250.lms.user.domain.User;
+import no.hvl.dat250.lms.user.repository.UserRepository;
+import no.hvl.dat250.lms.user.service.UserService;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
-import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import jakarta.validation.ConstraintViolationException;
+import org.junit.jupiter.params.provider.NullSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 @SpringBootTest
 @ActiveProfiles("test")
 @Transactional
 class UserIntegrationTest {
+    @Autowired private UserRepository users;
+    @Autowired private EntityManager entities;
+    @Autowired private UserService service;
+
     @Test
-    @Disabled("Not implemented yet")
-    void userProfileAndAccessSurvivePersistence() {
-        // Persist a user, flush/clear, and reload it. Verify identity, email,
-        // profile fields, and Access. Test each Access enum value separately.
-        fail("Not implemented yet");
+    void serviceCreatesUserWithGeneratedIdentityAndStandardAccess() {
+        User created = service.createUser("Sara", "Nordmann", "sara@example.com");
+        Long userId = created.getUserId();
+        org.junit.jupiter.api.Assertions.assertNotNull(userId);
+        assertEquals("sara@example.com", created.getEmail());
+        entities.flush();
+        entities.clear();
+
+        User stored = users.findById(userId).orElseThrow();
+        assertEquals("Sara", stored.getFirstName());
+        assertEquals("Nordmann", stored.getLastName());
+        assertEquals(Access.STANDARD, stored.getAccess());
+        assertEquals("sara@example.com", stored.getEmail());
+        assertEquals(userId, users.findByEmail(stored.getEmail()).orElseThrow().getUserId());
+    }
+
+    @ParameterizedTest
+    @EnumSource(Access.class)
+    void userProfileAndAccessSurvivePersistence(Access access) {
+        User user = new User("sara@example.com", "Sara", "Nordmann");
+        user.setAccess(access);
+        users.save(user);
+        entities.flush();
+        entities.clear();
+
+        User stored = users.findById(user.getUserId()).orElseThrow();
+        assertEquals(user.getUserId(), stored.getUserId());
+        assertEquals("Sara", stored.getFirstName());
+        assertEquals("Nordmann", stored.getLastName());
+        assertEquals(user.getEmail(), stored.getEmail());
+        assertEquals(access, stored.getAccess());
+    }
+
+    @ParameterizedTest
+    @NullSource
+    @ValueSource(strings = {"", "   "})
+    void persistenceRejectsMissingFirstName(String firstName) {
+        User user = new User("sara@example.com", firstName, "Nordmann");
+        assertThrows(ConstraintViolationException.class, () -> {
+            users.save(user);
+            entities.flush();
+        });
+    }
+
+    @ParameterizedTest
+    @NullSource
+    @ValueSource(strings = {"", "   "})
+    void persistenceRejectsMissingLastName(String lastName) {
+        User user = new User("sara@example.com", "Sara", lastName);
+        assertThrows(ConstraintViolationException.class, () -> {
+            users.save(user);
+            entities.flush();
+        });
     }
 
     @Test
-    @Disabled("Not implemented yet")
-    void userApiHandlesValidInvalidAndUnknownUsers() {
-        // With MockMvc, test allowed creation/retrieval, invalid data, duplicate
-        // email, and an unknown ID against the agreed HTTP contract.
-        // Use authorized actors where required; rejected writes must save nothing.
-        fail("Not implemented yet");
+    void generatedUserIdsAreUniqueAndStableAcrossProfileUpdates() {
+        User first = users.save(new User("sara@example.com", "Sara", "Nordmann"));
+        User second = users.save(new User("other@example.com", "Sara", "Nordmann"));
+        Long userId = first.getUserId();
+        org.junit.jupiter.api.Assertions.assertNotNull(userId);
+        org.junit.jupiter.api.Assertions.assertNotEquals(userId, second.getUserId());
+        first.updateProfile("Kari", "Hansen");
+        entities.flush();
+        entities.clear();
+        User stored = users.findById(userId).orElseThrow();
+        assertEquals(userId, stored.getUserId());
+        assertEquals(first.getEmail(), stored.getEmail());
+        assertEquals(userId, users.findByEmail(first.getEmail()).orElseThrow().getUserId());
+        assertEquals("Kari", stored.getFirstName());
+        assertEquals("Hansen", stored.getLastName());
     }
 
-    @Test
-    @Disabled("Not implemented yet")
-    void userResponsesNeverExposePasswordHashes() {
-        // Verify user detail, list, creation, and error responses do not contain
-        // passwords or stored hashes, including for authorized callers.
-        fail("Not implemented yet");
-    }
-
-    @Test
-    @Disabled("Not implemented yet")
-    void userApiEnforcesProfileAndAccessPermissions() {
-        // Define profile read/write and global access-management policies.
-        // With real security filters, test authorized and unauthorized callers,
-        // modified target IDs, and attempts to submit Access in profile requests.
-        // Verify rejected changes leave stored profiles and Access unchanged.
-        fail("Not implemented yet");
-    }
 }
