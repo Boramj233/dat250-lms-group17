@@ -1,13 +1,13 @@
 package no.hvl.dat250.lms.group.service;
 
 import no.hvl.dat250.lms.course.domain.Course;
-import no.hvl.dat250.lms.course.repository.CourseRepository;
+import no.hvl.dat250.lms.course.service.CourseService;
 import no.hvl.dat250.lms.group.api.dto.GroupDTO;
 import no.hvl.dat250.lms.group.domain.Group;
 import no.hvl.dat250.lms.group.repository.GroupRepository;
 import no.hvl.dat250.lms.user.domain.User;
-import no.hvl.dat250.lms.user.repository.UserRepository;
 
+import no.hvl.dat250.lms.user.service.UserService;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -22,16 +22,17 @@ public class GroupService {
     // TODO: As of now there is no check if a user is enrolled in a course
 
     private final GroupRepository groupRepository;
-    private final CourseRepository courseRepository;
-    private final UserRepository userRepository;
+    private final CourseService courseService;
+    private final UserService userService;
 
     public GroupService(
             GroupRepository groupRepository,
-            CourseRepository courseRepository,
-            UserRepository userRepository) {
+            CourseService courseService,
+            UserService userService
+    ) {
         this.groupRepository = groupRepository;
-        this.courseRepository = courseRepository;
-        this.userRepository = userRepository;
+        this.courseService = courseService;
+        this.userService = userService;
     }
 
     @Transactional(readOnly = true)
@@ -49,7 +50,7 @@ public class GroupService {
     }
 
     public GroupDTO createGroup(Long courseId, Integer groupNumber) {
-        Course course = courseRepository.findById(courseId)
+        Course course = courseService.findCourseById(courseId)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "Course not found"
                 ));
@@ -124,11 +125,5 @@ public class GroupService {
                         ));
     }
 
-    private User findByUserId(Long userId) {
-        return userRepository.findById(userId)
-                .orElseThrow(() ->
-                        new ResponseStatusException(
-                                HttpStatus.NOT_FOUND, "User not found"
-                        ));
-    }
+    private User findByUserId(Long userId) { return userService.getUser(userId); }
 }
