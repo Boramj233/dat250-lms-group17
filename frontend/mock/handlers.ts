@@ -11,8 +11,8 @@
 import type { Content, ContentType } from '../src/data/content/types'
 import type { EnrolledCourse } from '../src/data/courses/types'
 import type { UpcomingDeadline } from '../src/data/deadlines/types'
-import { completions, contents, courses, enrollments, modules, submissions, users } from './data'
-import { forbidden, notFound, ok, type MockHandler, type MockResult, type MockUser } from './types'
+import { completions, contents, courses, enrollments, modules, quizQuestions, submissions, users } from './data'
+import { created, forbidden, noContent, notFound, ok, type MockHandler, type MockResult, type MockUser } from './types'
 
 /** Like the backend: you may read your own data; ADMIN may read anyone's. */
 function canReadUser(user: MockUser, userId: string) {
@@ -26,6 +26,40 @@ function coursesOf(userId: number): EnrolledCourse[] {
       const course = courses.find(c => c.id === enrollment.courseId)
       return course ? [{ ...course, role: enrollment.role }] : []
     })
+}
+
+/** Like the backend should: only teachers of the course may change it. */
+function isTeacher(user: MockUser, courseId: string | number) {
+  return enrollments.some(e =>
+    e.userId === user.userId && String(e.courseId) === String(courseId) && e.role === 'TEACHER')
+}
+
+const badRequest = (error: string): MockResult => ({ status: 400, body: { error } })
+const nextId = (items: { id: number | string }[]) => Math.max(0, ...items.map(item => Number(item.id))) + 1
+
+/** Students only see published grades. */
+function publishedGrade(grade: (typeof submissions)[number]['grade']) {
+  return grade?.publishedAt ? grade : null
+}
+
+/** A submission in the frontend's Submission shape (src/data/submission/types.ts). */
+function submissionResponse(submission: (typeof submissions)[number]) {
+  const content = contents.find(c => c.id === submission.contentId)!
+  return {
+    id: submission.id,
+    contentId: submission.contentId,
+    courseId: content.courseId,
+    contentType: content.type,
+    submittedBy: submission.userId,
+    owner: { type: 'INDIVIDUAL', userId: submission.userId },
+    submittedAt: submission.submittedAt,
+    late: submission.late,
+    status: submission.grade ? 'GRADED' : 'SUBMITTED',
+    payload: submission.type === 'GIT_URL'
+      ? { type: 'REPOSITORY', repositoryUrl: submission.payload, commitRef: 'main' }
+      : { type: 'FILES', files: [] },
+    result: null,
+  }
 }
 
 /** Course content is for enrolled users (and ADMIN). */
@@ -187,7 +221,7 @@ export const handlers: MockHandler[] = [
       return ok({
         submissionId: submission.id,
         status: submission.grade ? 'GRADED' : 'SUBMITTED',
-        grade: submission.grade,
+        grade: publishedGrade(submission.grade),
         testResults: null,
         errorMessage: null,
       })
@@ -219,7 +253,7 @@ export const handlers: MockHandler[] = [
           submissionId: submission.id,
           submittedAt: submission.submittedAt,
           late: submission.late,
-          grade: submission.grade,
+          grade: publishedGrade(submission.grade),
         }]
       }))
     },
@@ -244,6 +278,195 @@ export const handlers: MockHandler[] = [
             accessible: true,
           }
         }))
+    },
+  },
+  // ---------- Teacher and course manager endpoints ----------
+  {
+    // Backend: CreateCourseRequest -> CourseResponse. The creator becomes TEACHER
+    // (the real backend does not do that yet).
+    method: 'POST',
+    path: '/api/courses',
+    handle: ({ user, body }) => {
+      if (user.access === 'STANDARD') return forbidden()
+      const input = body as { title: string, description: string, term: 'SPRING' | 'AUTUMN', year: number }
+      if (!input?.title?.trim() || !input.description?.trim()) return badRequest('Title and description are required')
+      const course = { id: nextId(courses), title: input.title, description: input.description, term: input.term, year: input.year }
+      courses.push(course)
+      enrollments.push({ userId: user.userId, courseId: course.id, role: 'TEACHER' })
+      return created(course)
+    },
+  },
+  {
+    // Backend (exists): only COURSE_MANAGER and ADMIN may search.
+    method: 'GET',
+    path: '/api/users/search',
+    handle: ({ user, query }) => {
+      if (user.access === 'STANDARD') return forbidden()
+      const text = (query.get('search') ?? '').toLowerCase()
+      const found = users
+        .filter(u => `${u.firstName} ${u.lastName} ${u.email}`.toLowerCase().includes(text))
+        .map(({ userId, firstName, lastName, email }) => ({ userId, firstName, lastName, email }))
+      return ok({ users: found.slice(0, 10), page: 0, size: 10, totalElements: found.length, totalPages: 1 })
+    },
+  },
+  {
+    method: 'GET',
+    path: '/api/courses/:courseId/enrollments',
+    handle: ({ user, params }) => {
+      if (!isTeacher(user, params.courseId) && user.access !== 'ADMIN') return forbidden()
+      return ok(enrollments
+        .filter(e => String(e.courseId) === params.courseId)
+        .flatMap(e => {
+          const member = users.find(u => u.userId === e.userId)
+          return member
+            ? [{ userId: e.userId, role: e.role, firstName: member.firstName, lastName: member.lastName, email: member.email }]
+            : []
+        }))
+    },
+  },
+  {
+    method: 'POST',
+    path: '/api/courses/:courseId/enrollments',
+    handle: ({ user, params, body }) => {
+      if (!isTeacher(user, params.courseId)) return forbidden()
+      const { userId, role = 'STUDENT' } = body as { userId: number, role?: 'STUDENT' | 'TEACHER' }
+      if (!users.some(u => u.userId === Number(userId))) return notFound()
+      if (enrollments.some(e => e.userId === Number(userId) && String(e.courseId) === params.courseId)) {
+        return { status: 409, body: { error: 'Already enrolled' } }
+      }
+      enrollments.push({ userId: Number(userId), courseId: Number(params.courseId), role })
+      return noContent()
+    },
+  },
+  {
+    method: 'PATCH',
+    path: '/api/courses/:courseId/enrollments/:userId',
+    handle: ({ user, params, body }) => {
+      if (!isTeacher(user, params.courseId)) return forbidden()
+      const enrollment = enrollments.find(e => String(e.userId) === params.userId && String(e.courseId) === params.courseId)
+      if (!enrollment) return notFound()
+      enrollment.role = (body as { role: 'STUDENT' | 'TEACHER' }).role
+      return noContent()
+    },
+  },
+  {
+    method: 'DELETE',
+    path: '/api/courses/:courseId/enrollments/:userId',
+    handle: ({ user, params }) => {
+      if (!isTeacher(user, params.courseId)) return forbidden()
+      const index = enrollments.findIndex(e => String(e.userId) === params.userId && String(e.courseId) === params.courseId)
+      if (index < 0) return notFound()
+      enrollments.splice(index, 1)
+      return noContent()
+    },
+  },
+  {
+    // Backend (exists): CreateModuleRequest -> ModuleResponse.
+    method: 'POST',
+    path: '/api/courses/:courseId/modules',
+    handle: ({ user, params, body }) => {
+      if (!isTeacher(user, params.courseId)) return forbidden()
+      const { title, position } = body as { title: string, position: number }
+      if (!title?.trim()) return badRequest('Title is required')
+      const module = { id: nextId(modules), courseId: Number(params.courseId), title, position }
+      modules.push(module)
+      return created(module)
+    },
+  },
+  ...([
+    ['pages', 'STATIC_PAGE'],
+    ['assignments', 'ASSIGNMENT'],
+    ['coding-exercises', 'CODING_EXERCISE'],
+    ['quizzes', 'QUIZ'],
+  ] as const).map(([slug, type]): MockHandler => ({
+    // Backend (exists): one create endpoint per type; answers like its GET endpoint.
+    method: 'POST',
+    path: `/api/courses/:courseId/modules/:moduleId/contents/${slug}`,
+    handle: ({ user, params, body }) => {
+      const module = modules.find(m => String(m.id) === params.moduleId && String(m.courseId) === params.courseId)
+      if (!module) return notFound()
+      if (!isTeacher(user, params.courseId)) return forbidden()
+      const fields = body as Record<string, unknown>
+      if (!String(fields.title ?? '').trim()) return badRequest('Title is required')
+      const content = {
+        ...fields,
+        id: nextId(contents),
+        courseId: module.courseId,
+        moduleId: module.id,
+        type,
+        // Optional fields the backend fills in.
+        ...(type === 'ASSIGNMENT' || type === 'CODING_EXERCISE' ? { deadline: fields.deadline ?? null } : {}),
+      } as (typeof contents)[number]
+      contents.push(content)
+      return created(detailResponse(content))
+    },
+  })),
+  {
+    // Backend (exists): CreateQuizQuestionRequest.
+    method: 'POST',
+    path: '/api/quizzes/:quizId/questions',
+    handle: ({ user, params, body }) => {
+      const quiz = contents.find(c => String(c.id) === params.quizId && c.type === 'QUIZ')
+      if (!quiz) return notFound()
+      if (!isTeacher(user, quiz.courseId)) return forbidden()
+      const question = body as { questionText: string, options: unknown[] }
+      quizQuestions.push({ quizId: Number(quiz.id), questionText: question.questionText, options: question.options })
+      return created({ id: quizQuestions.length, ...question })
+    },
+  },
+  {
+    // Proposed (src/data/submission): every student's latest submission, for teachers.
+    method: 'GET',
+    path: '/api/contents/:contentId/submissions',
+    handle: ({ user, params }) => {
+      const content = contents.find(c => String(c.id) === params.contentId)
+      if (!content) return notFound()
+      if (!isTeacher(user, content.courseId)) return forbidden()
+      const latest = new Map<number, (typeof submissions)[number]>()
+      for (const s of submissions.filter(s => s.contentId === content.id)) {
+        const previous = latest.get(s.userId)
+        if (!previous || Date.parse(s.submittedAt) > Date.parse(previous.submittedAt)) latest.set(s.userId, s)
+      }
+      return ok([...latest.values()].map(s => {
+        const student = users.find(u => u.userId === s.userId)!
+        return {
+          id: s.id, contentId: s.contentId, type: s.type, payload: s.payload, submittedAt: s.submittedAt, late: s.late,
+          student: { userId: student.userId, firstName: student.firstName, lastName: student.lastName, email: student.email },
+          grade: s.grade,
+        }
+      }))
+    },
+  },
+  {
+    // Proposed: save a grade (not visible to the student until published).
+    method: 'PUT',
+    path: '/api/submissions/:submissionId/grade',
+    handle: ({ user, params, body }) => {
+      const submission = submissions.find(s => String(s.id) === params.submissionId)
+      if (!submission) return notFound()
+      const content = contents.find(c => c.id === submission.contentId)!
+      if (!isTeacher(user, content.courseId)) return forbidden()
+      const { grade, feedback } = body as { grade: string, feedback?: string }
+      if (!grade?.trim()) return badRequest('Grade is required')
+      submission.grade = { value: grade, feedback: feedback ?? null, publishedAt: null }
+      return ok(submissionResponse(submission))
+    },
+  },
+  {
+    // Proposed: publish the saved grade to the student.
+    method: 'POST',
+    path: '/api/submissions/:submissionId/grade/publish',
+    handle: ({ user, params }) => {
+      const submission = submissions.find(s => String(s.id) === params.submissionId)
+      if (!submission?.grade) return notFound()
+      const content = contents.find(c => c.id === submission.contentId)!
+      if (!isTeacher(user, content.courseId)) return forbidden()
+      submission.grade.publishedAt = new Date().toISOString()
+      // A graded submission also counts as completed.
+      if (!completions.some(c => c.userId === submission.userId && c.contentId === submission.contentId)) {
+        completions.push({ userId: submission.userId, contentId: submission.contentId, completedAt: submission.submittedAt })
+      }
+      return ok(submissionResponse(submission))
     },
   },
   { method: 'GET', path: '/api/contents/:contentId', handle: contentDetail('STATIC_PAGE') },

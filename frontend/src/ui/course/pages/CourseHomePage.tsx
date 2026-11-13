@@ -5,11 +5,14 @@ import type { ContentSummary } from '../../../data/content/types'
 import type { CourseModule } from '../../../data/module/types'
 import type { CourseId } from '../../../data/shared/types'
 import { formatTerm } from '../../components/courseFormat'
+import AddModuleForm from '../AddModuleForm'
+import '../../components/forms.css'
 import ContentList from '../ContentList'
 import CompletedMark from '../CompletedMark'
 import { CourseLink } from '../CourseLink'
 import { useCourseContext } from '../courseContext'
 import { summarizeTypes } from '../contentTypes'
+import { EditModeOnly } from '../TeacherOnly'
 import './CoursePages.css'
 
 /**
@@ -70,6 +73,10 @@ export default function CourseHomePage() {
           </li>
         ))}
       </ol>
+
+      <EditModeOnly>
+        <AddModuleForm />
+      </EditModeOnly>
     </>
   )
 }
@@ -113,6 +120,11 @@ function ModuleSection({ courseId, module, number, items, open, completed, onTog
           </span>
           {items && items.length > 0 && <span className="module-section-summary">{summarizeTypes(items)}</span>}
         </button>
+        <EditModeOnly>
+          <CourseLink className="button-secondary" to={paths.courseNewContent(courseId, module.id)}>
+            Add content<span className="visually-hidden"> to {module.title}</span>
+          </CourseLink>
+        </EditModeOnly>
         <CourseLink className="module-section-open" to={paths.courseModule(courseId, module.id)}>
           Open module<span className="visually-hidden"> {module.title}</span>
         </CourseLink>

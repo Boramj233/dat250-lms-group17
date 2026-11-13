@@ -4,6 +4,7 @@ import type {
   Course,
   CourseEnrollmentInput,
   CreateCourseInput,
+  EnrollInCourseInput,
   UpdateCourseInput,
   UpdateCourseRoleInput,
 } from "../types";
@@ -41,13 +42,14 @@ export function deleteCourse(courseId: CourseId): Promise<void> {
 export function enrollInCourse({
   courseId,
   userId,
-}: CourseEnrollmentInput): Promise<void> {
+  role,
+}: EnrollInCourseInput): Promise<void> {
   return apiClient<void>(
     `/api/courses/${encodeURIComponent(String(courseId))}/enrollments`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ userId }),
+      body: JSON.stringify({ userId, role }),
     }
   );
 }

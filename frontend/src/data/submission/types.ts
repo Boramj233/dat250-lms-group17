@@ -36,6 +36,16 @@ export type SubmissionPayload =
   | { type: "FILES"; files: SubmissionFile[] }
   | { type: "REPOSITORY"; repositoryUrl: string; commitRef: string };
 
+/**
+ * A student's latest submission for an assignment or coding exercise, as a teacher
+ * sees it (proposed: GET /api/contents/{contentId}/submissions). `grade` includes
+ * unpublished grades here, with `publishedAt` null until published.
+ */
+export interface ContentSubmission extends MySubmission {
+  student: { userId: UserId; firstName: string; lastName: string; email: string };
+  grade: SubmissionGrade | null;
+}
+
 export interface SubmissionGrade {
   // The course's grading scheme determines valid values, e.g. "A" or "Passed".
   value: string;

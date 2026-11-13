@@ -8,6 +8,8 @@ import ContentTypeIcon from '../ContentTypeIcon'
 import { useCourseContext } from '../courseContext'
 import CompletionSections from '../CompletionSections'
 import { contentTypeBySlug, isCompletable } from '../contentTypes'
+import { EditModeOnly } from '../TeacherOnly'
+import '../../components/forms.css'
 import './CoursePages.css'
 
 /**
@@ -34,6 +36,14 @@ export default function ModuleContentTypePage() {
           Module {index + 1}: {module.title}
         </p>
         <h1>{info.plural}</h1>
+        <EditModeOnly>
+          <div className="form-actions">
+            <CourseLink className="button-primary"
+              to={`${paths.courseNewContent(course.id, module.id)}?type=${info.slug}`}>
+              Add {info.label.toLowerCase()}
+            </CourseLink>
+          </div>
+        </EditModeOnly>
       </header>
 
       {content.isPending && <p role="status">Loading…</p>}

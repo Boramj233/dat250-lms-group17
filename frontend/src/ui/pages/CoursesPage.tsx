@@ -2,7 +2,10 @@ import { useCurrentUser } from '../../data/auth/useAuth'
 import { useMyCourses } from '../../data/courses/hooks/queries/useMyCourses'
 import CourseGrid from '../components/CourseGrid'
 import { groupByTerm } from '../components/courseFormat'
-import { TrailPage } from '../navigation/Trail'
+import { paths } from '../../app/paths'
+import RequireAccess from '../components/RequireAccess'
+import { TrailLink, TrailPage } from '../navigation/Trail'
+import '../components/forms.css'
 import './CoursesPage.css'
 
 /** All courses the user is enrolled in, grouped by term (newest first). */
@@ -13,7 +16,13 @@ export default function CoursesPage() {
   return (
     <TrailPage label="Courses">
       <div className="courses-page">
-        <h1>Courses</h1>
+        <header className="courses-page-header">
+          <h1>Courses</h1>
+          {/* Course managers (and admins) may create courses; they become its teacher. */}
+          <RequireAccess level="COURSE_MANAGER">
+            <TrailLink className="button-primary" to={paths.newCourse}>New course</TrailLink>
+          </RequireAccess>
+        </header>
         {courses.isPending && <p role="status">Loading courses…</p>}
         {courses.error && <p role="alert">Could not load your courses. Try again later.</p>}
         {courses.data?.length === 0 && <p>You are not enrolled in any courses yet.</p>}

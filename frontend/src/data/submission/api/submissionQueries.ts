@@ -1,11 +1,18 @@
 import { apiClient } from "../../shared/apiClient";
 import type { ContentId, UserId } from "../../shared/types";
-import type { MySubmission, Submission, SubmissionId, SubmissionResult, SubmissionSummary } from "../types";
+import type { ContentSubmission, MySubmission, Submission, SubmissionId, SubmissionResult, SubmissionSummary } from "../types";
 
 /** The logged-in user's submissions for an assignment or coding exercise (backend). */
 export function getMySubmissionHistory(contentId: ContentId): Promise<MySubmission[]> {
   return apiClient<MySubmission[]>(
     `/api/contents/${encodeURIComponent(String(contentId))}/submissions/me`
+  );
+}
+
+/** Teachers: every student's latest submission for one content item (proposed). */
+export function getContentSubmissions(contentId: ContentId): Promise<ContentSubmission[]> {
+  return apiClient<ContentSubmission[]>(
+    `/api/contents/${encodeURIComponent(String(contentId))}/submissions`
   );
 }
 

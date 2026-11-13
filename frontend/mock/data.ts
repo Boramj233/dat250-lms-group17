@@ -17,6 +17,7 @@ export const users: MockUser[] = [
   { userId: 2, email: 'teacher@example.com', firstName: 'Tore', lastName: 'Teacher', access: 'COURSE_MANAGER' },
   { userId: 3, email: 'admin@example.com', firstName: 'Ada', lastName: 'Admin', access: 'ADMIN' },
   { userId: 4, email: 'new@example.com', firstName: 'Nina', lastName: 'New', access: 'STANDARD' },
+  { userId: 5, email: 'sam@example.com', firstName: 'Sam', lastName: 'Sample', access: 'STANDARD' },
 ]
 
 export const courses: Course[] = [
@@ -58,6 +59,7 @@ export const enrollments: { userId: number, courseId: number, role: CourseRole }
   { userId: 2, courseId: 1, role: 'TEACHER' },
   { userId: 2, courseId: 4, role: 'TEACHER' },
   { userId: 3, courseId: 2, role: 'TEACHER' },
+  { userId: 5, courseId: 1, role: 'STUDENT' },
   // User 4 is not enrolled anywhere (empty overview).
 ]
 
@@ -105,7 +107,8 @@ export const submissions: {
   payload: string
   submittedAt: string
   late: boolean
-  grade: { value: string, feedback: string | null, publishedAt: string } | null
+  /** publishedAt null: saved by the teacher but not visible to the student yet. */
+  grade: { value: string, feedback: string | null, publishedAt: string | null } | null
 }[] = [
   {
     id: 1, userId: 1, contentId: 104, type: 'TEXT', late: false,
@@ -127,7 +130,20 @@ export const submissions: {
     payload: 'Our first sprint went well.', submittedAt: inDays(-2, 15, 0),
     grade: { value: 'B', feedback: null, publishedAt: inDays(0, 8, 0) },
   },
+  {
+    id: 4, userId: 5, contentId: 102, type: 'GIT_URL', late: true,
+    payload: 'https://github.com/example/sam-docker-compose', submittedAt: inDays(1, 13, 0),
+    grade: null,
+  },
+  {
+    id: 5, userId: 5, contentId: 104, type: 'TEXT', late: false,
+    payload: 'Sam answered the old assignment.', submittedAt: inDays(-3, 22, 10),
+    grade: { value: 'Not passed', feedback: 'Please explain the HTTP methods.', publishedAt: null },
+  },
 ]
+
+/** Questions added to quizzes in mock mode (not shown anywhere yet). */
+export const quizQuestions: { quizId: number, questionText: string, options: unknown[] }[] = []
 
 /**
  * All content, with its courseId so the handlers can check the course. The handlers

@@ -18,9 +18,14 @@ export interface EnrolledCourse extends Course {
   role: CourseRole;
 }
 
+// One member of a course (proposed: GET /api/courses/{courseId}/enrollments). The names
+// and email let teachers see who is enrolled without a request per user.
 export interface CourseEnrollment {
   userId: UserId;
   role: CourseRole;
+  firstName: string;
+  lastName: string;
+  email: string;
 }
 
 // Matches the backend's CreateCourseRequest (course/api/dto/CreateCourseRequest.java).
@@ -39,6 +44,11 @@ export interface UpdateCourseInput {
 export interface CourseEnrollmentInput {
   courseId: CourseId;
   userId: UserId;
+}
+
+export interface EnrollInCourseInput extends CourseEnrollmentInput {
+  /** Defaults to STUDENT on the backend. */
+  role?: CourseRole;
 }
 
 export interface UpdateCourseRoleInput extends CourseEnrollmentInput {

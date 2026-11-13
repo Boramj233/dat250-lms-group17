@@ -9,6 +9,7 @@ export const paths = {
   home: '/',
   login: '/login',
   courses: '/courses',
+  newCourse: '/courses/new',
   grades: '/grades',
 
   // Route pattern for the course layout; the course pages are nested routes in routes.tsx.
@@ -24,4 +25,7 @@ export const paths = {
     `/courses/${id(courseId)}/${slug}`,
   courseGroups: (courseId: CourseId) => `/courses/${id(courseId)}/groups`,
   courseGrades: (courseId: CourseId) => `/courses/${id(courseId)}/grades`,
+  courseMembers: (courseId: CourseId) => `/courses/${id(courseId)}/members`,
+  courseNewContent: (courseId: CourseId, moduleId: ModuleId) =>
+    `/courses/${id(courseId)}/modules/${id(moduleId)}/new`,
 } as const

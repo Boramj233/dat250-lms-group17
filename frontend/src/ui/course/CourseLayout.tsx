@@ -5,6 +5,7 @@ import { useCurrentUser } from '../../data/auth/useAuth'
 import { useCourseCompletions } from '../../data/content/hooks/queries/useCourseCompletions'
 import { useModuleContent } from '../../data/content/hooks/queries/useModuleContent'
 import { useCourse } from '../../data/courses/hooks/queries/useCourse'
+import { useCourseRole } from '../../data/courses/hooks/queries/useCourseRole'
 import { useCourseModules } from '../../data/module/hooks/queries/useCourseModules'
 import { useUserModuleProgress } from '../../data/module/hooks/queries/useUserModuleProgress'
 import { Breadcrumbs, type BreadcrumbItem } from '../navigation/Trail'
@@ -15,6 +16,15 @@ import { contentTypeBySlug } from './contentTypes'
 import './CourseLayout.css'
 
 const COURSE_NAV_ID = 'course-navigation'
+
+/** Whether edit mode was on for this course earlier in this browser tab. */
+function readEditMode(key: string): boolean {
+  try {
+    return window.sessionStorage.getItem(key) === 'on'
+  } catch {
+    return false
+  }
+}
 
 /**
  * Frame for all pages in a course: breadcrumbs (course › module › content), the course
@@ -27,6 +37,7 @@ export default function CourseLayout() {
   const course = useCourse(courseId)
   const modules = useCourseModules(courseId)
   const completions = useCourseCompletions(courseId)
+  const { role } = useCourseRole(courseId)
   const user = useCurrentUser().data!
   const progress = useUserModuleProgress(courseId, user.userId)
 
@@ -42,6 +53,16 @@ export default function CourseLayout() {
   const moduleSection = contentTypeBySlug(moduleSectionMatch?.params.section)
 
   const moduleContent = useModuleContent(courseId, moduleId)
+
+  // Edit mode, per course, kept for this browser tab (sessionStorage), so it survives
+  // reloads but a new visit starts in the normal view.
+  const editKey = `lms-edit-mode-${courseId}`
+  const [editCourses, setEditCourses] = useState<Record<string, boolean>>({})
+  const editModeOn = editCourses[editKey] ?? readEditMode(editKey)
+  function setEditMode(on: boolean) {
+    setEditCourses(previous => ({ ...previous, [editKey]: on }))
+    try { window.sessionStorage.setItem(editKey, on ? 'on' : 'off') } catch { /* not available */ }
+  }
 
   // On narrow screens the course menu is a toggle; it closes again on every navigation.
   const [menuOpenAt, setMenuOpenAt] = useState<string | null>(null)
@@ -69,11 +90,14 @@ export default function CourseLayout() {
       state: linkState,
     })
     if (contentId) crumbs.push({ label: currentContent?.title ?? '…' })
+    else if (moduleSectionMatch?.params.section === 'new') crumbs.push({ label: 'New content' })
     else if (moduleSection) crumbs.push({ label: moduleSection.plural })
   } else if (section === 'groups') {
     crumbs.push({ label: 'Groups' })
   } else if (section === 'grades') {
     crumbs.push({ label: 'Grades' })
+  } else if (section === 'members') {
+    crumbs.push({ label: 'Members' })
   } else if (contentTypeBySlug(section)) {
     crumbs.push({ label: contentTypeBySlug(section)!.plural })
   }
@@ -82,6 +106,9 @@ export default function CourseLayout() {
 
   const context: CourseContextValue = {
     course: course.data,
+    role,
+    isTeacher: role === 'TEACHER',
+    editMode: role === 'TEACHER' && editModeOn,
     modules: sortedModules,
     completed: completions.data,
     completedModules: progress.data && new Set(
@@ -90,7 +117,25 @@ export default function CourseLayout() {
 
   return (
     <div className="course-layout">
-      <Breadcrumbs items={crumbs} />
+      <div className="course-topline">
+        <Breadcrumbs items={crumbs} />
+        {context.isTeacher && (
+          <button
+            type="button"
+            className={`edit-mode-toggle${context.editMode ? ' is-on' : ''}`}
+            aria-pressed={context.editMode}
+            onClick={() => setEditMode(!context.editMode)}
+          >
+            <span className="edit-mode-switch" aria-hidden="true" />
+            Edit course
+          </button>
+        )}
+      </div>
+      {context.editMode && (
+        <p className="edit-mode-banner" role="status">
+          <strong>Edit mode.</strong> You can add modules and content. Changes are visible to students.
+        </p>
+      )}
 
       <button
         type="button"
@@ -115,6 +160,7 @@ export default function CourseLayout() {
           isOpen={menuOpen}
           completed={completions.data}
           completedModules={context.completedModules}
+          isTeacher={context.isTeacher}
         />
         <div className="course-page">
           <Outlet context={context} />

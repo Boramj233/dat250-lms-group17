@@ -11,6 +11,8 @@ import CompletedMark from '../CompletedMark'
 import { CourseLink } from '../CourseLink'
 import ContentTypeIcon from '../ContentTypeIcon'
 import SubmissionFeedback from '../SubmissionFeedback'
+import { TeacherOnly } from '../TeacherOnly'
+import TeacherSubmissions from '../TeacherSubmissions'
 import { useCourseContext } from '../courseContext'
 import { contentTypeInfo } from '../contentTypes'
 import './CoursePages.css'
@@ -123,7 +125,9 @@ function TaskBody({ content }: { content: AssignmentContent | CodingExerciseCont
           </div>
         )}
       </dl>
-      <SubmissionFeedback contentId={content.id} />
+      <TeacherOnly fallback={<SubmissionFeedback contentId={content.id} />}>
+        <TeacherSubmissions contentId={content.id} />
+      </TeacherOnly>
       <h2 className="course-section-title">Instructions</h2>
       <div className="content-text">{content.instructions}</div>
     </>

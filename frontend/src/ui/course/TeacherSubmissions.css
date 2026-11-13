@@ -1,0 +1,74 @@
+.teacher-submission-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.teacher-submission {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-5);
+  border: var(--border-width-sm) solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-background);
+}
+
+.teacher-submission-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.teacher-submission-student {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.teacher-submission-name {
+  font-weight: var(--font-weight-bold);
+}
+
+.teacher-submission-meta,
+.teacher-submission-status {
+  font-family: var(--font-ui);
+  font-size: var(--text-small);
+  overflow-wrap: anywhere;
+}
+
+.teacher-submission-status {
+  padding: 0 var(--space-3);
+  border: var(--border-width-sm) solid var(--color-border);
+  border-radius: var(--radius-sm);
+  white-space: nowrap;
+}
+
+.teacher-submission-payload {
+  padding: var(--space-3) var(--space-5);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  overflow-wrap: anywhere;
+}
+
+.teacher-grade-form {
+  max-width: none;
+}
+
+.teacher-grade-form .form-row > .teacher-grade-value {
+  flex: 0 1 10rem;
+}
+
+.teacher-grade-form .form-row > .form-field:not(.teacher-grade-value) {
+  flex: 1 1 18rem;
+}
+
+.teacher-grade-form textarea {
+  min-height: 4.5rem;
+}

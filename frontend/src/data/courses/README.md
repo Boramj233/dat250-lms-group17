@@ -13,14 +13,25 @@ are frontend assumptions to agree on when implementing the backend.
 | POST | `/api/courses` | `CreateCourseInput` | `Course` |
 | PATCH | `/api/courses/{courseId}` | `UpdateCourseInput.changes` | `Course` |
 | DELETE | `/api/courses/{courseId}` | — | `204 No Content` |
-| POST | `/api/courses/{courseId}/enrollments` | `{ userId }` | `204 No Content` |
+| POST | `/api/courses/{courseId}/enrollments` | `{ userId, role? }` | `204 No Content` |
 | DELETE | `/api/courses/{courseId}/enrollments/{userId}` | — | `204 No Content` |
 | PATCH | `/api/courses/{courseId}/enrollments/{userId}` | `{ role }` | `204 No Content` |
 
 Types are defined in `types.ts`. A course has `id`, `title`, `description`,
 `term` (`SPRING` or `AUTUMN`) and `year`, as in the backend's `CourseResponse`. An enrolled course also includes the specified user's
-`role`. A course enrollment has `userId` and `role`. New enrollments default to
-`STUDENT` on the backend; promotion uses the role endpoint. Authentication and
+`role`. A course enrollment has `userId`, `role`, `firstName`, `lastName` and
+`email`, so the members page needs one request. New enrollments default to
+`STUDENT`; `role` in the POST body sets another role directly.
+
+**Who may do what** (the backend must enforce it):
+
+- Users with global access `COURSE_MANAGER` (or `ADMIN`) may create courses
+  (`POST /api/courses`). The creator must be enrolled as `TEACHER` of the new
+  course; the backend does not do this yet (`CourseService.createCourse`).
+- Only a `TEACHER` of the course may change it: enroll and remove members, change
+  roles, add modules and content, see all submissions and grade them.
+- Finding users to enroll uses `GET /api/users/search?search=` (exists, but only
+  for `COURSE_MANAGER`/`ADMIN`; a teacher without that access cannot search yet). Authentication and
 authorization must be enforced by the backend, including who may create courses
 and assign teacher roles.
 

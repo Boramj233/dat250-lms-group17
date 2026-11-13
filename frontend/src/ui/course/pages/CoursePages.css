@@ -340,3 +340,33 @@
   letter-spacing: normal;
   background: var(--color-surface);
 }
+
+/* New content form. */
+.content-type-choice {
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+
+.quiz-question-editor {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: 0;
+  padding: var(--space-5);
+  border: var(--border-width-sm) solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-background);
+}
+
+.quiz-option-editor {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.quiz-option-editor input[type='checkbox'] {
+  flex-shrink: 0;
+  width: 1.125rem;
+  height: 1.125rem;
+}

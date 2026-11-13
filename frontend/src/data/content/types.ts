@@ -1,5 +1,4 @@
 import type { ContentId, CourseId, ModuleId, UserId } from "../shared/types";
-import type { QuizQuestionDefinition } from "../quizzes/types";
 
 // The content types in the backend (ContentSummaryResponse.type). The backend sends
 // "Assignment" for assignments; contentQueries normalizes it to "ASSIGNMENT".
@@ -61,18 +60,57 @@ export type Content =
   | AssignmentContent
   | CodingExerciseContent;
 
-export interface CreateTextContentInput {
+// Creating content (teachers). Each type has its own backend endpoint:
+// POST /api/courses/{courseId}/modules/{moduleId}/contents/{pages|assignments|coding-exercises|quizzes}
+interface CreateContentBase {
+  courseId: CourseId;
   moduleId: ModuleId;
-  type: "STATIC_PAGE";
   title: string;
   position: number;
+}
+
+export interface CreateStaticPageInput extends CreateContentBase {
+  type: "STATIC_PAGE";
   body: string;
 }
 
-export interface CreateQuizContentInput extends Omit<QuizContent, "id"> {
-  questions: QuizQuestionDefinition[];
+export interface CreateAssignmentInput extends CreateContentBase {
+  type: "ASSIGNMENT";
+  instructions: string;
+  /** ISO 8601 instant, or null for no deadline. */
+  deadline: string | null;
+  allowLateSubmission: boolean;
+  /** Proposed; the backend ignores it until it has the field. */
+  mandatory: boolean;
 }
-export type CreateContentInput = CreateTextContentInput | CreateQuizContentInput;
+
+export interface CreateCodingExerciseInput extends CreateContentBase {
+  type: "CODING_EXERCISE";
+  instructions: string;
+  starterRepositoryUrl: string;
+  deadline: string | null;
+  allowLateSubmission: boolean;
+}
+
+// Matches the backend's CreateQuizQuestionRequest (without position; set from the order).
+export interface NewQuizQuestion {
+  questionText: string;
+  hint?: string;
+  options: { optionText: string; correct: boolean }[];
+}
+
+export interface CreateQuizInput extends CreateContentBase {
+  type: "QUIZ";
+  maxAttempts: number;
+  /** Added one by one after the quiz is created (POST /api/quizzes/{id}/questions). */
+  questions: NewQuizQuestion[];
+}
+
+export type CreateContentInput =
+  | CreateStaticPageInput
+  | CreateAssignmentInput
+  | CreateCodingExerciseInput
+  | CreateQuizInput;
 
 export interface UpdateContentInput {
   moduleId: ModuleId;

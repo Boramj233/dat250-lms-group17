@@ -4,6 +4,7 @@ import { useModuleContent } from '../../data/content/hooks/queries/useModuleCont
 import type { Course } from '../../data/courses/types'
 import type { CourseModule } from '../../data/module/types'
 import { formatTerm } from '../components/courseFormat'
+import '../components/forms.css'
 import CompletedMark from './CompletedMark'
 import { CourseNavLink } from './CourseLink'
 import ContentTypeIcon from './ContentTypeIcon'
@@ -21,6 +22,8 @@ type CourseSidebarProps = {
   completed?: Set<string>
   /** Completed module ids, for check marks. */
   completedModules?: Set<string>
+  /** Show the teacher tools (members). */
+  isTeacher?: boolean
 }
 
 /**
@@ -29,7 +32,7 @@ type CourseSidebarProps = {
  * leaving the page; the module being viewed is unfolded by default.
  */
 export default function CourseSidebar(
-  { id, course, modules, currentModuleId, isOpen, completed, completedModules }: CourseSidebarProps,
+  { id, course, modules, currentModuleId, isOpen, completed, completedModules, isTeacher = false }: CourseSidebarProps,
 ) {
   const currentId = currentModuleId === undefined ? undefined : String(currentModuleId)
   // Modules the user folded in or out by hand. They apply while the same module is
@@ -50,6 +53,7 @@ export default function CourseSidebar(
       <div className="course-nav-heading">
         <span className="course-nav-title">{course.title}</span>
         <span className="course-nav-term">{formatTerm(course)}</span>
+        {isTeacher && <span className="teacher-tag course-nav-role">Teacher</span>}
       </div>
 
       <ul className="course-nav-list">
@@ -111,6 +115,11 @@ export default function CourseSidebar(
         <li>
           <CourseNavLink to={paths.courseGroups(course.id)}>Groups</CourseNavLink>
         </li>
+        {isTeacher && (
+          <li>
+            <CourseNavLink to={paths.courseMembers(course.id)}>Members</CourseNavLink>
+          </li>
+        )}
       </ul>
     </nav>
   )

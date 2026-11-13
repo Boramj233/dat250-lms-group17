@@ -1,11 +1,20 @@
 import { useLocation, useOutletContext } from 'react-router'
-import type { Course } from '../../data/courses/types'
+import type { Course, CourseRole } from '../../data/courses/types'
 import type { CourseModule } from '../../data/module/types'
 import { readTrail } from '../navigation/trailState'
 
 /** What CourseLayout has loaded, for the course pages rendered in its <Outlet />. */
 export type CourseContextValue = {
   course: Course
+  /** The user's role in this course; undefined if not enrolled (e.g. an admin). */
+  role?: CourseRole
+  /** Teachers may change the course: members, modules, content, grading. */
+  isTeacher: boolean
+  /**
+   * Teachers switch this on to change modules and content. Off, a teacher sees the
+   * course (nearly) as students do. Always false for students.
+   */
+  editMode: boolean
   /** Sorted by position. */
   modules: CourseModule[]
   /**

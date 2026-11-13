@@ -1,4 +1,5 @@
-// Creates text or quiz content and refreshes the module's content list and user progress.
+// Creates a page, assignment, coding exercise or quiz (with questions) and refreshes
+// the module's content list and user progress.
 //only for teachers, not for students
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";

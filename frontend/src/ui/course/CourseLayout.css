@@ -8,6 +8,89 @@
   margin-bottom: 0;
 }
 
+/* Breadcrumbs left, the teacher's edit mode switch right. */
+.course-topline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  min-height: var(--size-control-md);
+}
+
+.edit-mode-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-left: auto;
+  min-height: var(--size-control-md);
+  padding: var(--space-2) var(--space-5) var(--space-2) var(--space-3);
+  border: var(--border-width-sm) solid var(--color-border);
+  border-radius: var(--radius-control);
+  color: var(--color-text);
+  background: var(--color-background);
+  font-family: var(--font-ui);
+  font-size: var(--text-small);
+  font-weight: var(--font-weight-bold);
+  cursor: pointer;
+}
+
+.edit-mode-toggle:hover {
+  background: var(--color-surface);
+}
+
+.edit-mode-toggle:focus-visible {
+  outline: var(--focus-ring-width) solid var(--color-primary);
+  outline-offset: var(--space-2);
+}
+
+/* A small switch: track with a knob that moves right when on. */
+.edit-mode-switch {
+  position: relative;
+  width: 2.25rem;
+  height: 1.25rem;
+  border-radius: 999px;
+  background: var(--color-border);
+  transition: background 0.15s ease;
+}
+
+.edit-mode-switch::after {
+  content: '';
+  position: absolute;
+  top: 0.125rem;
+  left: 0.125rem;
+  width: 1rem;
+  height: 1rem;
+  border-radius: 50%;
+  background: var(--color-background);
+  transition: transform 0.15s ease;
+}
+
+.edit-mode-toggle.is-on .edit-mode-switch {
+  background: var(--color-primary);
+}
+
+.edit-mode-toggle.is-on .edit-mode-switch::after {
+  transform: translateX(1rem);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .edit-mode-switch,
+  .edit-mode-switch::after {
+    transition: none;
+  }
+}
+
+.edit-mode-banner {
+  margin: 0;
+  padding: var(--space-3) var(--space-5);
+  border: var(--border-width-sm) dashed var(--color-primary);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  font-family: var(--font-ui);
+  font-size: var(--text-small);
+}
+
 /* Course menu left, page right; on narrow screens the menu is behind a toggle. */
 .course-body {
   display: grid;
@@ -89,6 +172,10 @@
 .course-nav-title {
   font-weight: var(--font-weight-bold);
   overflow-wrap: anywhere;
+}
+
+.course-nav-role {
+  align-self: flex-start;
 }
 
 .course-nav-term,

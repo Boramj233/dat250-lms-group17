@@ -6,6 +6,8 @@ import CompletedMark from '../CompletedMark'
 import { CourseLink } from '../CourseLink'
 import { useCourseContext } from '../courseContext'
 import { summarizeTypes } from '../contentTypes'
+import { EditModeOnly } from '../TeacherOnly'
+import '../../components/forms.css'
 import './CoursePages.css'
 
 /** One module: its content in order, and links to the previous and next module. */
@@ -37,6 +39,17 @@ export default function ModulePage() {
       {content.data && content.data.length > 0 && (
         <ContentList courseId={course.id} moduleId={module.id} items={content.data} />
       )}
+
+      <EditModeOnly>
+        <div className="teacher-panel">
+          <h2 className="teacher-panel-title">Add to this module</h2>
+          <div className="form-actions">
+            <CourseLink className="button-primary" to={paths.courseNewContent(course.id, module.id)}>
+              Add content
+            </CourseLink>
+          </div>
+        </div>
+      </EditModeOnly>
 
       <nav className="pager" aria-label="Modules">
         {previous && (
