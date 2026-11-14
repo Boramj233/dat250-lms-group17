@@ -1,4 +1,4 @@
-import type { UserId } from "../shared/types";
+import type { UserId } from "../../shared/types";
 import type { QuizAttemptId, QuizId } from "./types";
 
 export const quizKeys = {

@@ -1,4 +1,4 @@
-import type { ContentId, CourseId, ModuleId } from "../shared/types";
+import type { ContentId, CourseId, ModuleId } from "../../shared/types";
 
 // Content types that have a deadline in the backend (Assignment, CodingExercise).
 export type DeadlineContentType = "ASSIGNMENT" | "CODING_EXERCISE";

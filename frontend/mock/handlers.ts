@@ -11,6 +11,7 @@
 import type { Content, ContentType } from '../src/data/content/types'
 import type { EnrolledCourse } from '../src/data/courses/types'
 import type { UpcomingDeadline } from '../src/data/deadlines/types'
+import { canRequire, isUnlocked } from '../src/data/modules/prerequisites'
 import { completions, contents, courses, enrollments, modules, quizQuestions, submissions, users } from './data'
 import { created, forbidden, noContent, notFound, ok, type MockHandler, type MockResult, type MockUser } from './types'
 
@@ -42,7 +43,7 @@ function publishedGrade(grade: (typeof submissions)[number]['grade']) {
   return grade?.publishedAt ? grade : null
 }
 
-/** A submission in the frontend's Submission shape (src/data/submission/types.ts). */
+/** A submission in the frontend's Submission shape (src/data/submissions/types.ts). */
 function submissionResponse(submission: (typeof submissions)[number]) {
   const content = contents.find(c => c.id === submission.contentId)!
   return {
@@ -77,19 +78,40 @@ const BACKEND_TYPE: Record<ContentType, string> = {
 }
 
 /** The content as the backend's detail endpoint for its type returns it (no `type`). */
-function detailResponse(content: Content & { courseId: number }) {
+/**
+ * A quiz's questions as in QuizDetailResponse. For teachers of the course also the
+ * proposed `hint` and `correct` fields (data/content/README.md).
+ */
+function quizQuestionsResponse(quizId: string | number, forTeacher: boolean) {
+  return quizQuestions
+    .filter(q => String(q.quizId) === String(quizId))
+    .sort((a, b) => a.position - b.position)
+    .map(q => ({
+      id: q.id,
+      questionText: q.questionText,
+      position: q.position,
+      ...(forTeacher ? { hint: q.hint } : {}),
+      options: [...q.options]
+        .sort((a, b) => a.position - b.position)
+        .map(o => ({ id: o.id, optionText: o.optionText, position: o.position, ...(forTeacher ? { correct: o.correct } : {}) })),
+    }))
+}
+
+function detailResponse(content: Content & { courseId: number }, forTeacher = false) {
   const base = { id: content.id, moduleId: content.moduleId, title: content.title, position: content.position }
   switch (content.type) {
     case 'STATIC_PAGE':
       return { ...base, courseId: content.courseId, body: content.body }
     case 'QUIZ':
-      return { ...base, courseId: content.courseId, maxAttempts: content.maxAttempts }
+      return { ...base, courseId: content.courseId, maxAttempts: content.maxAttempts,
+        questions: quizQuestionsResponse(content.id, forTeacher) }
     case 'ASSIGNMENT':
       return { ...base, instructions: content.instructions, deadline: content.deadline,
-        allowLateSubmission: content.allowLateSubmission, mandatory: content.mandatory }
+        allowLateSubmission: content.allowLateSubmission, mandatory: content.mandatory,
+        groupAssignment: content.groupAssignment ?? false, acceptedFileTypes: content.acceptedFileTypes ?? [] }
     case 'CODING_EXERCISE':
       return { ...base, instructions: content.instructions, starterRepositoryUrl: content.starterRepositoryUrl,
-        deadline: content.deadline, allowLateSubmission: content.allowLateSubmission }
+        starterCode: content.starterCode ?? null, deadline: content.deadline, allowLateSubmission: content.allowLateSubmission }
   }
 }
 
@@ -99,7 +121,9 @@ function contentDetail(type: ContentType): MockHandler['handle'] {
     const content = contents.find(c => String(c.id) === params.contentId && c.type === type)
     if (!content) return notFound()
     if (!canReadCourse(user, content.courseId)) return forbidden()
-    return ok(detailResponse(content))
+    const teacher = isTeacher(user, content.courseId)
+    if (!teacher && content.active === false) return notFound()
+    return ok(detailResponse(content, teacher))
   }
 }
 
@@ -129,7 +153,7 @@ export const handlers: MockHandler[] = [
         .flatMap(content =>
           (content.type === 'ASSIGNMENT' || content.type === 'CODING_EXERCISE')
             && content.deadline && Date.parse(content.deadline) > now
-            && courseIds.has(content.courseId)
+            && courseIds.has(content.courseId) && content.active !== false
             ? [{
               contentId: content.id,
               type: content.type,
@@ -157,7 +181,8 @@ export const handlers: MockHandler[] = [
     },
   },
   {
-    // ModuleResponse: id, courseId, title, position.
+    // ModuleResponse: id, courseId, title, position, plus the proposed
+    // prerequisiteModuleIds (data/modules/README.md).
     method: 'GET',
     path: '/api/courses/:courseId/modules',
     handle: ({ user, params }) => {
@@ -166,7 +191,8 @@ export const handlers: MockHandler[] = [
       return ok(modules
         .filter(m => String(m.courseId) === params.courseId)
         .sort((a, b) => a.position - b.position)
-        .map(({ id, courseId, title, position }) => ({ id, courseId, title, position })))
+        .map(({ id, courseId, title, position, prerequisiteModuleIds }) =>
+          ({ id, courseId, title, position, prerequisiteModuleIds: prerequisiteModuleIds ?? [] })))
     },
   },
   {
@@ -177,10 +203,13 @@ export const handlers: MockHandler[] = [
       const module = modules.find(m => String(m.id) === params.moduleId && String(m.courseId) === params.courseId)
       if (!module) return notFound()
       if (!canReadCourse(user, params.courseId)) return forbidden()
+      // Students do not see inactive content; teachers of the course do.
+      const teacher = isTeacher(user, params.courseId)
       return ok(contents
-        .filter(c => c.moduleId === module.id)
+        .filter(c => c.moduleId === module.id && (teacher || c.active !== false))
         .sort((a, b) => a.position - b.position)
-        .map(c => ({ id: c.id, type: BACKEND_TYPE[c.type], title: c.title, position: c.position })))
+        .map(c => ({ id: c.id, type: BACKEND_TYPE[c.type], title: c.title, position: c.position,
+          requiredForCompletion: c.requiredForCompletion ?? false, active: c.active ?? true })))
     },
   },
   {
@@ -211,7 +240,7 @@ export const handlers: MockHandler[] = [
     },
   },
   {
-    // Proposed endpoint (src/data/submission): SubmissionResult with the published grade.
+    // Proposed endpoint (src/data/submissions): SubmissionResult with the published grade.
     method: 'GET',
     path: '/api/submissions/:submissionId/result',
     handle: ({ user, params }) => {
@@ -259,25 +288,31 @@ export const handlers: MockHandler[] = [
     },
   },
   {
-    // Proposed endpoint (src/data/module/README.md). The mock calls a module completed
-    // when the user has completed all its assignments, coding exercises and quizzes
-    // (and it has at least one). The backend decides the real rule.
+    // Proposed endpoint (src/data/modules/README.md). The mock calls a module completed
+    // when the user has completed all its content marked requiredForCompletion; with
+    // none marked, all its assignments, coding exercises and quizzes (and it has at
+    // least one). The backend decides the real rule.
     method: 'GET',
     path: '/api/users/:userId/courses/:courseId/modules/progress',
     handle: ({ user, params }) => {
       if (!canReadUser(user, params.userId)) return forbidden()
       if (!canReadCourse(user, params.courseId)) return forbidden()
       const done = new Set(completions.filter(c => String(c.userId) === params.userId).map(c => c.contentId))
-      return ok(modules
-        .filter(m => String(m.courseId) === params.courseId)
-        .map(module => {
-          const tasks = contents.filter(c => c.moduleId === module.id && c.type !== 'STATIC_PAGE')
-          return {
-            moduleId: module.id,
-            completed: tasks.length > 0 && tasks.every(task => done.has(Number(task.id))),
-            accessible: true,
-          }
-        }))
+      const courseModules = modules.filter(m => String(m.courseId) === params.courseId)
+      const completedIds = new Set(courseModules
+        .filter(module => {
+          const inModule = contents.filter(c => c.moduleId === module.id && c.active !== false)
+          const required = inModule.filter(c => c.requiredForCompletion)
+          const tasks = required.length > 0 ? required : inModule.filter(c => c.type !== 'STATIC_PAGE')
+          return tasks.length > 0 && tasks.every(task => done.has(Number(task.id)))
+        })
+        .map(module => String(module.id)))
+      return ok(courseModules.map(module => ({
+        moduleId: module.id,
+        completed: completedIds.has(String(module.id)),
+        // Open when all its prerequisite modules are completed.
+        accessible: isUnlocked(module, completedIds),
+      })))
     },
   },
   // ---------- Teacher and course manager endpoints ----------
@@ -294,6 +329,22 @@ export const handlers: MockHandler[] = [
       courses.push(course)
       enrollments.push({ userId: user.userId, courseId: course.id, role: 'TEACHER' })
       return created(course)
+    },
+  },
+  {
+    // Proposed (data/courses/README.md): UpdateCourseInput.changes -> CourseResponse.
+    // Only teachers of the course may change it.
+    method: 'PATCH',
+    path: '/api/courses/:courseId',
+    handle: ({ user, params, body }) => {
+      const course = courses.find(c => String(c.id) === params.courseId)
+      if (!course) return notFound()
+      if (!isTeacher(user, course.id)) return forbidden()
+      const changes = body as Partial<{ title: string, description: string, term: 'SPRING' | 'AUTUMN', year: number }>
+      if (changes.title !== undefined && !changes.title.trim()) return badRequest('Title is required')
+      if (changes.description !== undefined && !changes.description.trim()) return badRequest('Description is required')
+      Object.assign(course, changes)
+      return ok(course)
     },
   },
   {
@@ -368,9 +419,32 @@ export const handlers: MockHandler[] = [
       if (!isTeacher(user, params.courseId)) return forbidden()
       const { title, position } = body as { title: string, position: number }
       if (!title?.trim()) return badRequest('Title is required')
-      const module = { id: nextId(modules), courseId: Number(params.courseId), title, position }
+      const module = { id: nextId(modules), courseId: Number(params.courseId), title, position, prerequisiteModuleIds: [] }
       modules.push(module)
       return created(module)
+    },
+  },
+  {
+    // Proposed (data/modules/README.md): title, position and/or prerequisiteModuleIds.
+    // Prerequisites must be other modules in the same course, without cycles.
+    method: 'PATCH',
+    path: '/api/courses/:courseId/modules/:moduleId',
+    handle: ({ user, params, body }) => {
+      const module = modules.find(m => String(m.id) === params.moduleId && String(m.courseId) === params.courseId)
+      if (!module) return notFound()
+      if (!isTeacher(user, params.courseId)) return forbidden()
+      const changes = body as Partial<{ title: string, position: number, prerequisiteModuleIds: (string | number)[] }>
+      if (changes.title !== undefined && !changes.title.trim()) return badRequest('Title is required')
+      if (changes.prerequisiteModuleIds !== undefined) {
+        const courseModules = modules.filter(m => m.courseId === module.courseId)
+        const ids = changes.prerequisiteModuleIds.map(Number)
+        if (!ids.every(id => courseModules.some(m => m.id === id))) return badRequest('Prerequisites must be in the same course')
+        if (!ids.every(id => canRequire(courseModules, module.id, id))) return badRequest('Prerequisites cannot form a cycle')
+        module.prerequisiteModuleIds = ids
+      }
+      if (changes.title !== undefined) module.title = changes.title
+      if (changes.position !== undefined) module.position = changes.position
+      return ok({ ...module, prerequisiteModuleIds: module.prerequisiteModuleIds ?? [] })
     },
   },
   ...([
@@ -402,6 +476,55 @@ export const handlers: MockHandler[] = [
     },
   })),
   {
+    // Proposed (data/content/README.md): { moduleId, position } -> the moved content.
+    // The content may only move to another module in the same course.
+    method: 'PATCH',
+    path: '/api/content/:contentId/move',
+    handle: ({ user, params, body }) => {
+      const content = contents.find(c => String(c.id) === params.contentId)
+      if (!content) return notFound()
+      if (!isTeacher(user, content.courseId)) return forbidden()
+      const { moduleId, position } = body as { moduleId: string | number, position: number }
+      const target = modules.find(m => String(m.id) === String(moduleId) && m.courseId === content.courseId)
+      if (!target) return badRequest('The module is not in this course')
+      content.moduleId = target.id
+      content.position = position
+      return ok(detailResponse(content))
+    },
+  },
+  {
+    // Proposed (data/content/README.md): title, position and/or body (pages only).
+    method: 'PATCH',
+    path: '/api/content/:contentId',
+    handle: ({ user, params, body }) => {
+      const content = contents.find(c => String(c.id) === params.contentId)
+      if (!content) return notFound()
+      if (!isTeacher(user, content.courseId)) return forbidden()
+      const changes = body as Partial<{
+        title: string, position: number, body: string, requiredForCompletion: boolean, active: boolean,
+      }>
+      if (changes.title !== undefined && !changes.title.trim()) return badRequest('Title is required')
+      if (changes.title !== undefined) content.title = changes.title
+      if (changes.position !== undefined) content.position = changes.position
+      if (changes.requiredForCompletion !== undefined) content.requiredForCompletion = changes.requiredForCompletion
+      if (changes.active !== undefined) content.active = changes.active
+      if (changes.body !== undefined && content.type === 'STATIC_PAGE') content.body = changes.body
+      return ok(detailResponse(content))
+    },
+  },
+  {
+    // Proposed (data/content/README.md).
+    method: 'DELETE',
+    path: '/api/content/:contentId',
+    handle: ({ user, params }) => {
+      const index = contents.findIndex(c => String(c.id) === params.contentId)
+      if (index < 0) return notFound()
+      if (!isTeacher(user, contents[index].courseId)) return forbidden()
+      contents.splice(index, 1)
+      return noContent()
+    },
+  },
+  {
     // Backend (exists): CreateQuizQuestionRequest.
     method: 'POST',
     path: '/api/quizzes/:quizId/questions',
@@ -409,13 +532,28 @@ export const handlers: MockHandler[] = [
       const quiz = contents.find(c => String(c.id) === params.quizId && c.type === 'QUIZ')
       if (!quiz) return notFound()
       if (!isTeacher(user, quiz.courseId)) return forbidden()
-      const question = body as { questionText: string, options: unknown[] }
-      quizQuestions.push({ quizId: Number(quiz.id), questionText: question.questionText, options: question.options })
-      return created({ id: quizQuestions.length, ...question })
+      const question = body as {
+        questionText: string, position: number, hint: string | null,
+        options: { optionText: string, correct: boolean, position: number }[],
+      }
+      const optionIds = quizQuestions.flatMap(q => q.options.map(o => o.id))
+      const firstOptionId = Math.max(0, ...optionIds) + 1
+      const stored = {
+        id: nextId(quizQuestions),
+        quizId: Number(quiz.id),
+        questionText: question.questionText,
+        position: question.position,
+        hint: question.hint,
+        options: question.options.map((option, index) => ({ ...option, id: firstOptionId + index })),
+      }
+      quizQuestions.push(stored)
+      // QuizQuestionResponse: no options, like the backend.
+      return created({ id: stored.id, quizId: stored.quizId, questionText: stored.questionText,
+        position: stored.position, hint: stored.hint })
     },
   },
   {
-    // Proposed (src/data/submission): every student's latest submission, for teachers.
+    // Proposed (src/data/submissions): every student's latest submission, for teachers.
     method: 'GET',
     path: '/api/contents/:contentId/submissions',
     handle: ({ user, params }) => {

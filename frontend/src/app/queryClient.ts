@@ -1,5 +1,5 @@
 import { QueryClient } from "@tanstack/react-query";
-import { AuthenticationRequiredError } from "../data/shared/apiClient";
+import { AuthenticationRequiredError } from "../data/apiClient";
 
 export const queryClient = new QueryClient({
   defaultOptions: {

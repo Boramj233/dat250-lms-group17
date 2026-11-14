@@ -21,6 +21,66 @@ as text in React; do not insert it as raw HTML.
 | GET | `/api/assignments/{assignmentId}` | — | `AssignmentContent` (without `type`) |
 | GET | `/api/coding-exercises/{exerciseId}` | — | `CodingExerciseContent` (without `type`) |
 
+## Content required to complete a module (proposed)
+
+`ContentSummary.requiredForCompletion` (boolean) marks an item the user must
+complete to complete its module, for every content type. Teachers switch it on and
+off with `PATCH /api/content/{contentId}` (`{ requiredForCompletion }`). The module
+content list (`GET .../modules/{moduleId}/contents`) should include it; missing
+means not required.
+
+It is separate from an assignment's `mandatory`, which means the assignment must be
+passed for the course (for example to take the exam).
+
+The backend's module progress (`data/modules/README.md`) should then count a module
+as completed when the user has completed all its required items. How a module with
+no required items is treated is up to the backend; the mock then requires all its
+assignments, coding exercises and quizzes, as before.
+
+## Active (visible to students) content (proposed)
+
+`ContentSummary.active` (boolean) says whether students can see an item. Teachers
+switch it off to prepare content before it is shown, or to hide it again, with
+`PATCH /api/content/{contentId}` (`{ active }`). New content is active. The module
+content list includes it; missing means active.
+
+For students the backend must leave inactive content out everywhere: the module
+content list, the detail endpoints (404), upcoming deadlines and completion. Teachers
+of the course still get it, with `active: false`.
+
+## Quiz questions and correct answers (proposed)
+
+`GET /api/quizzes/{quizId}` (`QuizDetailResponse`) returns the questions and their
+options, but not which options are correct or the hints, so students cannot see
+them. Teachers need both to check a quiz they made. Proposed: when the user is a
+teacher of the course, the backend adds `hint` to each question and `correct` to each
+option (`QuizContentQuestion`, `QuizContentOption` in `types.ts`); for everyone else
+the response stays as it is. Until then the manage pages show the questions and
+options, and say that the correct answers are not available.
+
+## Starter code for coding exercises (proposed)
+
+`CodingExerciseContent.starterCode` (string or null) is code the students start from,
+shown with the exercise, as an alternative or addition to `starterRepositoryUrl`. A
+coding exercise has at least one of them, so `starterRepositoryUrl` may be null when
+there is starter code. The backend should add `starterCode` to the entity,
+`CreateCodingExerciseRequest` and `CodingExerciseResponse`, and accept a missing
+`starterRepositoryUrl`. Until then the field is missing and the UI shows only the
+repository.
+
+## Group assignments and accepted file types (proposed)
+
+Two more fields on `AssignmentContent`, set when the assignment is created:
+
+- `groupAssignment` (boolean): students hand in as a group, one submission per
+  group (the submission's `groupId`, see `data/submissions`).
+- `acceptedFileTypes` (string array): the file name extensions that may be handed
+  in, lower case with a dot, e.g. `[".pdf", ".zip"]`. Empty means any file type.
+  The backend must check uploaded files against it.
+
+The backend should add both to the `Assignment` entity, `CreateAssignmentRequest`
+and `AssignmentResponse`. Until then they are missing and the UI does not show them.
+
 ## Mandatory assignments (proposed)
 
 `AssignmentContent.mandatory` (boolean) says whether the assignment must be passed.
@@ -59,7 +119,7 @@ Proposed (not in the backend yet):
 | Method | Endpoint | Request body | Response |
 | --- | --- | --- | --- |
 | POST | `/api/modules/{moduleId}/content` | Text or quiz fields from `CreateContentInput` | `Content` |
-| PATCH | `/api/content/{contentId}` | Updated `title`, `position`, and/or `body` | `Content` |
+| PATCH | `/api/content/{contentId}` | Updated `title`, `position`, `body`, `requiredForCompletion` and/or `active` | `Content` |
 | DELETE | `/api/content/{contentId}` | — | `204 No Content` |
 | PATCH | `/api/content/{contentId}/move` | `{ moduleId, position }` | `Content` |
 | GET | `/api/users/{userId}/content/{contentId}/completion` | — | `ContentCompletion` |

@@ -1,4 +1,4 @@
-import type { UserId } from "../shared/types";
+import type { UserId } from "../../shared/types";
 
 // Matches the backend's UserLookupResponse.
 export interface UserLookup {

@@ -1,0 +1,38 @@
+.quiz-question-editor {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: 0;
+  padding: var(--space-5);
+  border: var(--border-width-sm) solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-background);
+}
+
+.quiz-option-editor {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.quiz-option-editor input[type='checkbox'] {
+  flex-shrink: 0;
+  width: 1.125rem;
+  height: 1.125rem;
+}
+
+/* Starter code: monospace, wide enough for code, keeps indentation. */
+.code-input {
+  min-height: 10rem;
+  font-family: var(--font-code);
+  font-size: var(--text-small);
+  white-space: pre;
+  tab-size: 2;
+}
+
+/* Accepted file types: the preset checkboxes, then a field for other extensions. */
+.file-types {
+  margin: 0;
+  padding: 0;
+  border: none;
+}

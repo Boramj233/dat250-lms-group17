@@ -1,5 +1,5 @@
-import type { ContentId, CourseId, ModuleId } from "../shared/types";
-import type { SubmissionGrade, SubmissionId } from "../submission/types";
+import type { ContentId, CourseId, ModuleId } from "../../shared/types";
+import type { SubmissionGrade, SubmissionId } from "../submissions/types";
 
 /**
  * One assignment or coding exercise the logged-in user has submitted: either graded

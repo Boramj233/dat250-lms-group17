@@ -1,4 +1,4 @@
-import type { ContentId, CourseId, ModuleId, UserId } from "../shared/types";
+import type { ContentId, CourseId, ModuleId, UserId } from "../../shared/types";
 
 // A quiz is a content item. Attempt and question IDs are local to this domain.
 export type QuizId = ContentId;

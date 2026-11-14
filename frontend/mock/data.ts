@@ -5,7 +5,7 @@
 // matches what the frontend expects from the backend.
 import type { Content } from '../src/data/content/types'
 import type { Course, CourseRole } from '../src/data/courses/types'
-import type { CourseModule } from '../src/data/module/types'
+import type { CourseModule } from '../src/data/modules/types'
 import type { MockUser } from './types'
 
 /** Delay on every API answer, so loading states are visible. 0 turns it off. */
@@ -73,8 +73,9 @@ function inDays(days: number, hours = 23, minutes = 59): string {
 
 export const modules: CourseModule[] = [
   { id: 1, courseId: 1, title: 'Introduction and REST', position: 0 },
-  { id: 2, courseId: 1, title: 'Containers', position: 1 },
-  { id: 3, courseId: 1, title: 'Messaging', position: 2 },
+  // Containers opens when module 1 is completed, Messaging when Containers is.
+  { id: 2, courseId: 1, title: 'Containers', position: 1, prerequisiteModuleIds: [1] },
+  { id: 3, courseId: 1, title: 'Messaging', position: 2, prerequisiteModuleIds: [2] },
   { id: 4, courseId: 1, title: 'Cloud deployment', position: 3 },
   { id: 5, courseId: 2, title: 'Agile and Scrum', position: 0 },
   { id: 6, courseId: 2, title: 'Testing', position: 1 },
@@ -143,7 +144,35 @@ export const submissions: {
 ]
 
 /** Questions added to quizzes in mock mode (not shown anywhere yet). */
-export const quizQuestions: { quizId: number, questionText: string, options: unknown[] }[] = []
+export type MockQuizQuestion = {
+  id: number
+  quizId: number
+  questionText: string
+  position: number
+  hint: string | null
+  options: { id: number, optionText: string, position: number, correct: boolean }[]
+}
+
+/** Questions of the quizzes; new ones are added by POST /api/quizzes/:quizId/questions. */
+export const quizQuestions: MockQuizQuestion[] = [
+  {
+    id: 1, quizId: 13, questionText: 'Which HTTP method should create a new resource?', position: 0,
+    hint: 'It is not idempotent.',
+    options: [
+      { id: 1, optionText: 'GET', position: 0, correct: false },
+      { id: 2, optionText: 'POST', position: 1, correct: true },
+      { id: 3, optionText: 'DELETE', position: 2, correct: false },
+    ],
+  },
+  {
+    id: 2, quizId: 13, questionText: 'Which status codes mean success?', position: 1, hint: null,
+    options: [
+      { id: 4, optionText: '200 OK', position: 0, correct: true },
+      { id: 5, optionText: '201 Created', position: 1, correct: true },
+      { id: 6, optionText: '404 Not Found', position: 2, correct: false },
+    ],
+  },
+]
 
 /**
  * All content, with its courseId so the handlers can check the course. The handlers
@@ -162,16 +191,16 @@ export const contents: (Content & { courseId: number })[] = [
     body: 'REST is an architectural style for APIs.\n\nResources are identified by URLs, and the '
       + 'HTTP methods (GET, POST, PUT, PATCH, DELETE) say what to do with them.',
   },
-  { id: 13, courseId: 1, moduleId: 1, position: 2, type: 'QUIZ', title: 'REST basics quiz', maxAttempts: 3 },
+  { id: 13, courseId: 1, moduleId: 1, position: 2, type: 'QUIZ', title: 'REST basics quiz', maxAttempts: 3, requiredForCompletion: true },
   {
     id: 101, courseId: 1, moduleId: 1, position: 3, type: 'ASSIGNMENT', title: 'Assignment 1: REST API',
     instructions: 'Build a REST API for polls with Spring Boot.\n\nHand in a link to your repository.',
-    deadline: inDays(0, 23, 59), allowLateSubmission: false, mandatory: true,
+    deadline: inDays(0, 23, 59), allowLateSubmission: false, mandatory: true, requiredForCompletion: true,
   },
   {
     id: 104, courseId: 1, moduleId: 1, position: 4, type: 'ASSIGNMENT', title: 'Old assignment (already passed)',
     instructions: 'This deadline has passed, so it is not on the overview.',
-    deadline: inDays(-3), allowLateSubmission: false, mandatory: false,
+    deadline: inDays(-3), allowLateSubmission: false, mandatory: false, active: false,
   },
   // DAT250, module 2
   {
@@ -182,6 +211,7 @@ export const contents: (Content & { courseId: number })[] = [
     id: 102, courseId: 1, moduleId: 2, position: 1, type: 'CODING_EXERCISE', title: 'Exercise: Docker Compose',
     instructions: 'Run the poll app, a database and RabbitMQ with Docker Compose.',
     starterRepositoryUrl: 'https://github.com/example/docker-compose-starter',
+    starterCode: 'services:\n  app:\n    build: .\n    ports:\n      - "8080:8080"\n  # Add the database and RabbitMQ here.\n',
     deadline: inDays(1, 12, 0), allowLateSubmission: true,
   },
   { id: 22, courseId: 1, moduleId: 2, position: 2, type: 'QUIZ', title: 'Containers quiz', maxAttempts: 1 },
@@ -193,7 +223,7 @@ export const contents: (Content & { courseId: number })[] = [
   {
     id: 103, courseId: 1, moduleId: 3, position: 1, type: 'ASSIGNMENT', title: 'Assignment 2: Messaging',
     instructions: 'Send poll events through RabbitMQ.', deadline: inDays(9), allowLateSubmission: false,
-    mandatory: true,
+    mandatory: true, groupAssignment: true, acceptedFileTypes: ['.pdf', '.zip'],
   },
   // DAT251
   {

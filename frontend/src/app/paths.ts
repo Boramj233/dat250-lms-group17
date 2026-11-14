@@ -1,31 +1,24 @@
-import type { ContentId, CourseId, ModuleId } from '../data/shared/types'
+import type { ContentId, CourseId, ModuleId } from '../shared/types'
 
 const id = (value: CourseId | ModuleId | ContentId) => encodeURIComponent(String(value))
 
-/** URL part for the course pages that list one content type, e.g. /courses/1/quizzes. */
-export type ContentTypeSlug = 'pages' | 'quizzes' | 'assignments' | 'coding-exercises'
-
+// URL patterns for the pages; register the pages in routes.tsx.
 export const paths = {
   home: '/',
   login: '/login',
-  courses: '/courses',
-  newCourse: '/courses/new',
-  grades: '/grades',
 
-  // Route pattern for the course layout; the course pages are nested routes in routes.tsx.
-  courseRoute: '/courses/:courseId',
-  course: (courseId: CourseId) => `/courses/${id(courseId)}`,
-  courseModule: (courseId: CourseId, moduleId: ModuleId) =>
-    `/courses/${id(courseId)}/modules/${id(moduleId)}`,
-  courseContent: (courseId: CourseId, moduleId: ModuleId, contentId: ContentId) =>
-    `/courses/${id(courseId)}/modules/${id(moduleId)}/content/${id(contentId)}`,
-  courseModuleContentType: (courseId: CourseId, moduleId: ModuleId, slug: ContentTypeSlug) =>
-    `/courses/${id(courseId)}/modules/${id(moduleId)}/${slug}`,
-  courseContentType: (courseId: CourseId, slug: ContentTypeSlug) =>
-    `/courses/${id(courseId)}/${slug}`,
-  courseGroups: (courseId: CourseId) => `/courses/${id(courseId)}/groups`,
-  courseGrades: (courseId: CourseId) => `/courses/${id(courseId)}/grades`,
-  courseMembers: (courseId: CourseId) => `/courses/${id(courseId)}/members`,
-  courseNewContent: (courseId: CourseId, moduleId: ModuleId) =>
-    `/courses/${id(courseId)}/modules/${id(moduleId)}/new`,
-} as const
+  // Course managers: create courses and manage the courses they teach.
+  manageCourses: '/manage-courses',
+  newCourse: '/manage-courses/new',
+  // Route pattern for one course's management pages; they are nested routes in routes.tsx.
+  manageCourseRoute: '/manage-courses/:courseId',
+  manageCourse: (courseId: CourseId) => `/manage-courses/${id(courseId)}`,
+  manageCourseMembers: (courseId: CourseId) => `/manage-courses/${id(courseId)}/members`,
+  manageCourseDetails: (courseId: CourseId) => `/manage-courses/${id(courseId)}/details`,
+  manageModule: (courseId: CourseId, moduleId: ModuleId) =>
+    `/manage-courses/${id(courseId)}/modules/${id(moduleId)}`,
+  /** `typeSlug` from CONTENT_TYPES in ui/manage/contentTypes.ts, e.g. "quiz". */
+  manageNewContent: (courseId: CourseId, moduleId: ModuleId, typeSlug: string) =>
+    `/manage-courses/${id(courseId)}/modules/${id(moduleId)}/new/${typeSlug}`,
+  manageContent: (courseId: CourseId, moduleId: ModuleId, contentId: ContentId) =>
+    `/manage-courses/${id(courseId)}/modules/${id(moduleId)}/content/${id(contentId)}`,} as const

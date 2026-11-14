@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { groupByTerm } from '../src/ui/components/courseFormat.ts'
+import { groupByTerm } from '../src/ui/components/courses/courseFormat.ts'
 
 const course = (id, title, term, year) => ({ id, title, description: '', term, year })
 
@@ -27,7 +27,7 @@ test('no courses gives no groups', () => {
 })
 
 test('the term of a date: January–July is spring, August–December is autumn', async () => {
-  const { termOf } = await import('../src/ui/components/courseFormat.ts')
+  const { termOf } = await import('../src/ui/components/courses/courseFormat.ts')
   assert.deepEqual(termOf(new Date(2026, 0, 10)), { term: 'SPRING', year: 2026 })
   assert.deepEqual(termOf(new Date(2026, 6, 31)), { term: 'SPRING', year: 2026 })
   assert.deepEqual(termOf(new Date(2026, 7, 1)), { term: 'AUTUMN', year: 2026 })
@@ -35,7 +35,7 @@ test('the term of a date: January–July is spring, August–December is autumn'
 })
 
 test('courses are split into the current and later terms and the previous terms', async () => {
-  const { splitByCurrentTerm } = await import('../src/ui/components/courseFormat.ts')
+  const { splitByCurrentTerm } = await import('../src/ui/components/courses/courseFormat.ts')
   const { current, previous } = splitByCurrentTerm([
     course(1, 'Old', 'AUTUMN', 2025),
     course(2, 'Now', 'AUTUMN', 2026),

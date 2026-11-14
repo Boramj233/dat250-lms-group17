@@ -1,6 +1,6 @@
 import { useState, useSyncExternalStore } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { apiClient, AuthenticationRequiredError } from '../shared/apiClient'
+import { apiClient, AuthenticationRequiredError } from '../apiClient'
 import { hasAccess, type Access } from './access'
 import {
   canUseLoginPopup,

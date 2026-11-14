@@ -1,4 +1,4 @@
-import type { ContentId, CourseId, ModuleId, UserId } from "../shared/types";
+import type { ContentId, CourseId, ModuleId, UserId } from "../../shared/types";
 
 // The content types in the backend (ContentSummaryResponse.type). The backend sends
 // "Assignment" for assignments; contentQueries normalizes it to "ASSIGNMENT".
@@ -10,6 +10,18 @@ export interface ContentSummary {
   type: ContentType;
   title: string;
   position: number;
+  /**
+   * The user must complete this item to complete its module. Proposed field (see
+   * README), not in the backend yet; missing means not required. Separate from an
+   * assignment's `mandatory` (must be passed for the course).
+   */
+  requiredForCompletion?: boolean;
+  /**
+   * Students can see the item. Teachers switch it off to prepare content before it is
+   * shown, or to hide it. Proposed field (see README), not in the backend yet; missing
+   * means active.
+   */
+  active?: boolean;
 }
 
 interface ContentDetailBase extends ContentSummary {
@@ -23,12 +35,39 @@ export interface StaticPageContent extends ContentDetailBase {
   body: string;
 }
 
-// Matches QuizResponse (GET /api/quizzes/{id}) plus `type`. Questions and attempts
-// are in ../quizzes.
+// Matches QuizDetailResponse (GET /api/quizzes/{id}) plus `type`. Attempts are in
+// ../quizzes.
 export interface QuizContent extends ContentDetailBase {
   type: "QUIZ";
   courseId: CourseId;
   maxAttempts: number;
+  /** In order; missing in older responses. */
+  questions?: QuizContentQuestion[];
+}
+
+// QuizDetailResponse.QuestionResponse.
+export interface QuizContentQuestion {
+  id: string | number;
+  questionText: string;
+  position: number;
+  options: QuizContentOption[];
+  /**
+   * Proposed, for teachers of the course only (see README): the hint. The backend
+   * leaves it out today, so students cannot see it either.
+   */
+  hint?: string | null;
+}
+
+// QuizDetailResponse.OptionResponse.
+export interface QuizContentOption {
+  id: string | number;
+  optionText: string;
+  position: number;
+  /**
+   * Proposed, for teachers of the course only (see README): whether this is a correct
+   * answer. Missing today, so the UI cannot show which answers are correct.
+   */
+  correct?: boolean;
 }
 
 // Matches AssignmentResponse (GET /api/assignments/{id}) plus `type`.
@@ -43,6 +82,16 @@ export interface AssignmentContent extends ContentDetailBase {
    * AssignmentResponse yet; the UI leaves it out while it is missing.
    */
   mandatory?: boolean;
+  /**
+   * Whether students hand in as a group (one submission per group). Proposed field,
+   * not in the backend yet; missing until it is.
+   */
+  groupAssignment?: boolean;
+  /**
+   * File name extensions that may be handed in, lower case with a dot, e.g. [".pdf",
+   * ".zip"]; empty for any file type. Proposed field, not in the backend yet.
+   */
+  acceptedFileTypes?: string[];
 }
 
 // Matches CodingExerciseResponse (GET /api/coding-exercises/{id}) plus `type`.
@@ -50,6 +99,11 @@ export interface CodingExerciseContent extends ContentDetailBase {
   type: "CODING_EXERCISE";
   instructions: string;
   starterRepositoryUrl: string | null;
+  /**
+   * Code the students start from, shown on the exercise. Proposed field, not in the
+   * backend's CodingExerciseResponse yet; missing or null when there is none.
+   */
+  starterCode?: string | null;
   deadline: string | null;
   allowLateSubmission: boolean;
 }
@@ -82,12 +136,19 @@ export interface CreateAssignmentInput extends CreateContentBase {
   allowLateSubmission: boolean;
   /** Proposed; the backend ignores it until it has the field. */
   mandatory: boolean;
+  /** Proposed (see AssignmentContent.groupAssignment). */
+  groupAssignment: boolean;
+  /** Proposed (see AssignmentContent.acceptedFileTypes); empty for any file type. */
+  acceptedFileTypes: string[];
 }
 
 export interface CreateCodingExerciseInput extends CreateContentBase {
   type: "CODING_EXERCISE";
   instructions: string;
-  starterRepositoryUrl: string;
+  /** A repository and/or code to start from; at least one of them. */
+  starterRepositoryUrl: string | null;
+  /** Proposed field (see CodingExerciseContent.starterCode). */
+  starterCode: string | null;
   deadline: string | null;
   allowLateSubmission: boolean;
 }
@@ -115,7 +176,7 @@ export type CreateContentInput =
 export interface UpdateContentInput {
   moduleId: ModuleId;
   contentId: ContentId;
-  changes: Partial<Pick<StaticPageContent, "title" | "position" | "body">>;
+  changes: Partial<Pick<StaticPageContent, "title" | "position" | "body" | "requiredForCompletion" | "active">>;
 }
 
 export interface DeleteContentInput {

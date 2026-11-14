@@ -1,0 +1,52 @@
+.pager {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-5);
+  margin-top: var(--space-9);
+  padding-top: var(--space-5);
+  border-top: var(--border-width-sm) solid var(--color-border);
+}
+
+.pager-link {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  max-width: min(100%, 20rem);
+  padding: var(--space-3) var(--space-5);
+  border: var(--border-width-sm) solid var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-text);
+  text-decoration: none;
+}
+
+.pager-link:hover {
+  background: var(--color-surface);
+}
+
+.pager-link:focus-visible {
+  outline: var(--focus-ring-width) solid var(--color-primary);
+  outline-offset: var(--space-2);
+}
+
+.pager-link.is-next {
+  margin-left: auto;
+  text-align: right;
+}
+
+.pager-direction {
+  font-family: var(--font-ui);
+  font-size: var(--text-small);
+}
+
+.pager-link.is-previous .pager-direction::before {
+  content: '← ';
+}
+
+.pager-link.is-next .pager-direction::after {
+  content: ' →';
+}
+
+.pager-title {
+  font-weight: var(--font-weight-bold);
+  overflow-wrap: anywhere;
+}

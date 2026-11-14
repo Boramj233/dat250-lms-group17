@@ -1,4 +1,4 @@
-import type { UserId } from "../shared/types";
+import type { UserId } from "../../shared/types";
 
 export const deadlineKeys = {
   all: ["deadlines"] as const,

@@ -1,0 +1,89 @@
+.action-menu {
+  position: relative;
+  display: inline-flex;
+}
+
+/* Round "⋯" button. */
+.action-menu-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--size-control-md);
+  height: var(--size-control-md);
+  padding: 0;
+  border: var(--border-width-sm) solid transparent;
+  border-radius: var(--radius-control);
+  color: var(--color-text);
+  background: transparent;
+  cursor: pointer;
+}
+
+.action-menu-button:hover,
+.action-menu-button[aria-expanded='true'] {
+  border-color: var(--color-border);
+  background: var(--color-surface);
+}
+
+.action-menu-button:focus-visible {
+  outline: var(--focus-ring-width) solid var(--color-primary);
+  outline-offset: var(--space-2);
+}
+
+/* The menu opens below the button, aligned to its right edge. */
+.action-menu-list {
+  position: absolute;
+  top: calc(100% + var(--space-2));
+  right: 0;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  min-width: 12rem;
+  max-width: min(20rem, 90vw);
+  padding: var(--space-2) 0;
+  border: var(--border-width-sm) solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-background);
+  box-shadow: 0 0.25rem 0.75rem rgb(0 0 0 / 0.12);
+}
+
+.action-menu-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-5);
+  border: none;
+  color: var(--color-text);
+  background: transparent;
+  font-family: var(--font-ui);
+  font-size: var(--text-small);
+  text-align: left;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+
+.action-menu-item:hover:not(:disabled),
+.action-menu-item:focus-visible {
+  background: var(--color-surface);
+  outline: none;
+}
+
+.action-menu-item:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+/* "Delete" and other destructive actions: set apart at the bottom. */
+.action-menu-item.is-danger {
+  margin-top: var(--space-2);
+  padding-top: calc(var(--space-3) + var(--space-2));
+  border-top: var(--border-width-sm) solid var(--color-border);
+  font-weight: var(--font-weight-bold);
+}
+
+/* The "← Move to" line at the top of a submenu. */
+.action-menu-back {
+  font-weight: var(--font-weight-bold);
+  border-bottom: var(--border-width-sm) solid var(--color-border);
+  margin-bottom: var(--space-2);
+}

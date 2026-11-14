@@ -1,4 +1,4 @@
-import type { CourseId, UserId } from "../shared/types";
+import type { CourseId, UserId } from "../../shared/types";
 
 // Matches the backend's Term enum (course/domain/Term.java).
 export type Term = "SPRING" | "AUTUMN";

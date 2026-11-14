@@ -1,0 +1,135 @@
+/* One card per content type: "+ Assignment" and what it is. */
+.new-content-types {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 13rem), 1fr));
+  gap: var(--space-5);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.new-content-type {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  height: 100%;
+  padding: var(--space-5);
+  border: var(--border-width-sm) solid var(--color-border);
+  border-top: var(--space-2) solid var(--color-accent);
+  border-radius: var(--radius-md);
+  color: var(--color-text);
+  background: var(--color-background);
+  text-decoration: none;
+}
+
+.new-content-type:hover {
+  background: var(--color-surface);
+}
+
+.new-content-type:focus-visible {
+  outline: var(--focus-ring-width) solid var(--color-primary);
+  outline-offset: var(--space-2);
+}
+
+.new-content-type-label {
+  font-weight: var(--font-weight-bold);
+}
+
+.new-content-type-description {
+  font-family: var(--font-ui);
+  font-size: var(--text-small);
+}
+
+/* The module's content as a table; scrolls sideways on narrow screens. */
+.manage-content-table-wrap {
+  overflow-x: auto;
+  border: var(--border-width-sm) solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.manage-content-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.manage-content-table th,
+.manage-content-table td {
+  padding: var(--space-3) var(--space-5);
+  border-bottom: var(--border-width-sm) solid var(--color-border);
+  text-align: left;
+  vertical-align: middle;
+}
+
+.manage-content-table tbody tr:last-child > * {
+  border-bottom: none;
+}
+
+.manage-content-table thead th {
+  background: var(--color-surface);
+  font-family: var(--font-ui);
+  font-size: var(--text-small);
+  font-weight: var(--font-weight-bold);
+}
+
+/* The title cell is a row header, but should read like normal text. */
+.manage-content-table tbody th {
+  font-weight: normal;
+}
+
+.manage-content-table .is-center {
+  text-align: center;
+}
+
+.manage-content-table .is-end {
+  width: 1%;
+  text-align: right;
+}
+
+.manage-content-title {
+  color: var(--color-text);
+  font-weight: var(--font-weight-bold);
+  overflow-wrap: anywhere;
+}
+
+.manage-content-type {
+  font-family: var(--font-ui);
+  font-size: var(--text-small);
+  white-space: nowrap;
+}
+
+.manage-content-check {
+  width: 1.125rem;
+  height: 1.125rem;
+  cursor: pointer;
+}
+
+/* Inactive content is hidden from students: dimmed, but the checkboxes stay clear. */
+.manage-content-table tr.is-inactive th,
+.manage-content-table tr.is-inactive .manage-content-type {
+  opacity: 0.6;
+}
+
+/* Unlocking: one checkbox per other module. */
+.module-prerequisites {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: 0;
+  padding: var(--space-5);
+  border: var(--border-width-sm) solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.module-prerequisites legend {
+  padding: 0 var(--space-2);
+  font-family: var(--font-ui);
+  font-weight: var(--font-weight-bold);
+}
+
+.module-prerequisites .form-check.is-disabled {
+  opacity: 0.6;
+}
+
+.module-prerequisites-note {
+  font-size: var(--text-small);
+}

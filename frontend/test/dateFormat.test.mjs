@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { formatTimeLeft, isSoon } from '../src/ui/components/dateFormat.ts'
+import { formatTimeLeft, isSoon } from '../src/shared/lib/dateFormat.ts'
 
 const now = new Date('2026-11-11T12:00:00Z')
 const later = ms => new Date(now.getTime() + ms)

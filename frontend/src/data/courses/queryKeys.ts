@@ -1,4 +1,4 @@
-import type { CourseId, UserId } from "../shared/types";
+import type { CourseId, UserId } from "../../shared/types";
 
 export const courseKeys = {
   all: ["courses"] as const,

@@ -1,7 +1,7 @@
 import { afterEach, test } from 'node:test'
 import assert from 'node:assert/strict'
 import { clearToken, getAccessToken, isLoginRequired, login, LOGIN_URL, logout } from '../src/data/auth/auth.ts'
-import { apiClient, AuthenticationRequiredError } from '../src/data/shared/apiClient.ts'
+import { apiClient, AuthenticationRequiredError } from '../src/data/apiClient.ts'
 
 const originalFetch = globalThis.fetch
 const originalWindow = globalThis.window
