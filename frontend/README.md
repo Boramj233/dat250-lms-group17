@@ -33,7 +33,11 @@ src/
     ├── courses/          data + courseFormat + CourseCard, CourseGrid, CourseForm,
     │                     CoursesPage (all my courses by term)
     ├── profile/          ProfilePage (the logged-in user)
-    ├── course-view/      CoursePage: one course as its members see it (modules and content)
+    ├── course-view/      one course as its members see it: CourseLayout (collapsible course
+    │                     menu, Manage for teachers) and Home, Modules, Assignments, People,
+    │                     Groups, Quizzes, Grades, Files, Code Exercises
+    │   └── module/       ModuleLayout (module menu: Files, Pages, Assignments, Quizzes,
+    │                     Code Exercises), the module overview and one content item
     ├── deadlines/        data + DeadlineList
     ├── modules/          data + prerequisites
     ├── content/, quizzes/, assignments/, grades/, users/   data only so far
@@ -105,7 +109,11 @@ Run `npm install` first, then from this directory:
 
 - `/` shows the landing page with a Log in button, or the dashboard after login.
 - `/courses` lists all of the user's courses by term; `/courses/:courseId` shows one
-  course (teachers get a link to manage it); `/profile` shows their account.
+  course with its course menu (`/modules`, `/assignments`, `/people`, `/groups`,
+  `/quizzes`, `/grades`, `/files`, `/code-exercises`; Groups and Files are placeholders),
+  and teachers get a Manage button in it. `/courses/:courseId/modules/:moduleId` shows
+  one module with its own menu (`/files`, `/pages`, `/assignments`, `/quizzes`,
+  `/code-exercises`) and `/content/:contentId` one item in it. `/profile` shows their account.
 - `/manage-courses` (course managers and admins): create a course
   (`/manage-courses/new`) or pick one of the courses they teach.
 - `/manage-courses/:courseId` manages one course: the Content tab (index, the

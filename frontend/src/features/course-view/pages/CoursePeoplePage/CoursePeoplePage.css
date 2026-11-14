@@ -1,0 +1,36 @@
+.course-people-manage {
+  align-self: flex-start;
+}
+
+.course-people-group + .course-people-group {
+  margin-top: var(--space-7);
+}
+
+.course-people-list {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Name left, email right; stacked on narrow screens. */
+.course-people-list li {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-5);
+  padding: var(--space-3) 0;
+  border-top: var(--border-width-sm) solid var(--color-surface);
+}
+
+.course-people-name {
+  font-weight: var(--font-weight-bold);
+  overflow-wrap: anywhere;
+}
+
+.course-people-email {
+  font-family: var(--font-ui);
+  font-size: var(--text-small);
+  overflow-wrap: anywhere;
+}

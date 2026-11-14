@@ -15,7 +15,19 @@ import NewCoursePage from '../features/course-management/pages/NewCoursePage'
 import NotFoundPage from '../shared/ui/NotFoundPage'
 import DashboardPage from '../features/dashboard/pages/DashboardPage'
 import CoursesPage from '../features/courses/pages/CoursesPage'
-import CoursePage from '../features/course-view/pages/CoursePage'
+import CourseContentTypePage from '../features/course-view/pages/CourseContentTypePage'
+import CourseGradesPage from '../features/course-view/pages/CourseGradesPage'
+import CourseHomePage from '../features/course-view/pages/CourseHomePage'
+import CourseLayout from '../features/course-view/pages/CourseLayout'
+import CourseMenuLayout from '../features/course-view/pages/CourseMenuLayout'
+import { CONTENT_SECTIONS } from '../features/course-view/contentSections'
+import ModuleContentPage from '../features/course-view/module/pages/ModuleContentPage'
+import ModuleContentTypePage from '../features/course-view/module/pages/ModuleContentTypePage'
+import ModuleLayout from '../features/course-view/module/pages/ModuleLayout'
+import ModuleOverviewPage from '../features/course-view/module/pages/ModuleOverviewPage'
+import CourseModulesPage from '../features/course-view/pages/CourseModulesPage'
+import CoursePeoplePage from '../features/course-view/pages/CoursePeoplePage'
+import CoursePlaceholderPage from '../features/course-view/pages/CoursePlaceholderPage'
 import ProfilePage from '../features/profile/pages/ProfilePage'
 import { paths } from '../shared/paths'
 
@@ -29,7 +41,32 @@ export default function AppRoutes() {
       <Route element={<AuthGate />}>
         <Route path={paths.home} element={<DashboardPage />} />
         <Route path={paths.courses} element={<CoursesPage />} />
-        <Route path={paths.courseRoute} element={<CoursePage />} />
+        {/* One course (see paths.course*): its pages with the course menu, or one module
+            with the module menu. */}
+        <Route path={paths.courseRoute} element={<CourseLayout />}>
+          <Route element={<CourseMenuLayout />}>
+            <Route index element={<CourseHomePage />} />
+            <Route path="modules" element={<CourseModulesPage />} />
+            <Route path="assignments" element={<CourseContentTypePage type="ASSIGNMENT" title="Assignments" />} />
+            <Route path="people" element={<CoursePeoplePage />} />
+            <Route path="groups" element={<CoursePlaceholderPage title="Groups" />} />
+            <Route path="quizzes" element={<CourseContentTypePage type="QUIZ" title="Quizzes" />} />
+            <Route path="grades" element={<CourseGradesPage />} />
+            <Route path="files" element={<CoursePlaceholderPage title="Files" />} />
+            <Route path="code-exercises" element={<CourseContentTypePage type="CODING_EXERCISE" title="Code Exercises" />} />
+            <Route path="*" element={<NotFoundPage />} />
+          </Route>
+
+          <Route path="modules/:moduleId" element={<ModuleLayout />}>
+            <Route index element={<ModuleOverviewPage />} />
+            <Route path="files" element={<CoursePlaceholderPage title="Files" />} />
+            {CONTENT_SECTIONS.map(({ type, section, label }) => (
+              <Route key={section} path={section} element={<ModuleContentTypePage type={type} title={label} />} />
+            ))}
+            <Route path="content/:contentId" element={<ModuleContentPage />} />
+            <Route path="*" element={<NotFoundPage />} />
+          </Route>
+        </Route>
         <Route path={paths.profile} element={<ProfilePage />} />
 
         {/* Only course managers (and admins); others get the not-found page. */}

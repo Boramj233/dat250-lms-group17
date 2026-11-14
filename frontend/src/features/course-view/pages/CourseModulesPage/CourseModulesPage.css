@@ -1,0 +1,77 @@
+.course-modules {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* One module: a bordered box. Closed, only the title row shows. */
+.course-module {
+  border: var(--border-width-sm) solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+/* Arrow button, then the title link. */
+.course-module-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin: 0;
+  padding: var(--space-3) var(--space-5) var(--space-3) var(--space-3);
+  font-size: var(--font-size-md);
+}
+
+.course-module-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  min-width: var(--size-control-md);
+  min-height: var(--size-control-md);
+  border: none;
+  border-radius: var(--radius-control);
+  color: var(--color-text);
+  background: transparent;
+  cursor: pointer;
+}
+
+.course-module-toggle:hover {
+  background: var(--color-surface);
+}
+
+.course-module-title {
+  min-width: 0;
+  color: var(--color-text);
+  overflow-wrap: anywhere;
+}
+
+.course-module-toggle:focus-visible,
+.course-module-title:focus-visible {
+  outline: var(--focus-ring-width) solid var(--color-primary);
+  outline-offset: var(--space-2);
+}
+
+/* Points right when closed, down when open. */
+.course-module-chevron {
+  transition: transform 0.15s ease;
+}
+
+.course-module.is-open .course-module-chevron {
+  transform: rotate(90deg);
+}
+
+.course-module-body {
+  padding: 0 var(--space-5) var(--space-5);
+}
+
+.course-module-body[hidden] {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .course-module-chevron {
+    transition: none;
+  }
+}
