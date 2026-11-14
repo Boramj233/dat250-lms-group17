@@ -134,3 +134,22 @@ export interface QuizHint {
   questionId: QuizQuestionId;
   hint: string;
 }
+
+// Taking a quiz as the backend supports it (QuizAttemptController): all answers are
+// sent at once and graded straight away.
+
+// Matches the backend's QuizAttemptResponse.
+export interface QuizAttemptScore {
+  id: QuizAttemptId;
+  quizId: QuizId;
+  /** ISO 8601 instant. */
+  submittedAt: string;
+  correctCount: number;
+  totalQuestions: number;
+}
+
+// Matches the backend's SubmitQuizRequest; an unanswered question has no option ids.
+export interface SubmitQuizAnswersInput {
+  quizId: QuizId;
+  answers: { questionId: string | number; selectedOptionIds: (string | number)[] }[];
+}

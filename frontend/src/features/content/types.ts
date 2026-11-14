@@ -43,7 +43,17 @@ export interface QuizContent extends ContentDetailBase {
   maxAttempts: number;
   /** In order; missing in older responses. */
   questions?: QuizContentQuestion[];
+  /** Proposed (see README): what the quiz is about, shown before it is started. */
+  description?: string | null;
+  /** Proposed (see README): ISO 8601 instant after which it cannot be taken; null for none. */
+  deadline?: string | null;
 }
+
+/**
+ * Proposed (see README): how a question is answered. All are choice questions, so the
+ * answer is always the chosen option ids. Missing means SINGLE_CHOICE.
+ */
+export type QuizQuestionType = "SINGLE_CHOICE" | "MULTIPLE_CHOICE" | "TRUE_FALSE";
 
 // QuizDetailResponse.QuestionResponse.
 export interface QuizContentQuestion {
@@ -51,6 +61,8 @@ export interface QuizContentQuestion {
   questionText: string;
   position: number;
   options: QuizContentOption[];
+  /** Proposed (see README); missing means SINGLE_CHOICE. */
+  questionType?: QuizQuestionType;
   /**
    * Proposed, for teachers of the course only (see README): the hint. The backend
    * leaves it out today, so students cannot see it either.

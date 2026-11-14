@@ -161,12 +161,14 @@ export const groups: { id: number, courseId: number, groupNumber: number, name?:
   { id: 4, courseId: 2, groupNumber: 1, memberIds: [1, 5] },
 ]
 
-/** Questions added to quizzes in mock mode (not shown anywhere yet). */
+/** A quiz question; new ones are added in mock mode by POST /api/quizzes/:quizId/questions. */
 export type MockQuizQuestion = {
   id: number
   quizId: number
   questionText: string
   position: number
+  /** Proposed; missing means SINGLE_CHOICE. */
+  questionType?: 'SINGLE_CHOICE' | 'MULTIPLE_CHOICE' | 'TRUE_FALSE'
   hint: string | null
   options: { id: number, optionText: string, position: number, correct: boolean }[]
 }
@@ -184,12 +186,36 @@ export const quizQuestions: MockQuizQuestion[] = [
   },
   {
     id: 2, quizId: 13, questionText: 'Which status codes mean success?', position: 1, hint: null,
+    questionType: 'MULTIPLE_CHOICE',
     options: [
       { id: 4, optionText: '200 OK', position: 0, correct: true },
       { id: 5, optionText: '201 Created', position: 1, correct: true },
       { id: 6, optionText: '404 Not Found', position: 2, correct: false },
     ],
   },
+  {
+    id: 3, quizId: 13, questionText: 'A PUT request should be idempotent.', position: 2, hint: null,
+    questionType: 'TRUE_FALSE',
+    options: [
+      { id: 7, optionText: 'True', position: 0, correct: true },
+      { id: 8, optionText: 'False', position: 1, correct: false },
+    ],
+  },
+  {
+    id: 4, quizId: 22, questionText: 'Which file describes the services for Docker Compose?', position: 0, hint: null,
+    options: [
+      { id: 9, optionText: 'Dockerfile', position: 0, correct: false },
+      { id: 10, optionText: 'compose.yaml', position: 1, correct: true },
+      { id: 11, optionText: 'package.json', position: 2, correct: false },
+    ],
+  },
+]
+
+/** Quiz attempts, like the backend's QuizAttemptResponse plus who took it. */
+export const quizAttempts: {
+  id: number, quizId: number, userId: number, submittedAt: string, correctCount: number, totalQuestions: number
+}[] = [
+  { id: 1, quizId: 13, userId: 1, submittedAt: inDays(-2, 10, 15), correctCount: 2, totalQuestions: 3 },
 ]
 
 /**
@@ -209,7 +235,9 @@ export const contents: (Content & { courseId: number })[] = [
     body: 'REST is an architectural style for APIs.\n\nResources are identified by URLs, and the '
       + 'HTTP methods (GET, POST, PUT, PATCH, DELETE) say what to do with them.',
   },
-  { id: 13, courseId: 1, moduleId: 1, position: 2, type: 'QUIZ', title: 'REST basics quiz', maxAttempts: 3, requiredForCompletion: true },
+  { id: 13, courseId: 1, moduleId: 1, position: 2, type: 'QUIZ', title: 'REST basics quiz', maxAttempts: 3, requiredForCompletion: true,
+    description: 'Three short questions about HTTP methods and status codes. You get your score right after you submit.',
+    deadline: inDays(5, 23, 59) },
   {
     id: 101, courseId: 1, moduleId: 1, position: 3, type: 'ASSIGNMENT', title: 'Assignment 1: REST API',
     instructions: 'Build a REST API for polls with Spring Boot.\n\nHand in a link to your repository.',
@@ -232,7 +260,8 @@ export const contents: (Content & { courseId: number })[] = [
     starterCode: 'services:\n  app:\n    build: .\n    ports:\n      - "8080:8080"\n  # Add the database and RabbitMQ here.\n',
     deadline: inDays(1, 12, 0), allowLateSubmission: true,
   },
-  { id: 22, courseId: 1, moduleId: 2, position: 2, type: 'QUIZ', title: 'Containers quiz', maxAttempts: 1 },
+  { id: 22, courseId: 1, moduleId: 2, position: 2, type: 'QUIZ', title: 'Containers quiz', maxAttempts: 1,
+    description: 'One question about Docker Compose. You have only one attempt.', deadline: null },
   // DAT250, module 3 (module 4 has no content)
   {
     id: 31, courseId: 1, moduleId: 3, position: 0, type: 'STATIC_PAGE', title: 'Messaging with RabbitMQ',

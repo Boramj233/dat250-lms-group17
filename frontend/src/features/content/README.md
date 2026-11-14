@@ -58,6 +58,22 @@ option (`QuizContentQuestion`, `QuizContentOption` in `types.ts`); for everyone 
 the response stays as it is. Until then the manage pages show the questions and
 options, and say that the correct answers are not available.
 
+## Taking a quiz (partly proposed)
+
+The backend grades a quiz in one request: `POST /api/quizzes/{quizId}/attempts` with
+`{ answers: [{ questionId, selectedOptionIds }] }` returns `QuizAttemptResponse`
+`{ id, quizId, submittedAt, correctCount, totalQuestions }`, and refuses when the user
+has used `maxAttempts`. A question is correct when the chosen options are exactly
+its correct options. Proposed, for the quiz page:
+
+- `GET /api/quizzes/{quizId}/attempts/me`: the user's earlier attempts
+  (`QuizAttemptResponse[]`), for "attempts used" and the best score.
+- On `QuizDetailResponse`: `description` (text shown before the quiz is started) and
+  `deadline` (ISO 8601 instant or null; no attempts after it).
+- On each question: `questionType`, one of `SINGLE_CHOICE` (one answer),
+  `MULTIPLE_CHOICE` (every correct answer) or `TRUE_FALSE` (two options). The page
+  shows each type differently; missing means `SINGLE_CHOICE`.
+
 ## Starter code for coding exercises (proposed)
 
 `CodingExerciseContent.starterCode` (string or null) is code the students start from,

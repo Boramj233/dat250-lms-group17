@@ -1,0 +1,156 @@
+/* The questions below each other, then the footer with Submit. */
+.quiz-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+/* One question: a box with a coloured bar on the left; the colour shows the type. */
+.quiz-question {
+  --quiz-type-color: var(--hvl-blue);
+  min-width: 0;
+  margin: 0;
+  padding: var(--space-5) var(--space-7) var(--space-7);
+  border: var(--border-width-sm) solid var(--color-border);
+  border-left: 6px solid var(--quiz-type-color);
+  border-radius: var(--radius-md);
+  background: var(--color-background);
+}
+
+.quiz-question.is-multiple-choice {
+  --quiz-type-color: var(--color-accent);
+}
+
+.quiz-question.is-true-false {
+  --quiz-type-color: var(--hvl-yellow);
+}
+
+/* The legend holds the header row and the question; float makes it a normal block. */
+.quiz-question-legend {
+  float: left;
+  width: 100%;
+  margin-bottom: var(--space-3);
+  padding: 0;
+}
+
+.quiz-question-legend + * {
+  clear: both;
+}
+
+.quiz-question-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+  padding-bottom: var(--space-3);
+  border-bottom: var(--border-width-sm) solid var(--color-surface);
+  font-family: var(--font-ui);
+  font-size: var(--text-small);
+}
+
+.quiz-question-number {
+  font-weight: var(--font-weight-bold);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* The type as a small tag in the type's colour. */
+.quiz-question-type {
+  padding: var(--space-2) var(--space-3);
+  border: var(--border-width-sm) solid var(--quiz-type-color);
+  border-radius: var(--radius-control);
+  background: color-mix(in srgb, var(--quiz-type-color) 15%, transparent);
+}
+
+.quiz-question-text {
+  display: block;
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-bold);
+  overflow-wrap: anywhere;
+}
+
+.quiz-question-hint {
+  margin: 0 0 var(--space-5);
+  font-family: var(--font-ui);
+  font-size: var(--text-small);
+  font-style: italic;
+}
+
+/* Options: one per row by default (single and multiple choice). */
+.quiz-options {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.quiz-option {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-5);
+  border: var(--border-width-sm) solid var(--color-border);
+  border-radius: var(--radius-control);
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+
+.quiz-option:hover {
+  background: var(--color-surface);
+}
+
+.quiz-option:has(input:checked) {
+  border-color: var(--color-primary);
+  background: color-mix(in srgb, var(--quiz-type-color) 15%, transparent);
+  font-weight: var(--font-weight-bold);
+}
+
+.quiz-option:has(input:focus-visible) {
+  outline: var(--focus-ring-width) solid var(--color-primary);
+  outline-offset: var(--space-2);
+}
+
+.quiz-option input {
+  flex-shrink: 0;
+  width: 1.125rem;
+  height: 1.125rem;
+  margin: 0;
+  accent-color: var(--color-primary);
+}
+
+/* True or false: two large tiles side by side, without the round buttons. */
+.quiz-question.is-true-false .quiz-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.quiz-question.is-true-false .quiz-option {
+  justify-content: center;
+  min-height: 4rem;
+  font-size: var(--font-size-md);
+  text-align: center;
+}
+
+.quiz-question.is-true-false .quiz-option input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Footer: how many are answered, then Submit and Cancel. */
+.quiz-form-footer {
+  gap: var(--space-3);
+}
+
+.quiz-form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.quiz-result-score {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+}

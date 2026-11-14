@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { UserId } from "../../shared/types";
 import { contentKeys } from "../content/queryKeys";
 import { moduleKeys } from "../modules/queryKeys";
-import { getQuiz, getQuizAttempt, getQuizAttempts, getQuizDefinition, requestQuizHint, saveQuizAnswer, startQuizAttempt, submitQuizAttempt, updateQuiz } from "./api";
+import { getMyQuizAttempts, getQuiz, getQuizAttempt, getQuizAttempts, getQuizDefinition, requestQuizHint, saveQuizAnswer, startQuizAttempt, submitQuizAnswers, submitQuizAttempt, updateQuiz } from "./api";
 import { quizKeys } from "./queryKeys";
 import type { QuizAttemptId, QuizId } from "./types";
 
@@ -103,5 +103,27 @@ export function useUpdateQuiz() {
         queryClient.invalidateQueries({ queryKey: contentKeys.moduleContent(moduleId) }),
       ]);
     },
+  });
+}
+
+// The logged-in user's attempts at a quiz, newest first (proposed endpoint).
+export function useMyQuizAttempts(quizId: QuizId) {
+  return useQuery({
+    queryKey: quizKeys.myAttempts(quizId),
+    queryFn: () => getMyQuizAttempts(quizId),
+    select: attempts =>
+      [...attempts].sort((a, b) => Date.parse(b.submittedAt) - Date.parse(a.submittedAt)),
+  });
+}
+
+// Hands in a quiz (backend) and refreshes the user's attempts, so the count and best
+// score update at once.
+export function useSubmitQuizAnswers() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: submitQuizAnswers,
+    onSuccess: (attempt) =>
+      queryClient.invalidateQueries({ queryKey: quizKeys.myAttempts(attempt.quizId) }),
   });
 }

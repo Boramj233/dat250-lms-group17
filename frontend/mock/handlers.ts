@@ -12,7 +12,7 @@ import type { Content, ContentType } from '../src/features/content/types'
 import type { EnrolledCourse } from '../src/features/courses/types'
 import type { UpcomingDeadline } from '../src/features/deadlines/types'
 import { canRequire, checkAvailabilityDates, isAccessible } from '../src/features/modules/prerequisites'
-import { completions, contents, courses, enrollments, groups, modules, quizQuestions, submissions, users } from './data'
+import { completions, contents, courses, enrollments, groups, modules, quizAttempts, quizQuestions, submissions, users } from './data'
 import { created, forbidden, noContent, notFound, ok, type MockHandler, type MockResult, type MockUser } from './types'
 
 /** Like the backend: you may read your own data; ADMIN may read anyone's. */
@@ -112,6 +112,7 @@ function quizQuestionsResponse(quizId: string | number, forTeacher: boolean) {
       id: q.id,
       questionText: q.questionText,
       position: q.position,
+      questionType: q.questionType ?? 'SINGLE_CHOICE',
       ...(forTeacher ? { hint: q.hint } : {}),
       options: [...q.options]
         .sort((a, b) => a.position - b.position)
@@ -126,6 +127,7 @@ function detailResponse(content: Content & { courseId: number }, forTeacher = fa
       return { ...base, courseId: content.courseId, body: content.body }
     case 'QUIZ':
       return { ...base, courseId: content.courseId, maxAttempts: content.maxAttempts,
+        description: content.description ?? null, deadline: content.deadline ?? null,
         questions: quizQuestionsResponse(content.id, forTeacher) }
     case 'ASSIGNMENT':
       return { ...base, instructions: content.instructions, deadline: content.deadline,
@@ -602,6 +604,48 @@ export const handlers: MockHandler[] = [
       if (!isTeacher(user, contents[index].courseId)) return forbidden()
       contents.splice(index, 1)
       return noContent()
+    },
+  },
+  {
+    // Backend (exists): SubmitQuizRequest → QuizAttemptResponse, graded at once. A question
+    // is correct when the chosen options are exactly its correct options.
+    method: 'POST',
+    path: '/api/quizzes/:quizId/attempts',
+    handle: ({ user, params, body }) => {
+      const quiz = contents.find(c => String(c.id) === params.quizId && c.type === 'QUIZ')
+      if (!quiz || quiz.type !== 'QUIZ') return notFound()
+      if (!canReadCourse(user, quiz.courseId)) return forbidden()
+      if (quiz.deadline && Date.now() > Date.parse(quiz.deadline)) return badRequest('The deadline has passed')
+      const used = quizAttempts.filter(a => a.quizId === Number(quiz.id) && a.userId === user.userId).length
+      if (used >= quiz.maxAttempts) return { status: 409, body: { error: 'No attempts left' } }
+      const { answers } = body as { answers?: { questionId: number, selectedOptionIds: number[] }[] }
+      if (!Array.isArray(answers) || answers.length === 0) return badRequest('Answers are required')
+      const questions = quizQuestions.filter(q => q.quizId === Number(quiz.id))
+      const correctCount = questions.filter(question => {
+        const chosen = new Set((answers.find(a => Number(a.questionId) === question.id)?.selectedOptionIds ?? []).map(Number))
+        const correct = question.options.filter(o => o.correct).map(o => o.id)
+        return chosen.size === correct.length && correct.every(id => chosen.has(id))
+      }).length
+      const attempt = {
+        id: nextId(quizAttempts), quizId: Number(quiz.id), userId: user.userId,
+        submittedAt: new Date().toISOString(), correctCount, totalQuestions: questions.length,
+      }
+      quizAttempts.push(attempt)
+      const { userId: _userId, ...response } = attempt
+      return created(response)
+    },
+  },
+  {
+    // Proposed (src/features/content/README.md): the caller's attempts at a quiz.
+    method: 'GET',
+    path: '/api/quizzes/:quizId/attempts/me',
+    handle: ({ user, params }) => {
+      const quiz = contents.find(c => String(c.id) === params.quizId && c.type === 'QUIZ')
+      if (!quiz) return notFound()
+      if (!canReadCourse(user, quiz.courseId)) return forbidden()
+      return ok(quizAttempts
+        .filter(a => a.quizId === Number(quiz.id) && a.userId === user.userId)
+        .map(({ userId: _userId, ...attempt }) => attempt))
     },
   },
   {
