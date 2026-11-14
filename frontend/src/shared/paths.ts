@@ -6,6 +6,11 @@ const id = (value: CourseId | ModuleId | ContentId) => encodeURIComponent(String
 export const paths = {
   home: '/',
   login: '/login',
+  courses: '/courses',
+  // One course as its members see it (students and teachers).
+  courseRoute: '/courses/:courseId',
+  course: (courseId: CourseId) => `/courses/${id(courseId)}`,
+  profile: '/profile',
 
   // Course managers: create courses and manage the courses they teach.
   manageCourses: '/manage-courses',

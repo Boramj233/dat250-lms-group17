@@ -4,7 +4,7 @@ import { useModuleContent } from '../content/hooks'
 import type { Course } from '../courses/types'
 import type { CourseModule } from '../modules/types'
 import type { BreadcrumbItem } from '../../shared/navigation/Trail'
-import { contentTypeBySlug } from './contentTypes'
+import { contentTypeBySlug } from '../content/contentTypes'
 
 /**
  * Breadcrumbs for the management pages, from the URL:

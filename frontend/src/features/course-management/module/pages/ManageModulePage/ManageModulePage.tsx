@@ -4,7 +4,7 @@ import { useCourseContent, useDeleteContent, useMoveContent, useUpdateContent } 
 import type { ContentSummary } from '../../../../content/types'
 import ActionMenu, { type ActionMenuItem } from '../../../../../shared/ui/ActionMenu'
 import PageHeader from '../../../../../shared/ui/PageHeader'
-import { CONTENT_TYPES, contentTypeLabel } from '../../../contentTypes'
+import { CONTENT_TYPES, contentTypeLabel } from '../../../../content/contentTypes'
 import { useManageCourse } from '../../../manageCourseContext'
 import { useManageModule } from '../../manageModuleContext'
 import ModuleAvailability from './ModuleAvailability'

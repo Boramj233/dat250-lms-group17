@@ -14,6 +14,9 @@ import NewContentPage from '../features/course-management/module/pages/NewConten
 import NewCoursePage from '../features/course-management/pages/NewCoursePage'
 import NotFoundPage from '../shared/ui/NotFoundPage'
 import DashboardPage from '../features/dashboard/pages/DashboardPage'
+import CoursesPage from '../features/courses/pages/CoursesPage'
+import CoursePage from '../features/course-view/pages/CoursePage'
+import ProfilePage from '../features/profile/pages/ProfilePage'
 import { paths } from '../shared/paths'
 
 export default function AppRoutes() {
@@ -25,6 +28,9 @@ export default function AppRoutes() {
       {/* Logged in: topbar, sidebar and page content. Otherwise: the landing page. */}
       <Route element={<AuthGate />}>
         <Route path={paths.home} element={<DashboardPage />} />
+        <Route path={paths.courses} element={<CoursesPage />} />
+        <Route path={paths.courseRoute} element={<CoursePage />} />
+        <Route path={paths.profile} element={<ProfilePage />} />
 
         {/* Only course managers (and admins); others get the not-found page. */}
         <Route element={<RequireAccess level="COURSE_MANAGER" fallback={<NotFoundPage />} />}>

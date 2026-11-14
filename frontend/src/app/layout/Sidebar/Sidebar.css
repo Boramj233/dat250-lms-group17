@@ -16,7 +16,8 @@
   display: flex;
 }
 
-.sidebar > a {
+.sidebar > a,
+.sidebar > .sidebar-item {
   display: flex;
   align-items: center;
   min-height: var(--size-control-md);
@@ -27,17 +28,30 @@
   overflow-wrap: anywhere;
 }
 
-.sidebar > a:hover {
+.sidebar > a:hover,
+.sidebar > .sidebar-item:hover {
   text-decoration: underline;
 }
 
-.sidebar > a.active {
+.sidebar > a.active,
+.sidebar > .sidebar-item.active {
   background: var(--color-primary);
   color: var(--color-on-primary);
   font-weight: var(--font-weight-bold);
 }
 
-.sidebar > a:focus-visible {
+.sidebar > a:focus-visible,
+.sidebar > .sidebar-item:focus-visible {
   outline: var(--focus-ring-width) solid var(--color-primary);
   outline-offset: var(--space-2);
+}
+
+/* The Courses button looks like the links around it. */
+.sidebar > .sidebar-item {
+  width: 100%;
+  border: none;
+  background: transparent;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
 }

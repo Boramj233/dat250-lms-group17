@@ -30,7 +30,10 @@ src/
     │   └── pages/        routed pages and layouts
     │
     ├── dashboard/        DashboardPage (student and course manager variants)
-    ├── courses/          data + courseFormat + CourseCard, CourseGrid, CourseForm
+    ├── courses/          data + courseFormat + CourseCard, CourseGrid, CourseForm,
+    │                     CoursesPage (all my courses by term)
+    ├── profile/          ProfilePage (the logged-in user)
+    ├── course-view/      CoursePage: one course as its members see it (modules and content)
     ├── deadlines/        data + DeadlineList
     ├── modules/          data + prerequisites
     ├── content/, quizzes/, assignments/, grades/, users/   data only so far
@@ -42,7 +45,7 @@ src/
                           Only setup and configuration; grading belongs elsewhere.
 ```
 
-The course, module and content pages for students have been removed for now. The
+The module and content pages for students have been removed for now. The
 data for them (`features/courses`, `features/modules`, `features/content`, ...) is
 still there. When they are rebuilt, give them their own feature (for example
 `features/course-view/`, with `module/` inside), with a layout per level that loads
@@ -101,6 +104,8 @@ Run `npm install` first, then from this directory:
 ## Navigation
 
 - `/` shows the landing page with a Log in button, or the dashboard after login.
+- `/courses` lists all of the user's courses by term; `/courses/:courseId` shows one
+  course (teachers get a link to manage it); `/profile` shows their account.
 - `/manage-courses` (course managers and admins): create a course
   (`/manage-courses/new`) or pick one of the courses they teach.
 - `/manage-courses/:courseId` manages one course: the Content tab (index, the
