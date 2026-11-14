@@ -74,6 +74,66 @@
   width: 100%;
 }
 
+/* A part of the menu that folds out, e.g. the course menu inside the module menu:
+   a bordered box whose header row is the button. */
+.side-menu-disclosure {
+  border: var(--border-width-sm) solid var(--color-surface);
+  border-radius: var(--radius-control);
+}
+
+.side-menu-disclosure-toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  padding: var(--space-3);
+  border: none;
+  border-radius: var(--radius-control);
+  color: var(--color-text);
+  background: transparent;
+  font: inherit;
+  font-size: var(--text-small);
+  font-weight: var(--font-weight-bold);
+  text-align: left;
+  cursor: pointer;
+}
+
+.side-menu-disclosure-toggle:hover {
+  background: var(--color-surface);
+}
+
+.side-menu-disclosure-toggle:focus-visible {
+  outline: var(--focus-ring-width) solid var(--color-primary);
+  outline-offset: var(--space-2);
+}
+
+/* Points right when folded, down when open. */
+.side-menu-disclosure-chevron {
+  flex-shrink: 0;
+  transition: transform 0.15s ease;
+}
+
+.side-menu-disclosure-toggle[aria-expanded="true"] .side-menu-disclosure-chevron {
+  transform: rotate(90deg);
+}
+
+.side-menu-disclosure-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3) var(--space-3);
+}
+
+.side-menu-disclosure-body[hidden] {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .side-menu-disclosure-chevron {
+    transition: none;
+  }
+}
+
 /* A small link back up, e.g. "‹ All modules". */
 .side-menu-back {
   display: inline-flex;

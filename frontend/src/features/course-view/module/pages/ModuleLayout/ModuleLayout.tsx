@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Link, NavLink, Outlet, useMatch, useParams } from 'react-router'
 import { Breadcrumbs, type BreadcrumbItem } from '../../../../../shared/navigation/Trail'
 import { paths } from '../../../../../shared/paths'
@@ -6,13 +7,15 @@ import { formatTerm } from '../../../../courses/courseFormat'
 import CourseMenuHeading from '../../../components/CourseMenuHeading'
 import SideMenuLayout from '../../../components/SideMenuLayout'
 import { CONTENT_SECTIONS } from '../../../contentSections'
+import { COURSE_MENU_ITEMS, courseMenuPath } from '../../../courseMenu'
 import { useCourseView, visibleContent } from '../../../courseContext'
 import { ModuleViewContext } from '../../moduleContext'
 
 /**
- * One module of a course with the module menu in place of the course menu: back to
- * the modules, the module's overview, Files and one item per content type. Loads the
- * module's content once and gives it to the pages (useModuleView).
+ * One module of a course with the module menu in place of the course menu: the course
+ * menu folded in (to unfold), back to the modules, the module's overview, Files and one
+ * item per content type. Loads the module's content once and gives it to the pages
+ * (useModuleView).
  */
 export default function ModuleLayout() {
   const { moduleId = '' } = useParams()
@@ -22,6 +25,8 @@ export default function ModuleLayout() {
   // On a content page, its type's menu item is the current one.
   const contentMatch = useMatch('/courses/:courseId/modules/:moduleId/content/:contentId')
   const sectionMatch = useMatch('/courses/:courseId/modules/:moduleId/:section')
+  // Folded at first; kept while moving between the module's pages.
+  const [courseMenuOpen, setCourseMenuOpen] = useState(false)
 
   if (!module) return <p role="alert">This module does not exist in {course.title}.</p>
 
@@ -55,6 +60,37 @@ export default function ModuleLayout() {
             subtitle={`${formatTerm(course)} course`}
             to={paths.course(course.id)}
           />
+          {/* The course menu, folded in here, so it can be seen without leaving the module. */}
+          <div className="side-menu-disclosure">
+            <button
+              type="button"
+              className="side-menu-disclosure-toggle"
+              aria-expanded={courseMenuOpen}
+              aria-controls="module-course-menu"
+              onClick={() => setCourseMenuOpen(!courseMenuOpen)}
+            >
+              <svg className="side-menu-disclosure-chevron" width="16" height="16" viewBox="0 0 24 24"
+                fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                aria-hidden="true" focusable="false">
+                <path d="M9 6l6 6-6 6" />
+              </svg>
+              Course menu
+            </button>
+            <div id="module-course-menu" className="side-menu-disclosure-body" hidden={!courseMenuOpen}>
+              {isTeacher && (
+                <Link className="button-secondary side-menu-button" to={paths.manageCourse(course.id)}>
+                  Manage
+                </Link>
+              )}
+              <ul className="side-menu-list">
+                {COURSE_MENU_ITEMS.map(item => (
+                  <li key={item.label}>
+                    <NavLink to={courseMenuPath(course.id, item.section)} end>{item.label}</NavLink>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
           <Link className="side-menu-back" to={paths.courseSection(course.id, 'modules')}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
               strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">

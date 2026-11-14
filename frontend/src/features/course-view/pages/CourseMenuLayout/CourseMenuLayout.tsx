@@ -5,20 +5,8 @@ import { formatTerm } from '../../../courses/courseFormat'
 import CourseMenuHeading from '../../components/CourseMenuHeading'
 import SideMenuLayout from '../../components/SideMenuLayout'
 import { CONTENT_SECTIONS } from '../../contentSections'
+import { COURSE_MENU_ITEMS, courseMenuPath } from '../../courseMenu'
 import { useCourseView, visibleContent } from '../../courseContext'
-
-/** The course menu, in this order; Home has no section. */
-const ITEMS: { label: string, section?: CourseSection }[] = [
-  { label: 'Home' },
-  { label: 'Modules', section: 'modules' },
-  { label: 'Assignments', section: 'assignments' },
-  { label: 'People', section: 'people' },
-  { label: 'Groups', section: 'groups' },
-  { label: 'Quizzes', section: 'quizzes' },
-  { label: 'Grades', section: 'grades' },
-  { label: 'Files', section: 'files' },
-  { label: 'Code Exercises', section: 'code-exercises' },
-]
 
 type SubItem = { key: string, label: string, to: string }
 
@@ -72,12 +60,12 @@ export default function CourseMenuLayout() {
             </Link>
           )}
           <ul className="side-menu-list">
-            {ITEMS.map(item => {
+            {COURSE_MENU_ITEMS.map(item => {
               const sub = subItems(item.section)
               return (
                 <li key={item.label}>
                   <NavLink
-                    to={item.section ? paths.courseSection(course.id, item.section) : paths.course(course.id)}
+                    to={courseMenuPath(course.id, item.section)}
                     end
                   >
                     {item.label}
