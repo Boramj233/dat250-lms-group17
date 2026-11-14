@@ -230,6 +230,12 @@
   background: var(--color-surface);
 }
 
+/* The item being viewed, e.g. the assignment at /courses/1/assignments/101. */
+.side-menu-list .side-menu-sublist a.active {
+  background: var(--color-surface);
+  font-weight: var(--font-weight-bold);
+}
+
 /* How many items a menu item leads to, e.g. the number of quizzes. */
 .side-menu-count {
   font-size: var(--text-small);

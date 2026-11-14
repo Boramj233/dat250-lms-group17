@@ -1,3 +1,4 @@
+import type { CourseSection } from '../../../../shared/paths'
 import PageHeader from '../../../../shared/ui/PageHeader'
 import { useCourseContent } from '../../../content/hooks'
 import type { ContentType } from '../../../content/types'
@@ -8,10 +9,12 @@ type CourseContentTypePageProps = {
   type: ContentType
   /** "Assignments", "Quizzes" or "Code Exercises". */
   title: string
+  /** This page's part of the URL; its items open under it (/courses/1/assignments/101). */
+  section: CourseSection
 }
 
 /** All content of one type in the course as a table, in module order. */
-export default function CourseContentTypePage({ type, title }: CourseContentTypePageProps) {
+export default function CourseContentTypePage({ type, title, section }: CourseContentTypePageProps) {
   const { course, modules, isTeacher } = useCourseView()
   const content = useCourseContent(course.id, modules.map(module => module.id))
   const rows = modules.flatMap(module =>
@@ -34,6 +37,7 @@ export default function CourseContentTypePage({ type, title }: CourseContentType
             rows={rows}
             showModule
             isTeacher={isTeacher}
+            courseSection={section}
           />
         )}
     </>

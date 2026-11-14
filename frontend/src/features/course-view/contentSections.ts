@@ -1,9 +1,10 @@
+import type { ContentSection } from '../../shared/paths'
 import type { ContentType } from '../content/types'
 
 /** One menu item and page per content type, in menu order: /…/assignments. */
 export const CONTENT_SECTIONS: {
   type: ContentType
-  section: 'pages' | 'assignments' | 'quizzes' | 'code-exercises'
+  section: ContentSection
   label: string
 }[] = [
   { type: 'STATIC_PAGE', section: 'pages', label: 'Pages' },

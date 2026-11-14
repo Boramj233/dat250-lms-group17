@@ -17,7 +17,8 @@ type SubItem = { key: string, label: string, to: string }
  */
 export default function CourseMenuLayout() {
   const { course, modules, isTeacher, menuOpen, toggleMenu } = useCourseView()
-  const current = useMatch('/courses/:courseId/:section')?.params.section
+  // The section, also on its content pages (/courses/1/assignments/101).
+  const current = useMatch('/courses/:courseId/:section/*')?.params.section
   const contentSection = CONTENT_SECTIONS.find(s => s.section === current)
   // The same queries as the content pages, so this is read from the cache. Only
   // fetched on a content type's page.
@@ -35,7 +36,9 @@ export default function CourseMenuLayout() {
         visibleContent(content.byModule.get(String(module.id)) ?? [], isTeacher)
           .filter(item => item.type === contentSection.type)
           .map(item => ({
-            key: String(item.id), label: item.title, to: paths.courseContent(course.id, module.id, item.id),
+            key: String(item.id),
+            label: item.title,
+            to: paths.courseSectionContent(course.id, section, item.id),
           })))
     }
     return []
@@ -68,7 +71,7 @@ export default function CourseMenuLayout() {
                 <li key={item.label}>
                   <NavLink
                     to={courseMenuPath(course.id, item.section)}
-                    end
+                    end={!item.section}
                   >
                     {item.label}
                   </NavLink>
@@ -77,7 +80,7 @@ export default function CourseMenuLayout() {
                     <ul className="side-menu-sublist" aria-label={`${item.label} in this course`}>
                       {sub.map(entry => (
                         <li key={entry.key}>
-                          <Link to={entry.to}>{entry.label}</Link>
+                          <NavLink to={entry.to}>{entry.label}</NavLink>
                         </li>
                       ))}
                     </ul>

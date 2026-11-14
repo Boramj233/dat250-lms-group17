@@ -17,8 +17,11 @@ export default function CourseLayout() {
   const role = useCourseRole(courseId)
   // Open by default; kept while moving around in the course, also into its modules.
   const [menuOpen, setMenuOpen] = useState(true)
-  // ModuleLayout draws its own breadcrumbs (course › module › …).
-  const inModule = useMatch('/courses/:courseId/modules/:moduleId/*') !== null
+  // ModuleLayout (course › module › …) and the course's content pages
+  // (/courses/1/assignments/101: course › Assignments › item) draw their own breadcrumbs.
+  const inModule = useMatch('/courses/:courseId/modules/:moduleId/*')
+  const onCourseContent = useMatch('/courses/:courseId/:section/:contentId')
+  const ownBreadcrumbs = inModule !== null || onCourseContent !== null
 
   if (course.isPending || modules.isPending || role.isPending) return <p role="status">Loading course…</p>
   if (course.error) return <p role="alert">Could not load the course.</p>
@@ -34,7 +37,7 @@ export default function CourseLayout() {
       menuOpen,
       toggleMenu: () => setMenuOpen(open => !open),
     }}>
-      <TrailPage label={course.data.title} hideBreadcrumbs={inModule}>
+      <TrailPage label={course.data.title} hideBreadcrumbs={ownBreadcrumbs}>
         <Outlet />
       </TrailPage>
     </CourseViewContext>

@@ -15,6 +15,7 @@ import NewCoursePage from '../features/course-management/pages/NewCoursePage'
 import NotFoundPage from '../shared/ui/NotFoundPage'
 import DashboardPage from '../features/dashboard/pages/DashboardPage'
 import CoursesPage from '../features/courses/pages/CoursesPage'
+import CourseSectionContentPage from '../features/course-view/pages/CourseContentPage'
 import CourseContentTypePage from '../features/course-view/pages/CourseContentTypePage'
 import CourseGradesPage from '../features/course-view/pages/CourseGradesPage'
 import CourseGroupsPage from '../features/course-view/pages/CourseGroupsPage'
@@ -48,23 +49,27 @@ export default function AppRoutes() {
           <Route element={<CourseMenuLayout />}>
             <Route index element={<CourseHomePage />} />
             <Route path="modules" element={<CourseModulesPage />} />
-            <Route path="assignments" element={<CourseContentTypePage type="ASSIGNMENT" title="Assignments" />} />
+            <Route path="assignments" element={<CourseContentTypePage type="ASSIGNMENT" title="Assignments" section="assignments" />} />
+            <Route path="assignments/:contentId" element={<CourseSectionContentPage section="assignments" label="Assignments" />} />
             <Route path="people" element={<CoursePeoplePage />} />
             <Route path="groups" element={<CourseGroupsPage />} />
-            <Route path="quizzes" element={<CourseContentTypePage type="QUIZ" title="Quizzes" />} />
+            <Route path="quizzes" element={<CourseContentTypePage type="QUIZ" title="Quizzes" section="quizzes" />} />
+            <Route path="quizzes/:contentId" element={<CourseSectionContentPage section="quizzes" label="Quizzes" />} />
             <Route path="grades" element={<CourseGradesPage />} />
+            <Route path="grades/:contentId" element={<CourseSectionContentPage section="grades" label="Grades" />} />
             <Route path="files" element={<CourseFilesPage />} />
-            <Route path="code-exercises" element={<CourseContentTypePage type="CODING_EXERCISE" title="Code Exercises" />} />
+            <Route path="code-exercises" element={<CourseContentTypePage type="CODING_EXERCISE" title="Code Exercises" section="code-exercises" />} />
+            <Route path="code-exercises/:contentId" element={<CourseSectionContentPage section="code-exercises" label="Code Exercises" />} />
             <Route path="*" element={<NotFoundPage />} />
           </Route>
 
           <Route path="modules/:moduleId" element={<ModuleLayout />}>
             <Route index element={<ModuleOverviewPage />} />
             <Route path="files" element={<CourseFilesPage />} />
-            {CONTENT_SECTIONS.map(({ type, section, label }) => (
-              <Route key={section} path={section} element={<ModuleContentTypePage type={type} title={label} />} />
-            ))}
-            <Route path="content/:contentId" element={<ModuleContentPage />} />
+            {CONTENT_SECTIONS.flatMap(({ type, section, label }) => [
+              <Route key={section} path={section} element={<ModuleContentTypePage type={type} title={label} />} />,
+              <Route key={`${section}-item`} path={`${section}/:contentId`} element={<ModuleContentPage />} />,
+            ])}
             <Route path="*" element={<NotFoundPage />} />
           </Route>
         </Route>

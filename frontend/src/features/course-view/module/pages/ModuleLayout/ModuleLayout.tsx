@@ -22,36 +22,35 @@ export default function ModuleLayout() {
   const { course, modules, isTeacher, menuOpen, toggleMenu } = useCourseView()
   const module = modules.find(m => String(m.id) === moduleId)
   const content = useModuleContent(course.id, module?.id)
-  // On a content page, its type's menu item is the current one.
-  const contentMatch = useMatch('/courses/:courseId/modules/:moduleId/content/:contentId')
-  const sectionMatch = useMatch('/courses/:courseId/modules/:moduleId/:section')
+  // A section (…/modules/2/quizzes) or a content item in it (…/modules/2/quizzes/13).
+  const sectionMatch = useMatch('/courses/:courseId/modules/:moduleId/:section/*')
+  const contentId = useMatch('/courses/:courseId/modules/:moduleId/:section/:contentId')?.params.contentId
   // Folded at first; kept while moving between the module's pages.
   const [courseMenuOpen, setCourseMenuOpen] = useState(false)
 
   if (!module) return <p role="alert">This module does not exist in {course.title}.</p>
 
   const items = content.data && visibleContent(content.data, isTeacher)
-  const currentItem = items?.find(item => String(item.id) === contentMatch?.params.contentId)
-  const currentType = currentItem?.type
+  const currentItem = items?.find(item => String(item.id) === contentId)
 
-  // Course › Modules › module › the section, or the content type › the item. The last is the
-  // current page and is not a link.
+  // Course › Modules › module › the section › the item (on a content page). The last
+  // crumb is the current page and is not a link.
   const crumbs: BreadcrumbItem[] = [
     { label: course.title, to: paths.course(course.id) },
     { label: 'Modules', to: paths.courseSection(course.id, 'modules') },
     { label: module.title, to: paths.courseModule(course.id, module.id) },
   ]
   const section = sectionMatch?.params.section
-  if (contentMatch) {
-    // The item's type (e.g. Pages) between the module and the item, to go back to it.
-    const typeSection = CONTENT_SECTIONS.find(s => s.type === currentType)
-    if (typeSection) {
-      crumbs.push({ label: typeSection.label, to: paths.courseModuleSection(course.id, module.id, typeSection.section) })
-    }
-    crumbs.push({ label: currentItem?.title ?? '…' })
+  if (section === 'files') {
+    crumbs.push({ label: 'Files' })
+  } else if (section) {
+    const typeSection = CONTENT_SECTIONS.find(s => s.section === section)
+    crumbs.push({
+      label: typeSection?.label ?? section,
+      to: typeSection && paths.courseModuleSection(course.id, module.id, typeSection.section),
+    })
+    if (contentId) crumbs.push({ label: currentItem?.title ?? '…' })
   }
-  else if (section === 'files') crumbs.push({ label: 'Files' })
-  else if (section) crumbs.push({ label: CONTENT_SECTIONS.find(s => s.section === section)?.label ?? section })
   crumbs[crumbs.length - 1] = { label: crumbs[crumbs.length - 1].label }
 
   return (
@@ -118,7 +117,6 @@ export default function ModuleLayout() {
               <li key={section}>
                 <NavLink
                   to={paths.courseModuleSection(course.id, module.id, section)}
-                  className={({ isActive }) => (isActive || type === currentType ? 'active' : undefined)}
                 >
                   {label}
                   {items && <span className="side-menu-count">{items.filter(item => item.type === type).length}</span>}

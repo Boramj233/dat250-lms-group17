@@ -3,7 +3,7 @@ import { Link } from 'react-router'
 import { paths } from '../../../../shared/paths'
 import type { CourseId } from '../../../../shared/types'
 import PageHeader from '../../../../shared/ui/PageHeader'
-import { contentTypeLabel } from '../../../content/contentTypes'
+import { contentSection, contentTypeLabel } from '../../../content/contentTypes'
 import { useCourseContent } from '../../../content/hooks'
 import type { ContentSummary } from '../../../content/types'
 import type { CourseModule } from '../../../modules/types'
@@ -97,7 +97,7 @@ function ModuleBox({ courseId, module, items, loading, open, onToggle }: ModuleB
         {items && items.length > 0 && (
           <ContentList rows={items.map(item => ({
             item,
-            to: paths.courseContent(courseId, module.id, item.id),
+            to: paths.courseContent(courseId, module.id, contentSection(item.type), item.id),
             meta: contentTypeLabel(item.type),
           }))} />
         )}

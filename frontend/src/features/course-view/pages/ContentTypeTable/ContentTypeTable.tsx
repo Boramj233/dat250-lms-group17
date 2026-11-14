@@ -1,7 +1,8 @@
 import { formatDateTime } from '../../../../shared/lib/dateFormat'
 import { TrailLink } from '../../../../shared/navigation/Trail'
-import { paths } from '../../../../shared/paths'
+import { paths, type CourseSection } from '../../../../shared/paths'
 import type { CourseId } from '../../../../shared/types'
+import { contentSection } from '../../../content/contentTypes'
 import { useContents } from '../../../content/hooks'
 import type { Content, ContentSummary, ContentType } from '../../../content/types'
 import { useMyGrades } from '../../../grades/hooks'
@@ -26,6 +27,11 @@ type ContentTypeTableProps = {
   showModule: boolean
   /** Students get a Status column for assignments and code exercises. */
   isTeacher: boolean
+  /**
+   * The course page the table is on (e.g. assignments). Its items then open there
+   * (/courses/1/assignments/101); without it, in their module (…/modules/2/assignments/101).
+   */
+  courseSection?: CourseSection
 }
 
 type Row = ContentTypeRow & {
@@ -41,7 +47,7 @@ type Row = ContentTypeRow & {
  * quizzes show the number of questions and attempts; pages only their title.
  */
 export default function ContentTypeTable(
-  { courseId, type, title, place, rows, showModule, isTeacher }: ContentTypeTableProps,
+  { courseId, type, title, place, rows, showModule, isTeacher, courseSection }: ContentTypeTableProps,
 ) {
   const submittable = type === 'ASSIGNMENT' || type === 'CODING_EXERCISE'
   // Deadlines, questions and attempts are in each item's details (same cache as the
@@ -63,12 +69,19 @@ export default function ContentTypeTable(
       header: 'Title',
       cell: ({ item, module }) => (
         <>
-          <TrailLink to={paths.courseContent(courseId, module.id, item.id)}>{item.title}</TrailLink>
+          <TrailLink to={courseSection
+            ? paths.courseSectionContent(courseId, courseSection, item.id)
+            : paths.courseContent(courseId, module.id, contentSection(item.type), item.id)}>
+            {item.title}
+          </TrailLink>
           {item.active === false && <span className="data-table-tag">Hidden from students</span>}
         </>
       ),
     },
-    ...(showModule ? [{ header: 'Module', cell: ({ module }: Row) => module.title }] : []),
+    // The module the item is in, as a link to it.
+    ...(showModule
+      ? [{ header: 'Module', cell: ({ module }: Row) => <TrailLink to={paths.courseModule(courseId, module.id)}>{module.title}</TrailLink> }]
+      : []),
   ]
   if (submittable) {
     columns.push(

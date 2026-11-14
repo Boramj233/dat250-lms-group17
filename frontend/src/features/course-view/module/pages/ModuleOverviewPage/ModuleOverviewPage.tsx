@@ -1,7 +1,7 @@
 import { TrailLink } from '../../../../../shared/navigation/Trail'
 import { paths } from '../../../../../shared/paths'
 import PageHeader from '../../../../../shared/ui/PageHeader'
-import { contentTypeLabel } from '../../../../content/contentTypes'
+import { contentSection, contentTypeLabel } from '../../../../content/contentTypes'
 import type { ContentSummary } from '../../../../content/types'
 import DataTable from '../../../components/DataTable'
 import { useCourseView } from '../../../courseContext'
@@ -24,7 +24,7 @@ export default function ModuleOverviewPage() {
             header: 'Title',
             cell: item => (
               <>
-                <TrailLink to={paths.courseContent(course.id, module.id, item.id)}>{item.title}</TrailLink>
+                <TrailLink to={paths.courseContent(course.id, module.id, contentSection(item.type), item.id)}>{item.title}</TrailLink>
                 {item.active === false && <span className="data-table-tag">Hidden from students</span>}
               </>
             ),

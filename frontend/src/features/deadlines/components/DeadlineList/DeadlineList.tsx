@@ -3,6 +3,7 @@ import type { DeadlineContentType, UpcomingDeadline } from '../../types'
 import { formatDateTime, formatDayMonth, formatTimeLeft, isSoon } from '../../../../shared/lib/dateFormat'
 import { TrailLink } from '../../../../shared/navigation/Trail'
 import { paths } from '../../../../shared/paths'
+import { contentSection } from '../../../content/contentTypes'
 import './DeadlineList.css'
 
 const TYPE_LABEL: Record<DeadlineContentType, string> = {
@@ -46,7 +47,7 @@ export default function DeadlineList({ deadlines }: DeadlineListProps) {
                   `submitted` (see data/deadlines/types.ts). */}
               <p className="deadline-title">
                 {/* Stretched over the row (CSS), so the whole deadline is one link. */}
-                <TrailLink className="deadline-link" to={paths.courseContent(item.courseId, item.moduleId, item.contentId)}>
+                <TrailLink className="deadline-link" to={paths.courseContent(item.courseId, item.moduleId, contentSection(item.type), item.contentId)}>
                   {item.title}
                 </TrailLink>
               </p>

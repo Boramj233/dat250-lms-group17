@@ -26,6 +26,7 @@ export default function CourseGradesPage() {
 }
 
 function MyGrades({ courseId, courseTitle }: { courseId: string, courseTitle: string }) {
+  const { modules } = useCourseView()
   const grades = useMyGrades()
   return (
     <QueryState query={grades} loading="Loading grades…" error="Could not load your grades. Try again later.">
@@ -39,10 +40,21 @@ function MyGrades({ courseId, courseTitle }: { courseId: string, courseTitle: st
             {
               header: 'Title',
               cell: entry => (
-                <TrailLink to={paths.courseContent(entry.courseId, entry.moduleId, entry.contentId)}>
+                // Opens under Grades: /courses/1/grades/101 (Course › Grades › item).
+                <TrailLink to={paths.courseSectionContent(entry.courseId, 'grades', entry.contentId)}>
                   {entry.title}
                 </TrailLink>
               ),
+            },
+            {
+              // The module the item is in, as a link to it.
+              header: 'Module',
+              cell: entry => {
+                const module = modules.find(m => String(m.id) === String(entry.moduleId))
+                return module
+                  ? <TrailLink to={paths.courseModule(entry.courseId, module.id)}>{module.title}</TrailLink>
+                  : <span className="data-table-muted">–</span>
+              },
             },
             { header: 'Type', cell: entry => <span className="data-table-muted">{contentTypeLabel(entry.type)}</span> },
             {
