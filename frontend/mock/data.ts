@@ -109,6 +109,8 @@ export const submissions: {
   payload: string
   submittedAt: string
   late: boolean
+  /** Set for a group assignment: the group that handed in (see groups). */
+  groupId?: number
   /** publishedAt null: saved by the teacher but not visible to the student yet. */
   grade: { value: string, feedback: string | null, publishedAt: string | null } | null
 }[] = [
@@ -142,6 +144,18 @@ export const submissions: {
     payload: 'Sam answered the old assignment.', submittedAt: inDays(-3, 22, 10),
     grade: { value: 'Not passed', feedback: 'Please explain the HTTP methods.', publishedAt: null },
   },
+  {
+    // Group assignment: Sam handed in for the group, so Siri sees it too.
+    id: 6, userId: 5, contentId: 103, groupId: 1, type: 'TEXT', late: false,
+    payload: 'We send a PollCreated event to a topic exchange and log it in a consumer.',
+    submittedAt: inDays(-1, 16, 20),
+    grade: { value: 'Passed', feedback: 'Nice and simple. Add a dead letter queue next time.', publishedAt: inDays(0, 9, 0) },
+  },
+]
+
+/** Student groups (proposed; the backend has no groups yet). */
+export const groups: { id: number, courseId: number, name: string, memberIds: number[] }[] = [
+  { id: 1, courseId: 1, name: 'Group 7: Rabbit Runners', memberIds: [1, 5] },
 ]
 
 /** Questions added to quizzes in mock mode (not shown anywhere yet). */

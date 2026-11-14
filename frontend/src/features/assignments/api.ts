@@ -1,6 +1,6 @@
 import { apiClient, apiPath, jsonBody } from "../../shared/api/apiClient";
 import type { ContentId, UserId } from "../../shared/types";
-import type { ContentSubmission, GradeSubmissionInput, MySubmission, Submission, SubmissionId, SubmissionResult, SubmissionSummary, SubmitAssignmentInput, SubmitCodingExerciseInput } from "./types";
+import type { ContentSubmission, GradeSubmissionInput, MySubmission, Submission, SubmissionId, SubmissionResult, SubmissionSummary, SubmitAssignmentInput, SubmitCodingExerciseInput, SubmitMySubmissionInput } from "./types";
 
 /** The logged-in user's submissions for an assignment or coding exercise (backend). */
 export function getMySubmissionHistory(contentId: ContentId): Promise<MySubmission[]> {
@@ -35,6 +35,14 @@ export function getSubmission(submissionId: SubmissionId): Promise<Submission> {
 // The backend filters unpublished grades and hidden test details for the authenticated viewer.
 export function getSubmissionResult(submissionId: SubmissionId): Promise<SubmissionResult> {
   return apiClient<SubmissionResult>(apiPath`/api/submissions/${submissionId}/result`);
+}
+
+/** Hands in the logged-in user's answer (backend): a text or a repository URL. */
+export function submitMySubmission({ contentId, type, payload }: SubmitMySubmissionInput): Promise<MySubmission> {
+  return apiClient<MySubmission>(
+    apiPath`/api/contents/${contentId}/submissions`,
+    jsonBody("POST", { type, payload })
+  );
 }
 
 // Proposed endpoints. Backend identifies the actor, validates access, deadlines

@@ -1,0 +1,159 @@
+/* The cards (task, submission) left, the details panel right; stacked on narrow
+   screens with the panel first, so the deadline is seen at once. */
+.submittable {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-7);
+}
+
+.submittable-main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-7);
+  min-width: 0;
+}
+
+.submittable p {
+  margin: 0;
+}
+
+/* A bordered box with a heading and a light line below it; used for the task, the
+   submission and the details panel, so they look like one set. */
+.submittable-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  padding: var(--space-5) var(--space-7) var(--space-7);
+  border: var(--border-width-sm) solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-background);
+}
+
+.submittable-card-title {
+  margin: 0;
+  padding-bottom: var(--space-3);
+  border-bottom: var(--border-width-sm) solid var(--color-surface);
+  font-family: var(--font-ui);
+  font-size: var(--text-small);
+  font-weight: var(--font-weight-bold);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.submittable-panel {
+  order: -1;
+  padding: var(--space-5);
+}
+
+@media (min-width: 60rem) {
+  .submittable {
+    grid-template-columns: minmax(0, 1fr) 16rem;
+    align-items: start;
+  }
+
+  .submittable-panel {
+    order: 0;
+  }
+}
+
+/* What was handed in: a box inside the submission card. */
+.submittable-answer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-5);
+  border: var(--border-width-sm) solid var(--color-surface);
+  border-left: 3px solid var(--color-primary);
+  border-radius: var(--radius-control);
+}
+
+.submittable-empty {
+  font-style: italic;
+}
+
+/* The button (or why there is none) at the bottom of the submission card. */
+.submittable-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  padding-top: var(--space-5);
+  border-top: var(--border-width-sm) solid var(--color-surface);
+}
+
+.submittable-label {
+  font-family: var(--font-ui);
+  font-size: var(--text-small);
+  font-weight: var(--font-weight-bold);
+}
+
+.submittable-facts {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+}
+
+.submittable-facts dt {
+  font-family: var(--font-ui);
+  font-size: var(--text-small);
+  font-weight: var(--font-weight-bold);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.submittable-facts dd {
+  margin: 0 0 var(--space-3);
+  overflow-wrap: anywhere;
+}
+
+.submittable-facts dd:last-child {
+  margin-bottom: 0;
+}
+
+.submittable-members {
+  margin: var(--space-2) 0 0;
+  padding-left: var(--space-5);
+  font-size: var(--text-small);
+}
+
+.submittable-muted,
+.submittable-note {
+  font-family: var(--font-ui);
+  font-size: var(--text-small);
+  font-weight: normal;
+}
+
+.submittable-note {
+  font-style: italic;
+}
+
+.submittable-late {
+  font-weight: var(--font-weight-bold);
+}
+
+/* Text written by the teacher or student: keep their line breaks. */
+.submittable-text {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.submittable-starter {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.submittable-code {
+  margin: 0;
+  padding: var(--space-5);
+  overflow-x: auto;
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  font-family: var(--font-code);
+  font-size: var(--text-small);
+}
+
+.submittable-form {
+  width: 100%;
+}

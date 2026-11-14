@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Outlet, useParams } from 'react-router'
+import { Outlet, useMatch, useParams } from 'react-router'
 import { TrailPage } from '../../../../shared/navigation/Trail'
 import { useCourse, useCourseRole } from '../../../courses/hooks'
 import { useCourseModules } from '../../../modules/hooks'
@@ -17,6 +17,8 @@ export default function CourseLayout() {
   const role = useCourseRole(courseId)
   // Open by default; kept while moving around in the course, also into its modules.
   const [menuOpen, setMenuOpen] = useState(true)
+  // ModuleLayout draws its own breadcrumbs (course › module › …).
+  const inModule = useMatch('/courses/:courseId/modules/:moduleId/*') !== null
 
   if (course.isPending || modules.isPending || role.isPending) return <p role="status">Loading course…</p>
   if (course.error) return <p role="alert">Could not load the course.</p>
@@ -32,7 +34,7 @@ export default function CourseLayout() {
       menuOpen,
       toggleMenu: () => setMenuOpen(open => !open),
     }}>
-      <TrailPage label={course.data.title}>
+      <TrailPage label={course.data.title} hideBreadcrumbs={inModule}>
         <Outlet />
       </TrailPage>
     </CourseViewContext>

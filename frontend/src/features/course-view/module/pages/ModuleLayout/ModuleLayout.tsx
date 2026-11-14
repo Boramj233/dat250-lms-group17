@@ -1,6 +1,9 @@
 import { Link, NavLink, Outlet, useMatch, useParams } from 'react-router'
+import { Breadcrumbs, type BreadcrumbItem } from '../../../../../shared/navigation/Trail'
 import { paths } from '../../../../../shared/paths'
 import { useModuleContent } from '../../../../content/hooks'
+import { formatTerm } from '../../../../courses/courseFormat'
+import CourseMenuHeading from '../../../components/CourseMenuHeading'
 import SideMenuLayout from '../../../components/SideMenuLayout'
 import { CONTENT_SECTIONS } from '../../../contentSections'
 import { useCourseView, visibleContent } from '../../../courseContext'
@@ -18,11 +21,26 @@ export default function ModuleLayout() {
   const content = useModuleContent(course.id, module?.id)
   // On a content page, its type's menu item is the current one.
   const contentMatch = useMatch('/courses/:courseId/modules/:moduleId/content/:contentId')
+  const sectionMatch = useMatch('/courses/:courseId/modules/:moduleId/:section')
 
   if (!module) return <p role="alert">This module does not exist in {course.title}.</p>
 
   const items = content.data && visibleContent(content.data, isTeacher)
-  const currentType = items?.find(item => String(item.id) === contentMatch?.params.contentId)?.type
+  const currentItem = items?.find(item => String(item.id) === contentMatch?.params.contentId)
+  const currentType = currentItem?.type
+
+  // Course › Modules › module › the section or content item. The last one is the
+  // current page and is not a link.
+  const crumbs: BreadcrumbItem[] = [
+    { label: course.title, to: paths.course(course.id) },
+    { label: 'Modules', to: paths.courseSection(course.id, 'modules') },
+    { label: module.title, to: paths.courseModule(course.id, module.id) },
+  ]
+  const section = sectionMatch?.params.section
+  if (contentMatch) crumbs.push({ label: currentItem?.title ?? '…' })
+  else if (section === 'files') crumbs.push({ label: 'Files' })
+  else if (section) crumbs.push({ label: CONTENT_SECTIONS.find(s => s.section === section)?.label ?? section })
+  crumbs[crumbs.length - 1] = { label: crumbs[crumbs.length - 1].label }
 
   return (
     <SideMenuLayout
@@ -32,6 +50,11 @@ export default function ModuleLayout() {
       onToggle={toggleMenu}
       menu={
         <>
+          <CourseMenuHeading
+            title={course.title}
+            subtitle={`${formatTerm(course)} course`}
+            to={paths.course(course.id)}
+          />
           <Link className="side-menu-back" to={paths.courseSection(course.id, 'modules')}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
               strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
@@ -61,6 +84,7 @@ export default function ModuleLayout() {
         </>
       }
     >
+      <Breadcrumbs items={crumbs} />
       {content.isPending && <p role="status">Loading module…</p>}
       {content.error && <p role="alert">Could not load the content of this module.</p>}
       {items && (

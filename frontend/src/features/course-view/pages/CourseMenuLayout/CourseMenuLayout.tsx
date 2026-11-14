@@ -1,5 +1,7 @@
 import { Link, NavLink, Outlet, useMatch } from 'react-router'
 import { paths, type CourseSection } from '../../../../shared/paths'
+import { formatTerm } from '../../../courses/courseFormat'
+import CourseMenuHeading from '../../components/CourseMenuHeading'
 import SideMenuLayout from '../../components/SideMenuLayout'
 import { useCourseView } from '../../courseContext'
 
@@ -28,6 +30,11 @@ export default function CourseMenuLayout() {
       onToggle={toggleMenu}
       menu={
         <>
+          <CourseMenuHeading
+            title={course.title}
+            subtitle={`${formatTerm(course)} course`}
+            to={paths.course(course.id)}
+          />
           {isTeacher && (
             <Link className="button-secondary side-menu-button" to={paths.manageCourse(course.id)}>
               Manage

@@ -12,7 +12,7 @@ import type { Content, ContentType } from '../src/features/content/types'
 import type { EnrolledCourse } from '../src/features/courses/types'
 import type { UpcomingDeadline } from '../src/features/deadlines/types'
 import { canRequire, checkAvailabilityDates, isAccessible } from '../src/features/modules/prerequisites'
-import { completions, contents, courses, enrollments, modules, quizQuestions, submissions, users } from './data'
+import { completions, contents, courses, enrollments, groups, modules, quizQuestions, submissions, users } from './data'
 import { created, forbidden, noContent, notFound, ok, type MockHandler, type MockResult, type MockUser } from './types'
 
 /** Like the backend: you may read your own data; ADMIN may read anyone's. */
@@ -37,6 +37,27 @@ function isTeacher(user: MockUser, courseId: string | number) {
 
 const badRequest = (error: string): MockResult => ({ status: 400, body: { error } })
 const nextId = (items: { id: number | string }[]) => Math.max(0, ...items.map(item => Number(item.id))) + 1
+
+/** The submission is the user's own, or their group's (proposed group assignments). */
+function isOwnSubmission(user: MockUser, submission: (typeof submissions)[number]) {
+  if (submission.userId === user.userId) return true
+  const group = groups.find(g => g.id === submission.groupId)
+  return group?.memberIds.includes(user.userId) ?? false
+}
+
+/** A group with its members' names, as in SubmissionGroup; null for no group. */
+function groupResponse(groupId: number | undefined) {
+  const group = groups.find(g => g.id === groupId)
+  if (!group) return null
+  return {
+    id: group.id,
+    name: group.name,
+    members: group.memberIds.flatMap(userId => {
+      const member = users.find(u => u.userId === userId)
+      return member ? [{ userId, firstName: member.firstName, lastName: member.lastName }] : []
+    }),
+  }
+}
 
 /** Students only see published grades. */
 function publishedGrade(grade: (typeof submissions)[number]['grade']) {
@@ -228,7 +249,7 @@ export const handlers: MockHandler[] = [
     },
   },
   {
-    // SubmissionResponse[]: the caller's own submissions for one content item.
+    // SubmissionResponse[]: the caller's own (and their group's) submissions for one content item.
     method: 'GET',
     path: '/api/contents/:contentId/submissions/me',
     handle: ({ user, params }) => {
@@ -236,9 +257,40 @@ export const handlers: MockHandler[] = [
       if (!content) return notFound()
       if (!canReadCourse(user, content.courseId)) return forbidden()
       return ok(submissions
-        .filter(s => s.userId === user.userId && s.contentId === content.id)
-        .map(({ id, contentId, type, payload, submittedAt, late }) =>
-          ({ id, contentId, type, payload, submittedAt, late })))
+        .filter(s => s.contentId === content.id && isOwnSubmission(user, s))
+        .map(({ id, contentId, type, payload, submittedAt, late, groupId }) =>
+          ({ id, contentId, type, payload, submittedAt, late, group: groupResponse(groupId) })))
+    },
+  },
+  {
+    // CreateSubmissionRequest { type, payload } → SubmissionResponse (201), like the backend.
+    method: 'POST',
+    path: '/api/contents/:contentId/submissions',
+    handle: ({ user, params, body }) => {
+      const content = contents.find(c => String(c.id) === params.contentId)
+      if (!content) return notFound()
+      if (content.type !== 'ASSIGNMENT' && content.type !== 'CODING_EXERCISE') return badRequest('Cannot submit to this content')
+      if (!canReadCourse(user, content.courseId)) return forbidden()
+      const { type, payload } = body as { type?: 'TEXT' | 'GIT_URL', payload?: string }
+      if ((type !== 'TEXT' && type !== 'GIT_URL') || !payload?.trim()) return badRequest('Type and payload are required')
+      const late = content.deadline !== null && Date.now() > Date.parse(content.deadline)
+      if (late && !content.allowLateSubmission) return badRequest('The deadline has passed')
+      // A group assignment is handed in for the user's group in the course.
+      let groupId: number | undefined
+      if (content.type === 'ASSIGNMENT' && content.groupAssignment) {
+        groupId = groups.find(g => g.courseId === content.courseId && g.memberIds.includes(user.userId))?.id
+        if (groupId === undefined) return badRequest('You are not in a group in this course')
+      }
+      const submission = {
+        id: nextId(submissions), userId: user.userId, contentId: Number(content.id), groupId, type,
+        payload: payload.trim(), submittedAt: new Date().toISOString(), late, grade: null,
+      }
+      submissions.push(submission)
+      const { id, contentId, submittedAt } = submission
+      return {
+        status: 201,
+        body: { id, contentId, type, payload: submission.payload, submittedAt, late, group: groupResponse(groupId) },
+      }
     },
   },
   {
@@ -248,7 +300,7 @@ export const handlers: MockHandler[] = [
     handle: ({ user, params }) => {
       const submission = submissions.find(s => String(s.id) === params.submissionId)
       if (!submission) return notFound()
-      if (submission.userId !== user.userId && user.access !== 'ADMIN') return forbidden()
+      if (!isOwnSubmission(user, submission) && user.access !== 'ADMIN') return forbidden()
       return ok({
         submissionId: submission.id,
         status: submission.grade ? 'GRADED' : 'SUBMITTED',
@@ -265,7 +317,7 @@ export const handlers: MockHandler[] = [
     path: '/api/users/me/grades',
     handle: ({ user }) => {
       const latest = new Map<number, (typeof submissions)[number]>()
-      for (const submission of submissions.filter(s => s.userId === user.userId)) {
+      for (const submission of submissions.filter(s => isOwnSubmission(user, s))) {
         const previous = latest.get(submission.contentId)
         if (!previous || Date.parse(submission.submittedAt) > Date.parse(previous.submittedAt)) {
           latest.set(submission.contentId, submission)

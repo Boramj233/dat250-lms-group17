@@ -6,7 +6,7 @@ import { useCourseView } from '../../courseContext'
 export default function CourseHomePage() {
   const { course } = useCourseView()
   return (
-    <PageHeader title={course.title} kicker={formatTerm(course)}>
+    <PageHeader title={course.title} kicker={`${formatTerm(course)} course`}>
       <p>{course.description || 'This course has no description yet.'}</p>
     </PageHeader>
   )

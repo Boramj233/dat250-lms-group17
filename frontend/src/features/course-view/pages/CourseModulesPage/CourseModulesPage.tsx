@@ -32,7 +32,7 @@ export default function CourseModulesPage() {
 
   return (
     <>
-      <PageHeader title="Modules" />
+      <PageHeader title="Modules" kicker={course.title} />
       {modules.length === 0 && <p>This course has no modules yet.</p>}
       {content.isError && <p role="alert">Could not load the content of some modules.</p>}
       <ol className="course-modules">

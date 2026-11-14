@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ContentId, UserId } from "../../shared/types";
-import { getAssignmentSubmissions, getContentSubmissions, getMySubmissionHistory, getMySubmissions, getSubmission, getSubmissionResult, gradeSubmission, publishSubmissionGrade, submitAssignment, submitCodingExercise } from "./api";
+import { getAssignmentSubmissions, getContentSubmissions, getMySubmissionHistory, getMySubmissions, getSubmission, getSubmissionResult, gradeSubmission, publishSubmissionGrade, submitAssignment, submitCodingExercise, submitMySubmission } from "./api";
+import { gradeKeys } from "../grades/queryKeys";
 import { invalidateSubmissionData } from "./cache";
 import { submissionKeys } from "./queryKeys";
 import type { SubmissionId } from "./types";
@@ -98,5 +99,19 @@ export function useSubmitCodingExercise() {
   return useMutation({
     mutationFn: submitCodingExercise,
     onSuccess: (submission) => invalidateSubmissionData(queryClient, submission),
+  });
+}
+
+// Hands in the logged-in user's answer (backend) and refreshes their submission
+// history and grades, so the new submission shows up at once.
+export function useSubmitMySubmission() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: submitMySubmission,
+    onSuccess: (submission) => Promise.all([
+      queryClient.invalidateQueries({ queryKey: submissionKeys.myHistory(submission.contentId) }),
+      queryClient.invalidateQueries({ queryKey: gradeKeys.all }),
+    ]),
   });
 }

@@ -16,7 +16,21 @@ export interface MySubmission {
   /** ISO 8601 instant. */
   submittedAt: string;
   late: boolean;
+  /**
+   * Proposed (see content/README.md): the group that handed in, for a group assignment.
+   * Missing or null for an individual submission. Every member's history includes
+   * the group's submissions.
+   */
+  group?: SubmissionGroup | null;
 }
+
+/** A student group with its members' names (proposed; the backend has no groups yet). */
+export interface SubmissionGroup {
+  id: GroupId;
+  name: string;
+  members: { userId: UserId; firstName: string; lastName: string }[];
+}
+
 export type SubmissionStatus = "SUBMITTED" | "GRADING" | "GRADED" | "GRADING_FAILED";
 
 export type SubmissionOwner =
@@ -86,6 +100,15 @@ export interface SubmissionSummary {
 export interface Submission extends SubmissionSummary {
   payload: SubmissionPayload;
   result: SubmissionResult | null;
+}
+
+// Matches the backend's CreateSubmissionRequest (POST /api/contents/{contentId}/submissions):
+// TEXT for an assignment answer, GIT_URL for a coding exercise's repository.
+export interface SubmitMySubmissionInput {
+  contentId: ContentId;
+  type: SubmissionKind;
+  /** The text, or the repository URL; at most 10 000 characters. */
+  payload: string;
 }
 
 export interface SubmitAssignmentInput {

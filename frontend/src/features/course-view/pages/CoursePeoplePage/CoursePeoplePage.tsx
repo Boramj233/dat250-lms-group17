@@ -19,7 +19,7 @@ export default function CoursePeoplePage() {
 
   return (
     <>
-      <PageHeader title="People">
+      <PageHeader title="People" kicker={course.title}>
         {isTeacher && (
           <Link className="button-secondary course-people-manage" to={paths.manageCourseMembers(course.id)}>
             Manage members

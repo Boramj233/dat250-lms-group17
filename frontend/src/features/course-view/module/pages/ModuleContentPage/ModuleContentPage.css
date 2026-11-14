@@ -24,16 +24,6 @@
   overflow-wrap: anywhere;
 }
 
-.module-content-code {
-  margin: 0;
-  padding: var(--space-5);
-  overflow-x: auto;
-  border-radius: var(--radius-md);
-  background: var(--color-surface);
-  font-family: var(--font-code);
-  font-size: var(--text-small);
-}
-
 .module-content-questions {
   display: flex;
   flex-direction: column;

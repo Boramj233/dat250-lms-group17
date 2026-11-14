@@ -14,7 +14,7 @@ export default function CourseGradesPage() {
   const { course, isTeacher } = useCourseView()
   return (
     <>
-      <PageHeader title="Grades" />
+      <PageHeader title="Grades" kicker={course.title} />
       {isTeacher ? <p>Grading is not available in the course view yet.</p> : <MyGrades courseId={String(course.id)} />}
     </>
   )

@@ -23,7 +23,7 @@ export default function CourseContentTypePage({ type, title }: CourseContentType
 
   return (
     <>
-      <PageHeader title={title} />
+      <PageHeader title={title} kicker={course.title} />
       {content.isError && <p role="alert">Could not load the content of some modules.</p>}
       {content.isPending && rows.length === 0 && <p role="status">Loading…</p>}
       {!content.isPending && rows.length === 0 && <p>No {title.toLowerCase()} in this course yet.</p>}
