@@ -1,8 +1,7 @@
-import { paths } from '../../../../../shared/paths'
 import PageHeader from '../../../../../shared/ui/PageHeader'
 import type { ContentType } from '../../../../content/types'
-import ContentList from '../../../components/ContentList'
 import { useCourseView } from '../../../courseContext'
+import ContentTypeTable from '../../../pages/ContentTypeTable'
 import { useModuleView } from '../../moduleContext'
 
 type ModuleContentTypePageProps = {
@@ -11,20 +10,22 @@ type ModuleContentTypePageProps = {
   title: string
 }
 
-/** The module's content of one type, in order. */
+/** The module's content of one type as a table, like the course's pages. */
 export default function ModuleContentTypePage({ type, title }: ModuleContentTypePageProps) {
-  const { course } = useCourseView()
+  const { course, isTeacher } = useCourseView()
   const { module, items } = useModuleView()
-  const ofType = items.filter(item => item.type === type)
   return (
     <>
       <PageHeader title={title} kicker={module.title} />
-      {ofType.length === 0
-        ? <p>No {title.toLowerCase()} in this module yet.</p>
-        : <ContentList rows={ofType.map(item => ({
-            item,
-            to: paths.courseContent(course.id, module.id, item.id),
-          }))} />}
+      <ContentTypeTable
+        courseId={course.id}
+        type={type}
+        title={title}
+        place={module.title}
+        rows={items.filter(item => item.type === type).map(item => ({ item, module }))}
+        showModule={false}
+        isTeacher={isTeacher}
+      />
     </>
   )
 }

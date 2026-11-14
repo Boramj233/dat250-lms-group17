@@ -110,7 +110,7 @@ Run `npm install` first, then from this directory:
 - `/` shows the landing page with a Log in button, or the dashboard after login.
 - `/courses` lists all of the user's courses by term; `/courses/:courseId` shows one
   course with its course menu (`/modules`, `/assignments`, `/people`, `/groups`,
-  `/quizzes`, `/grades`, `/files`, `/code-exercises`; Files is a placeholder),
+  `/quizzes`, `/grades`, `/files`, `/code-exercises`; the lists are tables, and Files is empty until the backend has files),
   and teachers get a Manage button in it. `/courses/:courseId/modules/:moduleId` shows
   one module with its own menu (`/files`, `/pages`, `/assignments`, `/quizzes`,
   `/code-exercises`) and `/content/:contentId` one item in it. `/profile` shows their account.

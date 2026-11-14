@@ -7,9 +7,11 @@
 }
 
 .deadline {
+  /* The title link is stretched over the row. */
+  position: relative;
   display: flex;
   gap: var(--space-5);
-  padding: var(--space-5) 0;
+  padding: var(--space-5) var(--space-3);
   border-bottom: var(--border-width-sm) solid var(--color-border);
 }
 
@@ -78,4 +80,34 @@
 
 .deadline.is-soon .deadline-left {
   font-weight: var(--font-weight-bold);
+}
+
+/* The title's link covers the whole deadline, so the row is one click target. */
+.deadline-link {
+  color: var(--color-text);
+  text-decoration: none;
+}
+
+.deadline-link::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: var(--radius-control);
+}
+
+.deadline:hover {
+  background: var(--color-surface);
+}
+
+.deadline:hover .deadline-link {
+  text-decoration: underline;
+}
+
+.deadline:focus-within {
+  outline: var(--focus-ring-width) solid var(--color-primary);
+  outline-offset: var(--space-2);
+}
+
+.deadline-link:focus-visible {
+  outline: none;
 }

@@ -3,7 +3,8 @@ import { paths } from '../../../../shared/paths'
 import PageHeader from '../../../../shared/ui/PageHeader'
 import QueryState from '../../../../shared/ui/QueryState'
 import { useCourseEnrollments } from '../../../courses/hooks'
-import type { CourseRole } from '../../../courses/types'
+import type { CourseEnrollment, CourseRole } from '../../../courses/types'
+import DataTable from '../../components/DataTable'
 import { useCourseView } from '../../courseContext'
 import './CoursePeoplePage.css'
 
@@ -24,45 +25,32 @@ export default function CoursePeoplePage() {
           </Link>
         )}
       </PageHeader>
-      <QueryState
-        query={members}
-        loading="Loading members…"
-        error="Could not load the members of this course."
-        empty="This course has no members yet."
-      >
-        {all => {
-          // Teachers first, then by last name and first name.
-          const sorted = [...all].sort((a, b) => ROLE_ORDER[a.role] - ROLE_ORDER[b.role]
-            || a.lastName.localeCompare(b.lastName) || a.firstName.localeCompare(b.firstName))
-          return (
-            <div className="course-people-scroll">
-              <table className="course-people-table">
-                <caption className="visually-hidden">Members of {course.title}</caption>
-                <thead>
-                  <tr>
-                    <th scope="col">Name</th>
-                    <th scope="col">Email</th>
-                    <th scope="col">Role</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {sorted.map(member => (
-                    <tr key={member.userId}>
-                      <td>{member.firstName} {member.lastName}</td>
-                      <td><a href={`mailto:${member.email}`}>{member.email}</a></td>
-                      <td>
-                        <span className={`course-people-role is-${member.role.toLowerCase()}`}>
-                          {ROLE_LABEL[member.role]}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              <p className="course-people-count">{all.length} {all.length === 1 ? 'member' : 'members'}</p>
-            </div>
-          )
-        }}
+      <QueryState query={members} loading="Loading members…" error="Could not load the members of this course.">
+        {all => (
+          <>
+            <DataTable<CourseEnrollment>
+              caption={`Members of ${course.title}`}
+              // Teachers first, then by last name and first name.
+              rows={[...all].sort((a, b) => ROLE_ORDER[a.role] - ROLE_ORDER[b.role]
+                || a.lastName.localeCompare(b.lastName) || a.firstName.localeCompare(b.firstName))}
+              rowKey={member => String(member.userId)}
+              empty="This course has no members yet."
+              columns={[
+                { header: 'Name', cell: member => `${member.firstName} ${member.lastName}` },
+                { header: 'Email', cell: member => <a href={`mailto:${member.email}`}>{member.email}</a> },
+                {
+                  header: 'Role',
+                  cell: member => (
+                    <span className={member.role === 'TEACHER' ? 'data-table-strong' : 'data-table-muted'}>
+                      {ROLE_LABEL[member.role]}
+                    </span>
+                  ),
+                },
+              ]}
+            />
+            <p className="course-people-count">{all.length} {all.length === 1 ? 'member' : 'members'}</p>
+          </>
+        )}
       </QueryState>
     </>
   )

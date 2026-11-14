@@ -2,59 +2,6 @@
   align-self: flex-start;
 }
 
-/* The table scrolls sideways on narrow screens instead of squeezing the columns. */
-.course-people-scroll {
-  overflow-x: auto;
-}
-
-.course-people-table {
-  width: 100%;
-  border: var(--border-width-sm) solid var(--color-border);
-  border-radius: var(--radius-md);
-  border-collapse: separate;
-  border-spacing: 0;
-  overflow: hidden;
-}
-
-.course-people-table th,
-.course-people-table td {
-  padding: var(--space-3) var(--space-5);
-  text-align: left;
-  overflow-wrap: anywhere;
-}
-
-.course-people-table th {
-  background: var(--color-surface);
-  font-family: var(--font-ui);
-  font-size: var(--text-small);
-  font-weight: var(--font-weight-bold);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
-.course-people-table tbody tr + tr td {
-  border-top: var(--border-width-sm) solid var(--color-surface);
-}
-
-.course-people-table a {
-  color: var(--color-text);
-}
-
-.course-people-table a:focus-visible {
-  outline: var(--focus-ring-width) solid var(--color-primary);
-  outline-offset: var(--space-2);
-}
-
-/* Teacher in bold, so the teachers stand out at the top of the list. */
-.course-people-role {
-  font-family: var(--font-ui);
-  font-size: var(--text-small);
-}
-
-.course-people-role.is-teacher {
-  font-weight: var(--font-weight-bold);
-}
-
 .course-people-count {
   margin: var(--space-3) 0 0;
   font-family: var(--font-ui);

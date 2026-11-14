@@ -4,7 +4,7 @@ import { moduleKeys } from "../modules/queryKeys";
 import { quizKeys } from "../quizzes/queryKeys";
 import { createContent, deleteContent, getContent, getContentCompletion, getModuleContent, getMyCourseCompletions, moveContent, setContentCompletion, updateContent } from "./api";
 import { contentKeys } from "./queryKeys";
-import type { ContentSummary, ContentType } from "./types";
+import type { Content, ContentSummary, ContentType } from "./types";
 
 // Fetches and caches the full details of a content item. The type comes from the
 // content summary, since the backend has one endpoint per content type.
@@ -14,6 +14,25 @@ export function useContent(type: ContentType | undefined, contentId: ContentId) 
     queryFn: () => getContent(type!, contentId),
     // Wait until the type is known (from the module's content list).
     enabled: type !== undefined,
+  });
+}
+
+// The full details of several content items at once, e.g. the deadlines in a course's
+// table of assignments. Shares the cache with useContent (same query keys).
+export function useContents(items: { type: ContentType; id: ContentId }[]) {
+  return useQueries({
+    queries: items.map(item => ({
+      queryKey: contentKeys.content(item.id),
+      queryFn: () => getContent(item.type, item.id),
+    })),
+    combine: results => ({
+      /** Details per content id (as string); missing while that item is loading. */
+      byId: new Map<string, Content>(
+        results.flatMap((result, index) =>
+          result.data ? [[String(items[index].id), result.data] as const] : [])
+      ),
+      isPending: results.some(result => result.isPending),
+    }),
   });
 }
 

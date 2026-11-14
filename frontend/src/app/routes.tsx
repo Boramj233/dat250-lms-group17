@@ -28,7 +28,7 @@ import ModuleLayout from '../features/course-view/module/pages/ModuleLayout'
 import ModuleOverviewPage from '../features/course-view/module/pages/ModuleOverviewPage'
 import CourseModulesPage from '../features/course-view/pages/CourseModulesPage'
 import CoursePeoplePage from '../features/course-view/pages/CoursePeoplePage'
-import CoursePlaceholderPage from '../features/course-view/pages/CoursePlaceholderPage'
+import CourseFilesPage from '../features/course-view/pages/CourseFilesPage'
 import ProfilePage from '../features/profile/pages/ProfilePage'
 import { paths } from '../shared/paths'
 
@@ -53,14 +53,14 @@ export default function AppRoutes() {
             <Route path="groups" element={<CourseGroupsPage />} />
             <Route path="quizzes" element={<CourseContentTypePage type="QUIZ" title="Quizzes" />} />
             <Route path="grades" element={<CourseGradesPage />} />
-            <Route path="files" element={<CoursePlaceholderPage title="Files" />} />
+            <Route path="files" element={<CourseFilesPage />} />
             <Route path="code-exercises" element={<CourseContentTypePage type="CODING_EXERCISE" title="Code Exercises" />} />
             <Route path="*" element={<NotFoundPage />} />
           </Route>
 
           <Route path="modules/:moduleId" element={<ModuleLayout />}>
             <Route index element={<ModuleOverviewPage />} />
-            <Route path="files" element={<CoursePlaceholderPage title="Files" />} />
+            <Route path="files" element={<CourseFilesPage />} />
             {CONTENT_SECTIONS.map(({ type, section, label }) => (
               <Route key={section} path={section} element={<ModuleContentTypePage type={type} title={label} />} />
             ))}

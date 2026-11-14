@@ -1,4 +1,6 @@
 .course-card {
+  /* The title link is stretched over the card. */
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
@@ -32,3 +34,34 @@
   overflow: hidden;
 }
 
+
+/* The title's link covers the whole card, so the card is one click target. */
+.course-card-link {
+  color: var(--color-text);
+  text-decoration: none;
+}
+
+.course-card-link::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: var(--radius-md);
+}
+
+.course-card:hover {
+  border-color: var(--color-primary);
+  background: var(--color-surface);
+}
+
+.course-card:hover .course-card-link {
+  text-decoration: underline;
+}
+
+.course-card:focus-within {
+  outline: var(--focus-ring-width) solid var(--color-primary);
+  outline-offset: var(--space-2);
+}
+
+.course-card-link:focus-visible {
+  outline: none;
+}
