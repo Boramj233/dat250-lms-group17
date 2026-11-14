@@ -7,6 +7,8 @@ import type { Content, ContentSummary, ContentType } from '../../../content/type
 import { useMyGrades } from '../../../grades/hooks'
 import type { GradeEntry } from '../../../grades/types'
 import type { CourseModule } from '../../../modules/types'
+import { useMyQuizAttemptsFor } from '../../../quizzes/hooks'
+import type { QuizAttemptScore } from '../../../quizzes/types'
 import DataTable, { type Column } from '../../components/DataTable'
 
 export type ContentTypeRow = { item: ContentSummary, module: CourseModule }
@@ -47,6 +49,8 @@ export default function ContentTypeTable(
   const details = useContents(type === 'STATIC_PAGE' ? [] : rows.map(({ item }) => ({ type: item.type, id: item.id })))
   // Students' status per item; the same request as the Grades page.
   const grades = useMyGrades()
+  // Students' quiz attempts, for the quizzes' Status (same cache as the quiz page).
+  const quizAttempts = useMyQuizAttemptsFor(type === 'QUIZ' && !isTeacher ? rows.map(({ item }) => item.id) : [])
 
   const fullRows: Row[] = rows.map(row => ({
     ...row,
@@ -77,6 +81,14 @@ export default function ContentTypeTable(
       { header: 'Questions', cell: ({ details }) => details?.type === 'QUIZ' ? details.questions?.length ?? '–' : '…' },
       { header: 'Attempts allowed', cell: ({ details }) => details?.type === 'QUIZ' ? details.maxAttempts : '…' },
     )
+    if (!isTeacher) {
+      columns.push({
+        header: 'Status',
+        cell: ({ item }) => (
+          <QuizStatus attempts={quizAttempts.byQuiz.get(String(item.id))} loading={quizAttempts.isPending} />
+        ),
+      })
+    }
   }
 
   return (
@@ -100,6 +112,24 @@ function LateSubmissions({ content }: { content?: Content }) {
   if (!content) return '…'
   if (content.type !== 'ASSIGNMENT' && content.type !== 'CODING_EXERCISE') return '–'
   return <span className="data-table-muted">{content.allowLateSubmission ? 'Accepted' : 'Not accepted'}</span>
+}
+
+/** Completed (with a check mark and the best score) once a quiz has an attempt. */
+function QuizStatus({ attempts, loading }: { attempts?: QuizAttemptScore[], loading: boolean }) {
+  if (!attempts) return loading ? '…' : <span className="data-table-muted">–</span>
+  if (attempts.length === 0) return <span className="data-table-muted">Not started</span>
+  const best = attempts.reduce((top, attempt) => (attempt.correctCount > top.correctCount ? attempt : top))
+  return (
+    <span className="data-table-done">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
+        strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
+        <circle cx="12" cy="12" r="10" />
+        <path d="M7.5 12.5l3 3 6-6.5" />
+      </svg>
+      Completed
+      <span className="data-table-muted"> · best {best.correctCount}/{best.totalQuestions}</span>
+    </span>
+  )
 }
 
 /** Not submitted, submitted (awaiting a grade) or the grade. */

@@ -47,13 +47,15 @@ export default function CourseMenuLayout() {
       id="course-menu"
       open={menuOpen}
       onToggle={toggleMenu}
+      heading={
+        <CourseMenuHeading
+          title={course.title}
+          subtitle={`${formatTerm(course)} course`}
+          to={paths.course(course.id)}
+        />
+      }
       menu={
         <>
-          <CourseMenuHeading
-            title={course.title}
-            subtitle={`${formatTerm(course)} course`}
-            to={paths.course(course.id)}
-          />
           {isTeacher && (
             <Link className="button-secondary side-menu-button" to={paths.manageCourse(course.id)}>
               Manage

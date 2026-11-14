@@ -34,7 +34,7 @@ export default function ModuleLayout() {
   const currentItem = items?.find(item => String(item.id) === contentMatch?.params.contentId)
   const currentType = currentItem?.type
 
-  // Course › Modules › module › the section or content item. The last one is the
+  // Course › Modules › module › the section, or the content type › the item. The last is the
   // current page and is not a link.
   const crumbs: BreadcrumbItem[] = [
     { label: course.title, to: paths.course(course.id) },
@@ -42,7 +42,14 @@ export default function ModuleLayout() {
     { label: module.title, to: paths.courseModule(course.id, module.id) },
   ]
   const section = sectionMatch?.params.section
-  if (contentMatch) crumbs.push({ label: currentItem?.title ?? '…' })
+  if (contentMatch) {
+    // The item's type (e.g. Pages) between the module and the item, to go back to it.
+    const typeSection = CONTENT_SECTIONS.find(s => s.type === currentType)
+    if (typeSection) {
+      crumbs.push({ label: typeSection.label, to: paths.courseModuleSection(course.id, module.id, typeSection.section) })
+    }
+    crumbs.push({ label: currentItem?.title ?? '…' })
+  }
   else if (section === 'files') crumbs.push({ label: 'Files' })
   else if (section) crumbs.push({ label: CONTENT_SECTIONS.find(s => s.section === section)?.label ?? section })
   crumbs[crumbs.length - 1] = { label: crumbs[crumbs.length - 1].label }
@@ -53,13 +60,15 @@ export default function ModuleLayout() {
       id="module-menu"
       open={menuOpen}
       onToggle={toggleMenu}
+      heading={
+        <CourseMenuHeading
+          title={course.title}
+          subtitle={`${formatTerm(course)} course`}
+          to={paths.course(course.id)}
+        />
+      }
       menu={
         <>
-          <CourseMenuHeading
-            title={course.title}
-            subtitle={`${formatTerm(course)} course`}
-            to={paths.course(course.id)}
-          />
           {/* The course menu, folded in here, so it can be seen without leaving the module. */}
           <div className="side-menu-disclosure">
             <button

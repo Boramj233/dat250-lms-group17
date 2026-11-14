@@ -36,12 +36,37 @@
   }
 }
 
-/* Square icon button; on the menu's right edge when open, alone when collapsed. */
+/* The top row: the heading (e.g. the course title) and the toggle on one line, with a
+   light line below; collapsed, only the toggle. */
+.side-menu-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  gap: var(--space-3);
+}
+
+.side-menu-layout.is-collapsed .side-menu-top {
+  justify-content: flex-start;
+}
+
+.side-menu-top.has-heading {
+  padding-bottom: var(--space-5);
+  border-bottom: var(--border-width-sm) solid var(--color-surface);
+}
+
+/* Pushed down so the first line of the title is level with the middle of the button. */
+.side-menu-top-heading {
+  flex: 1;
+  min-width: 0;
+  padding-top: calc((var(--size-control-md) - 1lh) / 2);
+}
+
+/* Square icon button with three lines, on the right of the top row. */
 .side-menu-toggle {
   display: inline-flex;
+  flex-shrink: 0;
   align-items: center;
   justify-content: center;
-  align-self: flex-end;
   min-width: var(--size-control-md);
   min-height: var(--size-control-md);
   border: var(--border-width-sm) solid var(--color-border);
@@ -49,10 +74,6 @@
   color: var(--color-text);
   background: var(--color-background);
   cursor: pointer;
-}
-
-.side-menu-layout.is-collapsed .side-menu-toggle {
-  align-self: flex-start;
 }
 
 .side-menu-toggle:hover {

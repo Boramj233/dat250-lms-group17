@@ -1,10 +1,9 @@
-/* Course title and term, with a light line below to set it apart from the menu items. */
+/* Course title and term, at the top of the menu next to its toggle button. */
 .course-menu-heading {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
-  padding: 0 var(--space-3) var(--space-5);
-  border-bottom: var(--border-width-sm) solid var(--color-surface);
+  padding: 0 var(--space-3);
 }
 
 .course-menu-heading-title {

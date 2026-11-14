@@ -67,6 +67,24 @@
   font-size: var(--text-small);
 }
 
+/* Done: a check mark in a circle before the text, e.g. a completed quiz. */
+.data-table-done {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  font-weight: var(--font-weight-bold);
+}
+
+.data-table-done svg {
+  flex-shrink: 0;
+  color: var(--color-accent);
+}
+
+.data-table-done .data-table-muted {
+  font-weight: normal;
+}
+
 .data-table-tag {
   display: inline-block;
   margin-left: var(--space-2);
