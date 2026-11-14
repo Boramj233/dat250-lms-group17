@@ -153,9 +153,12 @@ export const submissions: {
   },
 ]
 
-/** Student groups (proposed; the backend has no groups yet). */
-export const groups: { id: number, courseId: number, name: string, memberIds: number[] }[] = [
-  { id: 1, courseId: 1, name: 'Group 7: Rabbit Runners', memberIds: [1, 5] },
+/** Groups in a course, like the backend's GroupDTO; `name` is proposed (see src/features/groups). */
+export const groups: { id: number, courseId: number, groupNumber: number, name?: string, memberIds: number[] }[] = [
+  { id: 1, courseId: 1, groupNumber: 7, name: 'Rabbit Runners', memberIds: [1, 5] },
+  { id: 2, courseId: 1, groupNumber: 2, memberIds: [5] },
+  { id: 3, courseId: 1, groupNumber: 3, memberIds: [] },
+  { id: 4, courseId: 2, groupNumber: 1, memberIds: [1, 5] },
 ]
 
 /** Questions added to quizzes in mock mode (not shown anywhere yet). */

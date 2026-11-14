@@ -40,7 +40,7 @@ src/
     │                     Code Exercises), the module overview and one content item
     ├── deadlines/        data + DeadlineList
     ├── modules/          data + prerequisites
-    ├── content/, quizzes/, assignments/, grades/, users/   data only so far
+    ├── content/, quizzes/, assignments/, grades/, groups/, users/   data only so far
     └── course-management/  course managers: Manage courses, New course,
         │                 ManageCourseLayout (breadcrumbs) and CourseTabsLayout
         │                 (Content, Members, Details)
@@ -110,7 +110,7 @@ Run `npm install` first, then from this directory:
 - `/` shows the landing page with a Log in button, or the dashboard after login.
 - `/courses` lists all of the user's courses by term; `/courses/:courseId` shows one
   course with its course menu (`/modules`, `/assignments`, `/people`, `/groups`,
-  `/quizzes`, `/grades`, `/files`, `/code-exercises`; Groups and Files are placeholders),
+  `/quizzes`, `/grades`, `/files`, `/code-exercises`; Files is a placeholder),
   and teachers get a Manage button in it. `/courses/:courseId/modules/:moduleId` shows
   one module with its own menu (`/files`, `/pages`, `/assignments`, `/quizzes`,
   `/code-exercises`) and `/content/:contentId` one item in it. `/profile` shows their account.

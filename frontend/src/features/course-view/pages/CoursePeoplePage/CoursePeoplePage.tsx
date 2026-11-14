@@ -3,19 +3,17 @@ import { paths } from '../../../../shared/paths'
 import PageHeader from '../../../../shared/ui/PageHeader'
 import QueryState from '../../../../shared/ui/QueryState'
 import { useCourseEnrollments } from '../../../courses/hooks'
-import type { CourseId } from '../../../../shared/types'
 import type { CourseRole } from '../../../courses/types'
 import { useCourseView } from '../../courseContext'
 import './CoursePeoplePage.css'
 
-const GROUPS: { role: CourseRole, heading: string }[] = [
-  { role: 'TEACHER', heading: 'Teachers' },
-  { role: 'STUDENT', heading: 'Students' },
-]
+const ROLE_LABEL: Record<CourseRole, string> = { TEACHER: 'Teacher', STUDENT: 'Student' }
+const ROLE_ORDER: Record<CourseRole, number> = { TEACHER: 0, STUDENT: 1 }
 
-/** The course's members by role. The backend only lets teachers list them for now. */
+/** Everyone enrolled in the course in a table: name, email and role. */
 export default function CoursePeoplePage() {
   const { course, isTeacher } = useCourseView()
+  const members = useCourseEnrollments(course.id)
 
   return (
     <>
@@ -26,41 +24,46 @@ export default function CoursePeoplePage() {
           </Link>
         )}
       </PageHeader>
-      {isTeacher
-        ? <MemberList courseId={course.id} />
-        : <p>Only teachers can see the members of a course for now.</p>}
+      <QueryState
+        query={members}
+        loading="Loading members…"
+        error="Could not load the members of this course."
+        empty="This course has no members yet."
+      >
+        {all => {
+          // Teachers first, then by last name and first name.
+          const sorted = [...all].sort((a, b) => ROLE_ORDER[a.role] - ROLE_ORDER[b.role]
+            || a.lastName.localeCompare(b.lastName) || a.firstName.localeCompare(b.firstName))
+          return (
+            <div className="course-people-scroll">
+              <table className="course-people-table">
+                <caption className="visually-hidden">Members of {course.title}</caption>
+                <thead>
+                  <tr>
+                    <th scope="col">Name</th>
+                    <th scope="col">Email</th>
+                    <th scope="col">Role</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {sorted.map(member => (
+                    <tr key={member.userId}>
+                      <td>{member.firstName} {member.lastName}</td>
+                      <td><a href={`mailto:${member.email}`}>{member.email}</a></td>
+                      <td>
+                        <span className={`course-people-role is-${member.role.toLowerCase()}`}>
+                          {ROLE_LABEL[member.role]}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <p className="course-people-count">{all.length} {all.length === 1 ? 'member' : 'members'}</p>
+            </div>
+          )
+        }}
+      </QueryState>
     </>
-  )
-}
-
-function MemberList({ courseId }: { courseId: CourseId }) {
-  const members = useCourseEnrollments(courseId)
-  return (
-    <QueryState
-      query={members}
-      loading="Loading members…"
-      error="Could not load the members of this course."
-      empty="This course has no members yet."
-    >
-      {all => GROUPS.map(({ role, heading }) => {
-        const inRole = all
-          .filter(member => member.role === role)
-          .sort((a, b) => a.lastName.localeCompare(b.lastName) || a.firstName.localeCompare(b.firstName))
-        if (inRole.length === 0) return null
-        return (
-          <section key={role} className="course-people-group" aria-labelledby={`people-${role}`}>
-            <h2 id={`people-${role}`} className="section-title">{heading} ({inRole.length})</h2>
-            <ul className="course-people-list">
-              {inRole.map(member => (
-                <li key={member.userId}>
-                  <span className="course-people-name">{member.firstName} {member.lastName}</span>
-                  <span className="course-people-email">{member.email}</span>
-                </li>
-              ))}
-            </ul>
-          </section>
-        )
-      })}
-    </QueryState>
   )
 }

@@ -45,18 +45,19 @@ function isOwnSubmission(user: MockUser, submission: (typeof submissions)[number
   return group?.memberIds.includes(user.userId) ?? false
 }
 
-/** A group with its members' names, as in SubmissionGroup; null for no group. */
+/** The members' names of a group (proposed in GroupDTO and SubmissionGroup). */
+function groupMembers(group: (typeof groups)[number]) {
+  return group.memberIds.flatMap(userId => {
+    const member = users.find(u => u.userId === userId)
+    return member ? [{ userId, firstName: member.firstName, lastName: member.lastName }] : []
+  })
+}
+
+/** A group as in SubmissionGroup; null for no group. */
 function groupResponse(groupId: number | undefined) {
   const group = groups.find(g => g.id === groupId)
   if (!group) return null
-  return {
-    id: group.id,
-    name: group.name,
-    members: group.memberIds.flatMap(userId => {
-      const member = users.find(u => u.userId === userId)
-      return member ? [{ userId, firstName: member.firstName, lastName: member.lastName }] : []
-    }),
-  }
+  return { id: group.id, name: group.name ?? `Group ${group.groupNumber}`, members: groupMembers(group) }
 }
 
 /** Students only see published grades. */
@@ -418,7 +419,8 @@ export const handlers: MockHandler[] = [
     method: 'GET',
     path: '/api/courses/:courseId/enrollments',
     handle: ({ user, params }) => {
-      if (!isTeacher(user, params.courseId) && user.access !== 'ADMIN') return forbidden()
+      // Every member of the course may see who else is in it (the People page).
+      if (!canReadCourse(user, params.courseId)) return forbidden()
       return ok(enrollments
         .filter(e => String(e.courseId) === params.courseId)
         .flatMap(e => {
@@ -427,6 +429,20 @@ export const handlers: MockHandler[] = [
             ? [{ userId: e.userId, role: e.role, firstName: member.firstName, lastName: member.lastName, email: member.email }]
             : []
         }))
+    },
+  },
+  {
+    // GroupDTO[] (backend), with the proposed name and members.
+    method: 'GET',
+    path: '/api/courses/:courseId/groups',
+    handle: ({ user, params }) => {
+      if (!canReadCourse(user, params.courseId)) return forbidden()
+      return ok(groups
+        .filter(g => String(g.courseId) === params.courseId)
+        .map(group => ({
+          id: group.id, groupNumber: group.groupNumber, memberIds: group.memberIds,
+          name: group.name ?? null, members: groupMembers(group),
+        })))
     },
   },
   {

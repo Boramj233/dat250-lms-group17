@@ -17,6 +17,7 @@ import DashboardPage from '../features/dashboard/pages/DashboardPage'
 import CoursesPage from '../features/courses/pages/CoursesPage'
 import CourseContentTypePage from '../features/course-view/pages/CourseContentTypePage'
 import CourseGradesPage from '../features/course-view/pages/CourseGradesPage'
+import CourseGroupsPage from '../features/course-view/pages/CourseGroupsPage'
 import CourseHomePage from '../features/course-view/pages/CourseHomePage'
 import CourseLayout from '../features/course-view/pages/CourseLayout'
 import CourseMenuLayout from '../features/course-view/pages/CourseMenuLayout'
@@ -49,7 +50,7 @@ export default function AppRoutes() {
             <Route path="modules" element={<CourseModulesPage />} />
             <Route path="assignments" element={<CourseContentTypePage type="ASSIGNMENT" title="Assignments" />} />
             <Route path="people" element={<CoursePeoplePage />} />
-            <Route path="groups" element={<CoursePlaceholderPage title="Groups" />} />
+            <Route path="groups" element={<CourseGroupsPage />} />
             <Route path="quizzes" element={<CourseContentTypePage type="QUIZ" title="Quizzes" />} />
             <Route path="grades" element={<CourseGradesPage />} />
             <Route path="files" element={<CoursePlaceholderPage title="Files" />} />

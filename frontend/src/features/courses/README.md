@@ -9,7 +9,7 @@ are frontend assumptions to agree on when implementing the backend.
 | GET | `/api/courses` | — | `Course[]` |
 | GET | `/api/courses/{courseId}` | — | `Course` |
 | GET | `/api/users/{userId}/courses` | — | `EnrolledCourse[]` |
-| GET | `/api/courses/{courseId}/enrollments` | — | `CourseEnrollment[]` |
+| GET | `/api/courses/{courseId}/enrollments` | — | `CourseEnrollment[]` (every member of the course: the People page) |
 | POST | `/api/courses` | `CreateCourseInput` | `Course` |
 | PATCH | `/api/courses/{courseId}` | `UpdateCourseInput.changes` | `Course` |
 | DELETE | `/api/courses/{courseId}` | — | `204 No Content` |

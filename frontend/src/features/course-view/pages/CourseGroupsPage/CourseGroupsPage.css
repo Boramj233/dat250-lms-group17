@@ -1,0 +1,114 @@
+.course-groups-filter {
+  align-self: flex-start;
+}
+
+.course-groups {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* One group: a bordered box; folded, only the header row shows. */
+.course-group {
+  border: var(--border-width-sm) solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.course-group-header {
+  margin: 0;
+  font-size: var(--font-size-md);
+}
+
+/* The whole header row is the button: arrow, name, "Your group", member count. */
+.course-group-toggle {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  width: 100%;
+  min-height: var(--size-control-md);
+  padding: var(--space-3) var(--space-5);
+  border: none;
+  border-radius: var(--radius-md);
+  color: var(--color-text);
+  background: transparent;
+  font: inherit;
+  font-weight: var(--font-weight-bold);
+  text-align: left;
+  cursor: pointer;
+}
+
+.course-group-toggle:hover {
+  background: var(--color-surface);
+}
+
+.course-group-toggle:focus-visible {
+  outline: var(--focus-ring-width) solid var(--color-primary);
+  outline-offset: var(--space-2);
+}
+
+.course-group-chevron {
+  flex-shrink: 0;
+  transition: transform 0.15s ease;
+}
+
+.course-group.is-open .course-group-chevron {
+  transform: rotate(90deg);
+}
+
+.course-group-name {
+  overflow-wrap: anywhere;
+}
+
+.course-group-tag {
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  font-family: var(--font-ui);
+  font-size: var(--text-small);
+}
+
+/* Member count on the right edge. */
+.course-group-count {
+  margin-left: auto;
+  font-family: var(--font-ui);
+  font-size: var(--text-small);
+  font-weight: normal;
+}
+
+.course-group-body {
+  padding: var(--space-3) var(--space-5) var(--space-5);
+  border-top: var(--border-width-sm) solid var(--color-surface);
+}
+
+.course-group-body[hidden] {
+  display: none;
+}
+
+.course-group-members {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding-left: var(--space-7);
+}
+
+.course-group-you,
+.course-group-empty {
+  font-family: var(--font-ui);
+  font-size: var(--text-small);
+}
+
+.course-group-empty {
+  margin: 0;
+  font-style: italic;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .course-group-chevron {
+    transition: none;
+  }
+}
