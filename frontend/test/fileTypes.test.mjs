@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { combineExtensions, formatExtensions, parseExtensions } from '../src/ui/manage/fileTypes.ts'
+import { combineExtensions, formatExtensions, parseExtensions } from '../src/features/course-management/fileTypes.ts'
 
 test('typed extensions get a dot, lower case and no duplicates', () => {
   assert.deepEqual(parseExtensions('py, .Java  ipynb;PY'), ['.py', '.java', '.ipynb'])

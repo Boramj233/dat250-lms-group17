@@ -8,10 +8,10 @@
 //
 // The responses copy the backend's DTOs (field names, and which fields each one has),
 // so the frontend sees the same shapes as with the real backend.
-import type { Content, ContentType } from '../src/data/content/types'
-import type { EnrolledCourse } from '../src/data/courses/types'
-import type { UpcomingDeadline } from '../src/data/deadlines/types'
-import { canRequire, checkAvailabilityDates, isAccessible } from '../src/data/modules/prerequisites'
+import type { Content, ContentType } from '../src/features/content/types'
+import type { EnrolledCourse } from '../src/features/courses/types'
+import type { UpcomingDeadline } from '../src/features/deadlines/types'
+import { canRequire, checkAvailabilityDates, isAccessible } from '../src/features/modules/prerequisites'
 import { completions, contents, courses, enrollments, modules, quizQuestions, submissions, users } from './data'
 import { created, forbidden, noContent, notFound, ok, type MockHandler, type MockResult, type MockUser } from './types'
 
@@ -43,7 +43,7 @@ function publishedGrade(grade: (typeof submissions)[number]['grade']) {
   return grade?.publishedAt ? grade : null
 }
 
-/** A submission in the frontend's Submission shape (src/data/submissions/types.ts). */
+/** A submission in the frontend's Submission shape (src/features/assignments/types.ts). */
 function submissionResponse(submission: (typeof submissions)[number]) {
   const content = contents.find(c => c.id === submission.contentId)!
   return {
@@ -215,7 +215,7 @@ export const handlers: MockHandler[] = [
     },
   },
   {
-    // Proposed endpoint (src/data/content/README.md): CompletedContent[] for the caller.
+    // Proposed endpoint (src/features/content/README.md): CompletedContent[] for the caller.
     method: 'GET',
     path: '/api/courses/:courseId/completions/me',
     handle: ({ user, params }) => {
@@ -242,7 +242,7 @@ export const handlers: MockHandler[] = [
     },
   },
   {
-    // Proposed endpoint (src/data/submissions): SubmissionResult with the published grade.
+    // Proposed endpoint (src/features/assignments): SubmissionResult with the published grade.
     method: 'GET',
     path: '/api/submissions/:submissionId/result',
     handle: ({ user, params }) => {
@@ -259,7 +259,7 @@ export const handlers: MockHandler[] = [
     },
   },
   {
-    // Proposed endpoint (src/data/grades/README.md): the latest submission per
+    // Proposed endpoint (src/features/grades/README.md): the latest submission per
     // assignment / coding exercise, with its published grade or null.
     method: 'GET',
     path: '/api/users/me/grades',
@@ -290,7 +290,7 @@ export const handlers: MockHandler[] = [
     },
   },
   {
-    // Proposed endpoint (src/data/modules/README.md). The mock calls a module completed
+    // Proposed endpoint (src/features/modules/README.md). The mock calls a module completed
     // when the user has completed all its content marked requiredForCompletion; with
     // none marked, all its assignments, coding exercises and quizzes (and it has at
     // least one). The backend decides the real rule.
@@ -565,7 +565,7 @@ export const handlers: MockHandler[] = [
     },
   },
   {
-    // Proposed (src/data/submissions): every student's latest submission, for teachers.
+    // Proposed (src/features/assignments): every student's latest submission, for teachers.
     method: 'GET',
     path: '/api/contents/:contentId/submissions',
     handle: ({ user, params }) => {

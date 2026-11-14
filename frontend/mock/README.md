@@ -39,7 +39,7 @@ login popup:
   ```
 
 Both files are reloaded on the next request after you save them: refresh the
-browser, no restart. They use the types from `src/data`, so `npm run build` fails
+browser, no restart. They use the types from `src/features`, so `npm run build` fails
 when the test data no longer matches what the frontend expects.
 
 Changes made through POST/PATCH/DELETE handlers only live in memory and are lost

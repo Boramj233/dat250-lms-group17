@@ -1,0 +1,52 @@
+.dashboard h1 {
+  margin-top: 0;
+}
+
+/* Courses and the side panel side by side on wide screens, stacked on narrow ones. */
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-7);
+  align-items: start;
+}
+
+@media (min-width: 64rem) {
+  .dashboard-grid {
+    grid-template-columns: minmax(0, 2fr) minmax(18rem, 1fr);
+  }
+}
+
+.dashboard-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  min-width: 0;
+}
+
+.dashboard-section h2 {
+  margin: 0;
+  font-size: var(--font-size-md);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* Section title left, a button right (e.g. "Manage courses"). */
+.dashboard-section-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.dashboard-section > p {
+  margin: 0;
+}
+
+/* A framed side panel, e.g. the deadlines. */
+.dashboard-panel {
+  padding: var(--space-5);
+  border: var(--border-width-sm) solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-background);
+}

@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { hasAccess } from '../src/data/auth/access.ts'
+import { hasAccess } from '../src/shared/auth/access.ts'
 
 test('access follows the backend hierarchy ADMIN > COURSE_MANAGER > STANDARD', () => {
   assert.equal(hasAccess('STANDARD', 'STANDARD'), true)

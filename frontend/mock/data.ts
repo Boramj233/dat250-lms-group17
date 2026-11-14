@@ -1,11 +1,11 @@
 // Test data for `npm run dev:mock`. Edit freely: the mock backend reloads this file on
 // the next request, so you only need to refresh the browser.
 //
-// The types come from src/data, so TypeScript tells you when the data no longer
+// The types come from src/features, so TypeScript tells you when the data no longer
 // matches what the frontend expects from the backend.
-import type { Content } from '../src/data/content/types'
-import type { Course, CourseRole } from '../src/data/courses/types'
-import type { CourseModule } from '../src/data/modules/types'
+import type { Content } from '../src/features/content/types'
+import type { Course, CourseRole } from '../src/features/courses/types'
+import type { CourseModule } from '../src/features/modules/types'
 import type { MockUser } from './types'
 
 /** Delay on every API answer, so loading states are visible. 0 turns it off. */
@@ -60,7 +60,7 @@ export const enrollments: { userId: number, courseId: number, role: CourseRole }
   { userId: 2, courseId: 4, role: 'TEACHER' },
   { userId: 3, courseId: 2, role: 'TEACHER' },
   { userId: 5, courseId: 1, role: 'STUDENT' },
-  // User 4 is not enrolled anywhere (empty overview).
+  // User 4 is not enrolled anywhere (empty dashboard).
 ]
 
 /** ISO time `days` from now at hh:mm local time, so the deadlines stay upcoming. */
@@ -178,7 +178,7 @@ export const quizQuestions: MockQuizQuestion[] = [
 /**
  * All content, with its courseId so the handlers can check the course. The handlers
  * return each type in the backend's response shape. Assignments and coding exercises
- * with a deadline also show up as upcoming deadlines on the overview.
+ * with a deadline also show up as upcoming deadlines on the dashboard.
  */
 export const contents: (Content & { courseId: number })[] = [
   // DAT250, module 1
@@ -200,7 +200,7 @@ export const contents: (Content & { courseId: number })[] = [
   },
   {
     id: 104, courseId: 1, moduleId: 1, position: 4, type: 'ASSIGNMENT', title: 'Old assignment (already passed)',
-    instructions: 'This deadline has passed, so it is not on the overview.',
+    instructions: 'This deadline has passed, so it is not on the dashboard.',
     deadline: inDays(-3), allowLateSubmission: false, mandatory: false, active: false,
   },
   // DAT250, module 2

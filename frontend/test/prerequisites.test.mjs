@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { canRequire, dependsOn, isUnlocked } from '../src/data/modules/prerequisites.ts'
+import { canRequire, dependsOn, isUnlocked } from '../src/features/modules/prerequisites.ts'
 
 // 3 requires 2, 2 requires 1; 4 has none.
 const modules = [
@@ -36,7 +36,7 @@ test('a cycle in the data does not make dependsOn loop forever', () => {
 })
 
 test('a module is accessible from its start date, when unlocked or open to all', async () => {
-  const { isAccessible, checkAvailabilityDates } = await import('../src/data/modules/prerequisites.ts')
+  const { isAccessible, checkAvailabilityDates } = await import('../src/features/modules/prerequisites.ts')
   const now = new Date('2026-11-14T12:00:00Z')
   const before = '2026-11-10T00:00:00Z'
   const after = '2026-11-20T00:00:00Z'
