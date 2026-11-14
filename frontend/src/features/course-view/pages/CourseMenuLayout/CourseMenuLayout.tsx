@@ -1,9 +1,11 @@
 import { Link, NavLink, Outlet, useMatch } from 'react-router'
 import { paths, type CourseSection } from '../../../../shared/paths'
+import { useCourseContent } from '../../../content/hooks'
 import { formatTerm } from '../../../courses/courseFormat'
 import CourseMenuHeading from '../../components/CourseMenuHeading'
 import SideMenuLayout from '../../components/SideMenuLayout'
-import { useCourseView } from '../../courseContext'
+import { CONTENT_SECTIONS } from '../../contentSections'
+import { useCourseView, visibleContent } from '../../courseContext'
 
 /** The course menu, in this order; Home has no section. */
 const ITEMS: { label: string, section?: CourseSection }[] = [
@@ -18,10 +20,39 @@ const ITEMS: { label: string, section?: CourseSection }[] = [
   { label: 'Code Exercises', section: 'code-exercises' },
 ]
 
-/** The course's pages with the course menu: Manage (teachers), then the sections. */
+type SubItem = { key: string, label: string, to: string }
+
+/**
+ * The course's pages with the course menu: Manage (teachers), then the sections. The
+ * current section unfolds a list of shortcuts: its modules, or its assignments,
+ * quizzes or code exercises.
+ */
 export default function CourseMenuLayout() {
   const { course, modules, isTeacher, menuOpen, toggleMenu } = useCourseView()
-  const onModulesPage = useMatch('/courses/:courseId/modules') !== null
+  const current = useMatch('/courses/:courseId/:section')?.params.section
+  const contentSection = CONTENT_SECTIONS.find(s => s.section === current)
+  // The same queries as the content pages, so this is read from the cache. Only
+  // fetched on a content type's page.
+  const content = useCourseContent(course.id, contentSection ? modules.map(m => m.id) : [])
+
+  function subItems(section: CourseSection | undefined): SubItem[] {
+    if (section !== current) return []
+    if (section === 'modules') {
+      return modules.map(module => ({
+        key: String(module.id), label: module.title, to: paths.courseModule(course.id, module.id),
+      }))
+    }
+    if (contentSection && section === contentSection.section) {
+      return modules.flatMap(module =>
+        visibleContent(content.byModule.get(String(module.id)) ?? [], isTeacher)
+          .filter(item => item.type === contentSection.type)
+          .map(item => ({
+            key: String(item.id), label: item.title, to: paths.courseContent(course.id, module.id, item.id),
+          })))
+    }
+    return []
+  }
+
   return (
     <SideMenuLayout
       label="Course menu"
@@ -41,26 +72,29 @@ export default function CourseMenuLayout() {
             </Link>
           )}
           <ul className="side-menu-list">
-            {ITEMS.map(item => (
-              <li key={item.label}>
-                <NavLink
-                  to={item.section ? paths.courseSection(course.id, item.section) : paths.course(course.id)}
-                  end
-                >
-                  {item.label}
-                </NavLink>
-                {/* On the Modules page: a shortcut into each module. */}
-                {item.section === 'modules' && onModulesPage && modules.length > 0 && (
-                  <ul className="side-menu-sublist" aria-label="Modules in this course">
-                    {modules.map(module => (
-                      <li key={module.id}>
-                        <Link to={paths.courseModule(course.id, module.id)}>{module.title}</Link>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </li>
-            ))}
+            {ITEMS.map(item => {
+              const sub = subItems(item.section)
+              return (
+                <li key={item.label}>
+                  <NavLink
+                    to={item.section ? paths.courseSection(course.id, item.section) : paths.course(course.id)}
+                    end
+                  >
+                    {item.label}
+                  </NavLink>
+                  {/* On a section's page: a shortcut to each of its modules or items. */}
+                  {sub.length > 0 && (
+                    <ul className="side-menu-sublist" aria-label={`${item.label} in this course`}>
+                      {sub.map(entry => (
+                        <li key={entry.key}>
+                          <Link to={entry.to}>{entry.label}</Link>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </li>
+              )
+            })}
           </ul>
         </>
       }
