@@ -9,7 +9,7 @@ Shared identifiers are defined in `../shared/types.ts`.
 | --- | --- | --- | --- |
 | GET | `/api/courses/{courseId}/modules` | — | `CourseModule[]` |
 | POST | `/api/courses/{courseId}/modules` | `{ title, position, prerequisiteModuleIds? }` | `CourseModule` |
-| PATCH | `/api/courses/{courseId}/modules/{moduleId}` | Updated `title`, `position`, and/or `prerequisiteModuleIds` | `CourseModule` |
+| PATCH | `/api/courses/{courseId}/modules/{moduleId}` | Updated `title`, `position`, `prerequisiteModuleIds`, `availableFrom` and/or `openToAllFrom` | `CourseModule` |
 | DELETE | `/api/courses/{courseId}/modules/{moduleId}` | — | `204 No Content` |
 
 A `CourseModule` has `id`, `courseId`, `title`, zero-based `position`, and
@@ -40,7 +40,17 @@ are treated. A module may require completion of all modules in
 module position alone does not lock a module. The backend must validate that
 prerequisites exist in the same course and reject self-dependencies and cycles.
 `prerequisites.ts` has these rules for the frontend and the mock (`canRequire`,
-`isUnlocked`); the manage pages only offer prerequisites that `canRequire` allows.
+`isAccessible`); the manage pages only offer prerequisites that `canRequire` allows.
+
+Two optional dates per module (proposed, ISO 8601 instants or null, set with the
+PATCH above):
+
+- `availableFrom`: the module is closed to students before this date.
+- `openToAllFrom`: from this date the module is open to all students, also those
+  who have not completed its prerequisites. It cannot be before `availableFrom`.
+
+So a module is accessible when `availableFrom` has passed (or is null) and either
+its prerequisites are completed or `openToAllFrom` has passed (`isAccessible`).
 
 The backend calculates completion and access before returning progress after a
 successful content-completion write. It must check enrollment and module access

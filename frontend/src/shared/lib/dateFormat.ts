@@ -17,6 +17,23 @@ const monthFormat = new Intl.DateTimeFormat('en-GB', { month: 'short' })
 const relativeFormat = new Intl.RelativeTimeFormat('en', { numeric: 'auto' })
 
 /** "Fri 14 Nov, 23:59" in the user's time zone. */
+/**
+ * An ISO instant as the value of an <input type="datetime-local"> in local time
+ * ("2026-11-14T09:30"), or "" for none. Turn it back with `fromDateTimeLocal`.
+ */
+export function toDateTimeLocal(iso: string | null | undefined): string {
+  if (!iso) return ''
+  const date = new Date(iso)
+  if (Number.isNaN(date.getTime())) return ''
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`
+}
+
+/** The value of an <input type="datetime-local"> (local time) as an ISO instant, or null if empty. */
+export function fromDateTimeLocal(value: string): string | null {
+  return value ? new Date(value).toISOString() : null
+}
+
 export function formatDateTime(date: Date): string {
   return dateTimeFormat.format(date)
 }

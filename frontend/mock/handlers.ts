@@ -11,7 +11,7 @@
 import type { Content, ContentType } from '../src/data/content/types'
 import type { EnrolledCourse } from '../src/data/courses/types'
 import type { UpcomingDeadline } from '../src/data/deadlines/types'
-import { canRequire, isUnlocked } from '../src/data/modules/prerequisites'
+import { canRequire, checkAvailabilityDates, isAccessible } from '../src/data/modules/prerequisites'
 import { completions, contents, courses, enrollments, modules, quizQuestions, submissions, users } from './data'
 import { created, forbidden, noContent, notFound, ok, type MockHandler, type MockResult, type MockUser } from './types'
 
@@ -191,8 +191,10 @@ export const handlers: MockHandler[] = [
       return ok(modules
         .filter(m => String(m.courseId) === params.courseId)
         .sort((a, b) => a.position - b.position)
-        .map(({ id, courseId, title, position, prerequisiteModuleIds }) =>
-          ({ id, courseId, title, position, prerequisiteModuleIds: prerequisiteModuleIds ?? [] })))
+        .map(({ id, courseId, title, position, prerequisiteModuleIds, availableFrom, openToAllFrom }) => ({
+          id, courseId, title, position, prerequisiteModuleIds: prerequisiteModuleIds ?? [],
+          availableFrom: availableFrom ?? null, openToAllFrom: openToAllFrom ?? null,
+        })))
     },
   },
   {
@@ -310,8 +312,8 @@ export const handlers: MockHandler[] = [
       return ok(courseModules.map(module => ({
         moduleId: module.id,
         completed: completedIds.has(String(module.id)),
-        // Open when all its prerequisite modules are completed.
-        accessible: isUnlocked(module, completedIds),
+        // From its start date, when its prerequisites are completed or it is open to all.
+        accessible: isAccessible(module, completedIds, new Date()),
       })))
     },
   },
@@ -433,8 +435,17 @@ export const handlers: MockHandler[] = [
       const module = modules.find(m => String(m.id) === params.moduleId && String(m.courseId) === params.courseId)
       if (!module) return notFound()
       if (!isTeacher(user, params.courseId)) return forbidden()
-      const changes = body as Partial<{ title: string, position: number, prerequisiteModuleIds: (string | number)[] }>
+      const changes = body as Partial<{
+        title: string, position: number, prerequisiteModuleIds: (string | number)[],
+        availableFrom: string | null, openToAllFrom: string | null,
+      }>
       if (changes.title !== undefined && !changes.title.trim()) return badRequest('Title is required')
+      const availableFrom = changes.availableFrom !== undefined ? changes.availableFrom : module.availableFrom ?? null
+      const openToAllFrom = changes.openToAllFrom !== undefined ? changes.openToAllFrom : module.openToAllFrom ?? null
+      const dateProblem = checkAvailabilityDates(availableFrom, openToAllFrom)
+      if (dateProblem) return badRequest(dateProblem)
+      module.availableFrom = availableFrom
+      module.openToAllFrom = openToAllFrom
       if (changes.prerequisiteModuleIds !== undefined) {
         const courseModules = modules.filter(m => m.courseId === module.courseId)
         const ids = changes.prerequisiteModuleIds.map(Number)
@@ -444,7 +455,8 @@ export const handlers: MockHandler[] = [
       }
       if (changes.title !== undefined) module.title = changes.title
       if (changes.position !== undefined) module.position = changes.position
-      return ok({ ...module, prerequisiteModuleIds: module.prerequisiteModuleIds ?? [] })
+      return ok({ ...module, prerequisiteModuleIds: module.prerequisiteModuleIds ?? [],
+        availableFrom: module.availableFrom ?? null, openToAllFrom: module.openToAllFrom ?? null })
     },
   },
   ...([

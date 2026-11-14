@@ -7,14 +7,14 @@ import PageHeader from '../../../../shared/ui/PageHeader'
 import { CONTENT_TYPES, contentTypeLabel } from '../../contentTypes'
 import { useManageCourse } from '../../manageCourseContext'
 import { useManageModule } from '../manageModuleContext'
-import ModulePrerequisites from './ModulePrerequisites'
+import ModuleAvailability from './ModuleAvailability'
 import './ManageModulePage.css'
 
 /**
  * One module: a button per content type to create new content, and a table of the
- * module's content: whether each item is required for module completion (a checkbox)
- * and a "⋯" menu to edit, move or delete it. Below, which modules must be completed
- * before this one opens.
+ * module's content (active, required for module completion, and a "⋯" menu to edit,
+ * move or delete it). Below, when students can open the module: start date, required
+ * modules and the date it opens to everyone.
  */
 export default function ManageModulePage() {
   const { course, modules } = useManageCourse()
@@ -142,7 +142,7 @@ export default function ManageModulePage() {
         {updateContent.error && <p className="form-error" role="alert">Could not change the content. Try again.</p>}
       </section>
 
-      <ModulePrerequisites courseId={course.id} module={module} modules={modules} />
+      <ModuleAvailability courseId={course.id} module={module} modules={modules} />
     </>
   )
 }

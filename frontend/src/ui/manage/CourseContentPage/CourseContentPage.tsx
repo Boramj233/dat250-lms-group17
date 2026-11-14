@@ -2,6 +2,7 @@ import { Link } from 'react-router'
 import { paths } from '../../../app/paths'
 import { useCourseContent } from '../../../data/content/hooks'
 import type { CourseModule } from '../../../data/modules/types'
+import { formatDateTime } from '../../../shared/lib/dateFormat'
 import { useManageCourse } from '../manageCourseContext'
 import AddModuleForm from './AddModuleForm'
 import './CourseContentPage.css'
@@ -12,17 +13,23 @@ export default function CourseContentPage() {
   // All modules' content at once, for the counts; the same cache as the module pages.
   const content = useCourseContent(course.id, modules.map(m => m.id))
 
-  /** "Open from the start" or "Opens after module 1 and 2". */
-  function unlockText(prerequisiteIds: CourseModule['id'][]): string {
+  /**
+   * When students can open the module, e.g. "From 21 Nov 08:00 · After module 1 and 2 ·
+   * For all from 5 Dec 08:00", or "Open from the start".
+   */
+  function availabilityText(module: CourseModule): string {
     const numbers = modules
       .map((m, index) => ({ id: String(m.id), number: index + 1 }))
-      .filter(m => prerequisiteIds.some(id => String(id) === m.id))
+      .filter(m => (module.prerequisiteModuleIds ?? []).some(id => String(id) === m.id))
       .map(m => m.number)
-    if (numbers.length === 0) return 'Open from the start'
-    const list = numbers.length === 1
-      ? `${numbers[0]}`
-      : `${numbers.slice(0, -1).join(', ')} and ${numbers.at(-1)}`
-    return `Opens after module ${list}`
+    const parts: string[] = []
+    if (module.availableFrom) parts.push(`From ${formatDateTime(new Date(module.availableFrom))}`)
+    if (numbers.length > 0) {
+      const list = numbers.length === 1 ? `${numbers[0]}` : `${numbers.slice(0, -1).join(', ')} and ${numbers.at(-1)}`
+      parts.push(`After module ${list}`)
+    }
+    if (module.openToAllFrom) parts.push(`For all from ${formatDateTime(new Date(module.openToAllFrom))}`)
+    return parts.length > 0 ? parts.join(' · ') : 'Open from the start'
   }
 
   return (
@@ -41,7 +48,7 @@ export default function CourseContentPage() {
                     <span className="manage-module-count">
                       {items === undefined ? '…' : `${items.length} ${items.length === 1 ? 'item' : 'items'}`}
                       {' · '}
-                      {unlockText(module.prerequisiteModuleIds ?? [])}
+                      {availabilityText(module)}
                     </span>
                   </div>
                   <Link className="button-secondary" to={paths.manageModule(course.id, module.id)}>

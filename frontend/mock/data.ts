@@ -76,7 +76,8 @@ export const modules: CourseModule[] = [
   // Containers opens when module 1 is completed, Messaging when Containers is.
   { id: 2, courseId: 1, title: 'Containers', position: 1, prerequisiteModuleIds: [1] },
   { id: 3, courseId: 1, title: 'Messaging', position: 2, prerequisiteModuleIds: [2] },
-  { id: 4, courseId: 1, title: 'Cloud deployment', position: 3 },
+  // Cloud deployment opens in a week (start date) and is open to all two weeks later.
+  { id: 4, courseId: 1, title: 'Cloud deployment', position: 3, availableFrom: inDays(7, 8, 0), openToAllFrom: inDays(21, 8, 0) },
   { id: 5, courseId: 2, title: 'Agile and Scrum', position: 0 },
   { id: 6, courseId: 2, title: 'Testing', position: 1 },
   { id: 7, courseId: 3, title: 'Haskell', position: 0 },

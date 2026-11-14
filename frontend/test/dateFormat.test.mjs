@@ -23,3 +23,12 @@ test('deadlines less than two days away are soon', () => {
   assert.equal(isSoon(later(2 * DAY), now), false)
   assert.equal(isSoon(later(-HOUR), now), false)
 })
+
+test('datetime-local values round-trip through ISO instants', async () => {
+  const { fromDateTimeLocal, toDateTimeLocal } = await import('../src/shared/lib/dateFormat.ts')
+  assert.equal(toDateTimeLocal(null), '')
+  assert.equal(toDateTimeLocal('not a date'), '')
+  assert.equal(fromDateTimeLocal(''), null)
+  const value = '2026-11-14T09:30'
+  assert.equal(toDateTimeLocal(fromDateTimeLocal(value)), value)
+})

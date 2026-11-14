@@ -34,3 +34,25 @@ test('a cycle in the data does not make dependsOn loop forever', () => {
   const cyclic = [{ id: 1, prerequisiteModuleIds: [2] }, { id: 2, prerequisiteModuleIds: [1] }]
   assert.equal(dependsOn(cyclic, 1, 3), false)
 })
+
+test('a module is accessible from its start date, when unlocked or open to all', async () => {
+  const { isAccessible, checkAvailabilityDates } = await import('../src/data/modules/prerequisites.ts')
+  const now = new Date('2026-11-14T12:00:00Z')
+  const before = '2026-11-10T00:00:00Z'
+  const after = '2026-11-20T00:00:00Z'
+  const locked = { id: 5, prerequisiteModuleIds: [1] }
+
+  assert.equal(isAccessible({ id: 9 }, new Set(), now), true)
+  assert.equal(isAccessible({ id: 9, availableFrom: after }, new Set(), now), false)
+  assert.equal(isAccessible({ id: 9, availableFrom: before }, new Set(), now), true)
+  assert.equal(isAccessible(locked, new Set(), now), false)
+  assert.equal(isAccessible(locked, new Set(['1']), now), true)
+  assert.equal(isAccessible({ ...locked, openToAllFrom: before }, new Set(), now), true)
+  assert.equal(isAccessible({ ...locked, openToAllFrom: after }, new Set(), now), false)
+  // Open to all does not open it before its start date.
+  assert.equal(isAccessible({ ...locked, availableFrom: after, openToAllFrom: before }, new Set(), now), false)
+
+  assert.equal(checkAvailabilityDates(before, after), undefined)
+  assert.equal(checkAvailabilityDates(null, before), undefined)
+  assert.ok(checkAvailabilityDates(after, before))
+})

@@ -3,7 +3,12 @@
 
 import type { ModuleId } from "../../shared/types";
 
-type ModuleLike = { id: ModuleId; prerequisiteModuleIds?: ModuleId[] };
+type ModuleLike = {
+  id: ModuleId;
+  prerequisiteModuleIds?: ModuleId[];
+  availableFrom?: string | null;
+  openToAllFrom?: string | null;
+};
 
 const same = (a: ModuleId, b: ModuleId) => String(a) === String(b);
 
@@ -33,7 +38,25 @@ export function canRequire(modules: ModuleLike[], moduleId: ModuleId, candidateI
   return !same(moduleId, candidateId) && !dependsOn(modules, candidateId, moduleId);
 }
 
-/** Whether a module is open: all its prerequisites are completed. */
+/** Whether all a module's prerequisites are completed. */
 export function isUnlocked(module: ModuleLike, completedModuleIds: Set<string>): boolean {
   return (module.prerequisiteModuleIds ?? []).every(id => completedModuleIds.has(String(id)));
+}
+
+/**
+ * Whether a student can open a module now: its start date (availableFrom) has come,
+ * and either its prerequisites are completed or it is open to all (openToAllFrom).
+ */
+export function isAccessible(module: ModuleLike, completedModuleIds: Set<string>, now: Date): boolean {
+  const reached = (date: string | null | undefined) => !!date && Date.parse(date) <= now.getTime();
+  if (module.availableFrom && !reached(module.availableFrom)) return false;
+  return isUnlocked(module, completedModuleIds) || reached(module.openToAllFrom);
+}
+
+/** A problem with the two dates, or undefined if they fit together. */
+export function checkAvailabilityDates(availableFrom: string | null, openToAllFrom: string | null): string | undefined {
+  if (availableFrom && openToAllFrom && Date.parse(openToAllFrom) < Date.parse(availableFrom)) {
+    return "“Available for all” cannot be before “Available from”.";
+  }
+  return undefined;
 }

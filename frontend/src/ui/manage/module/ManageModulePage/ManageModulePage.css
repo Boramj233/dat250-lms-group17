@@ -133,3 +133,10 @@
 .module-prerequisites-note {
   font-size: var(--text-small);
 }
+
+/* Availability: the dates, then the prerequisites. */
+.module-availability {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}

@@ -1,5 +1,6 @@
 import { NavLink } from 'react-router'
 import { paths } from '../../../app/paths'
+import RequireAccess from '../RequireAccess'
 import './Sidebar.css'
 
 type SidebarProps = {
@@ -17,6 +18,12 @@ export default function Sidebar({ isOpen }: SidebarProps) {
       <NavLink to={paths.home} end>
         Overview
       </NavLink>
+      {/* Course managers (and admins) only. Active on every page under it. */}
+      <RequireAccess level="COURSE_MANAGER">
+        <NavLink to={paths.manageCourses}>
+          Manage courses
+        </NavLink>
+      </RequireAccess>
     </nav>
   )
 }
