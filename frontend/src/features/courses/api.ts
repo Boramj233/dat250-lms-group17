@@ -1,4 +1,4 @@
-import { apiClient } from "../../shared/api/apiClient";
+import { apiClient, apiPath, jsonBody } from "../../shared/api/apiClient";
 import type { CourseId, UserId } from "../../shared/types";
 import type { Course, CourseEnrollment, CourseEnrollmentInput, CreateCourseInput, EnrolledCourse, EnrollInCourseInput, UpdateCourseInput, UpdateCourseRoleInput } from "./types";
 
@@ -8,53 +8,33 @@ export function getAllCourses(): Promise<Course[]> {
 }
 
 export function getMyCourses(userId: UserId): Promise<EnrolledCourse[]> {
-  return apiClient<EnrolledCourse[]>(
-    `/api/users/${encodeURIComponent(String(userId))}/courses`
-  );
+  return apiClient<EnrolledCourse[]>(apiPath`/api/users/${userId}/courses`);
 }
 
 export function getCourse(courseId: CourseId): Promise<Course> {
-  return apiClient<Course>(
-    `/api/courses/${encodeURIComponent(String(courseId))}`
-  );
+  return apiClient<Course>(apiPath`/api/courses/${courseId}`);
 }
 
 export function getCourseEnrollments(
   courseId: CourseId
 ): Promise<CourseEnrollment[]> {
-  return apiClient<CourseEnrollment[]>(
-    `/api/courses/${encodeURIComponent(String(courseId))}/enrollments`
-  );
+  return apiClient<CourseEnrollment[]>(apiPath`/api/courses/${courseId}/enrollments`);
 }
 
 // Proposed API contract is documented in ../README.md until backend is implemented.
 export function createCourse(input: CreateCourseInput): Promise<Course> {
-  return apiClient<Course>("/api/courses", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(input),
-  });
+  return apiClient<Course>("/api/courses", jsonBody("POST", input));
 }
 
 export function updateCourse({
   courseId,
   changes,
 }: UpdateCourseInput): Promise<Course> {
-  return apiClient<Course>(
-    `/api/courses/${encodeURIComponent(String(courseId))}`,
-    {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(changes),
-    }
-  );
+  return apiClient<Course>(apiPath`/api/courses/${courseId}`, jsonBody("PATCH", changes));
 }
 
 export function deleteCourse(courseId: CourseId): Promise<void> {
-  return apiClient<void>(
-    `/api/courses/${encodeURIComponent(String(courseId))}`,
-    { method: "DELETE" }
-  );
+  return apiClient<void>(apiPath`/api/courses/${courseId}`, { method: "DELETE" });
 }
 
 export function enrollInCourse({
@@ -63,12 +43,8 @@ export function enrollInCourse({
   role,
 }: EnrollInCourseInput): Promise<void> {
   return apiClient<void>(
-    `/api/courses/${encodeURIComponent(String(courseId))}/enrollments`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ userId, role }),
-    }
+    apiPath`/api/courses/${courseId}/enrollments`,
+    jsonBody("POST", { userId, role })
   );
 }
 
@@ -77,7 +53,7 @@ export function removeCourseEnrollment({
   userId,
 }: CourseEnrollmentInput): Promise<void> {
   return apiClient<void>(
-    `/api/courses/${encodeURIComponent(String(courseId))}/enrollments/${encodeURIComponent(String(userId))}`,
+    apiPath`/api/courses/${courseId}/enrollments/${userId}`,
     { method: "DELETE" }
   );
 }
@@ -88,11 +64,7 @@ export function updateCourseRole({
   role,
 }: UpdateCourseRoleInput): Promise<void> {
   return apiClient<void>(
-    `/api/courses/${encodeURIComponent(String(courseId))}/enrollments/${encodeURIComponent(String(userId))}`,
-    {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ role }),
-    }
+    apiPath`/api/courses/${courseId}/enrollments/${userId}`,
+    jsonBody("PATCH", { role })
   );
 }

@@ -1,11 +1,9 @@
-import { apiClient } from "../../shared/api/apiClient";
+import { apiClient, apiPath, jsonBody } from "../../shared/api/apiClient";
 import type { CourseId, UserId } from "../../shared/types";
 import type { CourseModule, CreateModuleInput, DeleteModuleInput, UpdateModuleInput, UserModuleProgress } from "./types";
 
 export function getCourseModules(courseId: CourseId): Promise<CourseModule[]> {
-  return apiClient<CourseModule[]>(
-    `/api/courses/${encodeURIComponent(String(courseId))}/modules`
-  );
+  return apiClient<CourseModule[]>(apiPath`/api/courses/${courseId}/modules`);
 }
 
 export function getUserModuleProgress(
@@ -13,7 +11,7 @@ export function getUserModuleProgress(
   userId: UserId
 ): Promise<UserModuleProgress[]> {
   return apiClient<UserModuleProgress[]>(
-    `/api/users/${encodeURIComponent(String(userId))}/courses/${encodeURIComponent(String(courseId))}/modules/progress`
+    apiPath`/api/users/${userId}/courses/${courseId}/modules/progress`
   );
 }
 
@@ -21,14 +19,7 @@ export function createModule({
   courseId,
   ...input
 }: CreateModuleInput): Promise<CourseModule> {
-  return apiClient<CourseModule>(
-    `/api/courses/${encodeURIComponent(String(courseId))}/modules`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(input),
-    }
-  );
+  return apiClient<CourseModule>(apiPath`/api/courses/${courseId}/modules`, jsonBody("POST", input));
 }
 
 export function updateModule({
@@ -37,12 +28,8 @@ export function updateModule({
   changes,
 }: UpdateModuleInput): Promise<CourseModule> {
   return apiClient<CourseModule>(
-    `/api/courses/${encodeURIComponent(String(courseId))}/modules/${encodeURIComponent(String(moduleId))}`,
-    {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(changes),
-    }
+    apiPath`/api/courses/${courseId}/modules/${moduleId}`,
+    jsonBody("PATCH", changes)
   );
 }
 
@@ -51,7 +38,7 @@ export function deleteModule({
   moduleId,
 }: DeleteModuleInput): Promise<void> {
   return apiClient<void>(
-    `/api/courses/${encodeURIComponent(String(courseId))}/modules/${encodeURIComponent(String(moduleId))}`,
+    apiPath`/api/courses/${courseId}/modules/${moduleId}`,
     { method: "DELETE" }
   );
 }

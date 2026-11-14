@@ -1,8 +1,6 @@
-import { apiClient } from "../../shared/api/apiClient";
+import { apiClient, apiPath, jsonBody } from "../../shared/api/apiClient";
 import type { ContentId, CourseId, ModuleId, UserId } from "../../shared/types";
 import type { AssignmentContent, CodingExerciseContent, CompletedContent, Content, ContentCompletion, ContentSummary, ContentType, CreateContentInput, DeleteContentInput, MoveContentInput, QuizContent, SetContentCompletionInput, StaticPageContent, UpdateContentInput } from "./types";
-
-const id = (value: CourseId | ModuleId | ContentId) => encodeURIComponent(String(value));
 
 // The backend sends "Assignment" for assignments in content lists, unlike the other
 // types (STATIC_PAGE, QUIZ, CODING_EXERCISE). Accept both spellings.
@@ -16,7 +14,7 @@ export async function getModuleContent(
   moduleId: ModuleId
 ): Promise<ContentSummary[]> {
   const items = await apiClient<(Omit<ContentSummary, "type"> & { type: string })[]>(
-    `/api/courses/${id(courseId)}/modules/${id(moduleId)}/contents`
+    apiPath`/api/courses/${courseId}/modules/${moduleId}/contents`
   );
   return items
     .map(item => ({ ...item, type: normalizeType(item.type) }))
@@ -31,13 +29,13 @@ export async function getModuleContent(
 export async function getContent(type: ContentType, contentId: ContentId): Promise<Content> {
   switch (type) {
     case "STATIC_PAGE":
-      return { ...(await apiClient<Omit<StaticPageContent, "type">>(`/api/contents/${id(contentId)}`)), type };
+      return { ...(await apiClient<Omit<StaticPageContent, "type">>(apiPath`/api/contents/${contentId}`)), type };
     case "QUIZ":
-      return { ...(await apiClient<Omit<QuizContent, "type">>(`/api/quizzes/${id(contentId)}`)), type };
+      return { ...(await apiClient<Omit<QuizContent, "type">>(apiPath`/api/quizzes/${contentId}`)), type };
     case "ASSIGNMENT":
-      return { ...(await apiClient<Omit<AssignmentContent, "type">>(`/api/assignments/${id(contentId)}`)), type };
+      return { ...(await apiClient<Omit<AssignmentContent, "type">>(apiPath`/api/assignments/${contentId}`)), type };
     case "CODING_EXERCISE":
-      return { ...(await apiClient<Omit<CodingExerciseContent, "type">>(`/api/coding-exercises/${id(contentId)}`)), type };
+      return { ...(await apiClient<Omit<CodingExerciseContent, "type">>(apiPath`/api/coding-exercises/${contentId}`)), type };
   }
 }
 
@@ -45,22 +43,16 @@ export function getContentCompletion(
   contentId: ContentId,
   userId: UserId
 ): Promise<ContentCompletion> {
-  return apiClient<ContentCompletion>(
-    `/api/users/${encodeURIComponent(String(userId))}/content/${encodeURIComponent(String(contentId))}/completion`
-  );
+  return apiClient<ContentCompletion>(apiPath`/api/users/${userId}/content/${contentId}/completion`);
 }
 
 /** What the logged-in user has completed in a course (proposed endpoint, see README). */
 export function getMyCourseCompletions(courseId: CourseId): Promise<CompletedContent[]> {
-  return apiClient<CompletedContent[]>(`/api/courses/${id(courseId)}/completions/me`);
+  return apiClient<CompletedContent[]>(apiPath`/api/courses/${courseId}/completions/me`);
 }
 
 function post<T>(url: string, body: unknown): Promise<T> {
-  return apiClient<T>(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
+  return apiClient<T>(url, jsonBody("POST", body));
 }
 
 const CREATE_PATH: Record<CreateContentInput["type"], string> = {
@@ -76,14 +68,14 @@ const CREATE_PATH: Record<CreateContentInput["type"], string> = {
  */
 export async function createContent(input: CreateContentInput): Promise<{ id: ContentId }> {
   const { courseId, moduleId, type, ...fields } = input;
-  const url = `/api/courses/${id(courseId)}/modules/${id(moduleId)}/contents/${CREATE_PATH[type]}`;
+  const url = apiPath`/api/courses/${courseId}/modules/${moduleId}/contents/${CREATE_PATH[type]}`;
   if (input.type !== "QUIZ") {
     return post<{ id: ContentId }>(url, fields);
   }
   const { questions, ...quizFields } = fields as Omit<typeof input, "courseId" | "moduleId" | "type">;
   const quiz = await post<{ id: ContentId }>(url, quizFields);
   for (const [position, question] of questions.entries()) {
-    await post(`/api/quizzes/${id(quiz.id)}/questions`, {
+    await post(apiPath`/api/quizzes/${quiz.id}/questions`, {
       questionText: question.questionText,
       position,
       hint: question.hint || null,
@@ -97,21 +89,11 @@ export function updateContent({
   contentId,
   changes,
 }: UpdateContentInput): Promise<Content> {
-  return apiClient<Content>(
-    `/api/content/${encodeURIComponent(String(contentId))}`,
-    {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(changes),
-    }
-  );
+  return apiClient<Content>(apiPath`/api/content/${contentId}`, jsonBody("PATCH", changes));
 }
 
 export function deleteContent({ contentId }: DeleteContentInput): Promise<void> {
-  return apiClient<void>(
-    `/api/content/${encodeURIComponent(String(contentId))}`,
-    { method: "DELETE" }
-  );
+  return apiClient<void>(apiPath`/api/content/${contentId}`, { method: "DELETE" });
 }
 
 export function moveContent({
@@ -120,12 +102,8 @@ export function moveContent({
   position,
 }: MoveContentInput): Promise<Content> {
   return apiClient<Content>(
-    `/api/content/${encodeURIComponent(String(contentId))}/move`,
-    {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ moduleId: targetModuleId, position }),
-    }
+    apiPath`/api/content/${contentId}/move`,
+    jsonBody("PATCH", { moduleId: targetModuleId, position })
   );
 }
 
@@ -135,11 +113,7 @@ export function setContentCompletion({
   completed,
 }: SetContentCompletionInput): Promise<ContentCompletion> {
   return apiClient<ContentCompletion>(
-    `/api/users/${encodeURIComponent(String(userId))}/content/${encodeURIComponent(String(contentId))}/completion`,
-    {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ completed }),
-    }
+    apiPath`/api/users/${userId}/content/${contentId}/completion`,
+    jsonBody("PUT", { completed })
   );
 }

@@ -10,6 +10,24 @@ export class AuthenticationRequiredError extends Error {
   }
 }
 
+/**
+ * Builds an API path and URL-encodes every interpolated value, so ids can never
+ * break the path: apiPath`/api/courses/${courseId}/modules/${moduleId}`.
+ * Not for query strings; build those with URLSearchParams.
+ */
+export function apiPath(strings: TemplateStringsArray, ...values: (string | number)[]): string {
+  return strings.reduce((path, part, i) => path + encodeURIComponent(String(values[i - 1])) + part);
+}
+
+/** Request options for sending `body` as JSON: apiClient(path, jsonBody('PATCH', changes)). */
+export function jsonBody(method: 'POST' | 'PUT' | 'PATCH', body: unknown): RequestInit {
+  return {
+    method,
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  };
+}
+
 export async function apiClient<T>(
   endpoint: string,
   options?: RequestInit
