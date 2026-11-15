@@ -30,6 +30,8 @@ import no.hvl.dat250.lms.submission.repository.SubmissionRepository;
 import no.hvl.dat250.lms.submission.service.SubmissionService;
 
 import org.junit.jupiter.api.Test;
+import org.springframework.security.access.AccessDeniedException;
+import no.hvl.dat250.lms.submission.service.SubmissionDeadlinePassedException;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -257,7 +259,7 @@ class SubmissionServiceIntegrationTest {
         );
 
         assertThrows(
-            IllegalStateException.class,
+            SubmissionDeadlinePassedException.class,
             () -> submissionService.submitIndividual(
                 f.assignment().getId(),
                 userId(f.user()),
@@ -301,10 +303,8 @@ class SubmissionServiceIntegrationTest {
             )
         );
 
-        // Exact exception type depends on the existing
-        // EnrollmentService implementation.
         assertThrows(
-            RuntimeException.class,
+            AccessDeniedException.class,
             () -> submissionService.submitIndividual(
                 f.assignment().getId(),
                 userId(outsider),

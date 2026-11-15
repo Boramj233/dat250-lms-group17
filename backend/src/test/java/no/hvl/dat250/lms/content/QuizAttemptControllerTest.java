@@ -8,17 +8,13 @@ import no.hvl.dat250.lms.content.api.controllers.QuizAttemptController;
 import no.hvl.dat250.lms.content.api.dto.SubmitQuizRequest;
 import no.hvl.dat250.lms.content.domain.QuizAttempt;
 import no.hvl.dat250.lms.content.service.QuizAttemptService;
-import no.hvl.dat250.lms.identity.CurrentUserService;
+import no.hvl.dat250.lms.security.AuthenticatedUser;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-
-import org.springframework.beans.factory.ObjectProvider;
-import org.springframework.http.HttpStatus;
-import org.springframework.web.server.ResponseStatusException;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
@@ -30,52 +26,8 @@ class QuizAttemptControllerTest {
     @Mock
     private QuizAttemptService attemptService;
 
-    @Mock
-    private ObjectProvider<CurrentUserService> currentUserProvider;
-
-    @Test
-    void rejectsSubmissionWhenAuthenticationIsUnavailable() {
-
-        QuizAttemptController controller =
-            new QuizAttemptController(
-                attemptService,
-                currentUserProvider
-            );
-
-        SubmitQuizRequest request = new SubmitQuizRequest(
-            List.of(
-                new SubmitQuizRequest.Answer(
-                    11L,
-                    List.of(21L)
-                )
-            )
-        );
-
-        ResponseStatusException exception =
-            assertThrows(
-                ResponseStatusException.class,
-                () -> controller.submit(7L, request)
-            );
-
-        assertEquals(
-            HttpStatus.SERVICE_UNAVAILABLE,
-            exception.getStatusCode()
-        );
-
-        verifyNoInteractions(attemptService);
-    }
-
     @Test
     void usesAuthenticatedUserIdForSubmission() {
-
-        CurrentUserService currentUser =
-            mock(CurrentUserService.class);
-
-        when(currentUserProvider.getIfAvailable())
-            .thenReturn(currentUser);
-
-        when(currentUser.requireCurrentUserId())
-            .thenReturn(5L);
 
         QuizAttempt savedAttempt =
             mock(QuizAttempt.class);
@@ -97,8 +49,7 @@ class QuizAttemptControllerTest {
 
         QuizAttemptController controller =
             new QuizAttemptController(
-                attemptService,
-                currentUserProvider
+                attemptService
             );
 
         SubmitQuizRequest request = new SubmitQuizRequest(
@@ -110,7 +61,7 @@ class QuizAttemptControllerTest {
             )
         );
 
-        var response = controller.submit(7L, request);
+        var response = controller.submit(7L, request, new AuthenticatedUser(5L));
 
         assertEquals(100L, response.id());
         assertEquals(7L, response.quizId());

@@ -19,6 +19,8 @@ import no.hvl.dat250.lms.enrollment.domain.Enrollment;
 import no.hvl.dat250.lms.enrollment.service.EnrollmentService;
 
 import org.junit.jupiter.api.Test;
+import java.util.NoSuchElementException;
+import org.springframework.security.access.AccessDeniedException;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
@@ -179,7 +181,7 @@ class QuizAttemptServiceTest {
             .thenReturn(2L);
 
         assertThrows(
-            IllegalStateException.class,
+            QuizAttemptLimitExceededException.class,
             () -> attemptService.submitAttempt(
                 7L,
                 5L,
@@ -218,4 +220,33 @@ class QuizAttemptServiceTest {
 
         verifyNoInteractions(answerRepository);
     }
+    @Test
+    void missingEnrollmentIsForbiddenBeforeCountingAttempts() {
+        when(quizService.findQuizWithQuestions(7L)).thenReturn(sampleQuiz());
+        when(enrollmentService.requireActiveStudent(5L, 1L))
+            .thenThrow(new NoSuchElementException("Enrollment not found"));
+        assertThrows(AccessDeniedException.class,
+            () -> attemptService.submitAttempt(7L, 5L, List.of()));
+        verifyNoInteractions(attemptRepository, answerRepository);
+    }
+
+    @Test
+    void inactiveOrNonStudentEnrollmentIsForbidden() {
+        when(quizService.findQuizWithQuestions(7L)).thenReturn(sampleQuiz());
+        when(enrollmentService.requireActiveStudent(5L, 1L))
+            .thenThrow(new IllegalStateException("Enrollment is inactive"));
+        assertThrows(AccessDeniedException.class,
+            () -> attemptService.submitAttempt(7L, 5L, List.of()));
+        verifyNoInteractions(attemptRepository, answerRepository);
+    }
+
+    @Test
+    void unrelatedStateFailureIsNotConvertedToAccessDenied() {
+        stubStudentAndQuiz();
+        IllegalStateException failure = new IllegalStateException("Persistence failure");
+        when(attemptRepository.countByEnrollment_IdAndQuiz_Id(3L, 7L)).thenThrow(failure);
+        assertSame(failure, assertThrows(IllegalStateException.class,
+            () -> attemptService.submitAttempt(7L, 5L, List.of())));
+    }
+
 }

@@ -22,6 +22,8 @@ import no.hvl.dat250.lms.submission.domain.SubmissionType;
 import no.hvl.dat250.lms.submission.repository.SubmissionRepository;
 import no.hvl.dat250.lms.submission.service.SubmissionService;
 
+import org.springframework.security.access.AccessDeniedException;
+import no.hvl.dat250.lms.submission.service.SubmissionDeadlinePassedException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -193,7 +195,7 @@ class SubmissionServiceTest {
         prepareEnrollment();
 
         assertThrows(
-            IllegalStateException.class,
+            SubmissionDeadlinePassedException.class,
             () -> service.submitIndividual(
                 30L,
                 5L,
@@ -217,7 +219,7 @@ class SubmissionServiceTest {
             ));
 
         assertThrows(
-            IllegalStateException.class,
+            AccessDeniedException.class,
             () -> service.submitIndividual(
                 30L,
                 5L,
@@ -336,4 +338,24 @@ class SubmissionServiceTest {
             submissionRepository
         );
     }
+    @Test
+    void missingEnrollmentIsForbiddenWithoutSaving() {
+        prepareAssignment();
+        when(enrollmentLookupService.requireActiveStudentEnrollment(5L, 10L))
+            .thenThrow(new NoSuchElementException("Enrollment not found"));
+        assertThrows(AccessDeniedException.class,
+            () -> service.submitIndividual(30L, 5L, SubmissionType.TEXT, "Answer"));
+        verifyNoInteractions(submissionRepository);
+    }
+
+    @Test
+    void unrelatedStateFailureIsNotConvertedToAccessDenied() {
+        prepareAssignment();
+        prepareEnrollment();
+        IllegalStateException failure = new IllegalStateException("Persistence failure");
+        when(submissionRepository.save(any(Submission.class))).thenThrow(failure);
+        assertSame(failure, assertThrows(IllegalStateException.class,
+            () -> service.submitIndividual(30L, 5L, SubmissionType.TEXT, "Answer")));
+    }
+
 }

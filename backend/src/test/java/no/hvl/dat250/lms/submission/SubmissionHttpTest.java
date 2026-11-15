@@ -5,7 +5,10 @@ import java.time.Instant;
 import java.util.NoSuchElementException;
 
 import no.hvl.dat250.lms.content.domain.Content;
-import no.hvl.dat250.lms.identity.CurrentUserService;
+import no.hvl.dat250.lms.security.AuthenticatedUser;
+import org.springframework.security.authentication.TestingAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.web.method.annotation.AuthenticationPrincipalArgumentResolver;
 import no.hvl.dat250.lms.submission.api.controllers.SubmissionController;
 import no.hvl.dat250.lms.submission.domain.Submission;
 import no.hvl.dat250.lms.submission.domain.SubmissionType;
@@ -19,7 +22,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -35,43 +37,33 @@ class SubmissionHttpTest {
     @Mock
     private SubmissionService submissionService;
 
-    @Mock
-    private CurrentUserService currentUserService;
-
-    @Mock
-    private ObjectProvider<CurrentUserService> currentUserProvider;
-
     private MockMvc mockMvc;
     private LocalValidatorFactoryBean validator;
 
     @BeforeEach
     void setUp() {
+        // Controller/DTO test only; real token validation is covered by SecurityIntegrationTest.
+        SecurityContextHolder.getContext().setAuthentication(
+            new TestingAuthenticationToken(new AuthenticatedUser(5L), null));
         validator = new LocalValidatorFactoryBean();
         validator.afterPropertiesSet();
 
         SubmissionController controller =
             new SubmissionController(
-                submissionService,
-                currentUserProvider
+                submissionService
             );
 
         mockMvc = MockMvcBuilders
             .standaloneSetup(controller)
+            .setCustomArgumentResolvers(new AuthenticationPrincipalArgumentResolver())
             .setValidator(validator)
             .build();
     }
 
     @AfterEach
     void tearDown() {
+        SecurityContextHolder.clearContext();
         validator.destroy();
-    }
-
-    private void mockAuthenticatedStudent() {
-        when(currentUserProvider.getIfAvailable())
-            .thenReturn(currentUserService);
-
-        when(currentUserService.requireCurrentUserId())
-            .thenReturn(5L);
     }
 
     private Submission savedSubmission() {
@@ -96,8 +88,6 @@ class SubmissionHttpTest {
 
     @Test
     void validSubmissionReturns201() throws Exception {
-
-        mockAuthenticatedStudent();
 
         // Prepare this mock BEFORE configuring service stubbing.
         Submission saved = savedSubmission();
@@ -131,26 +121,6 @@ class SubmissionHttpTest {
             SubmissionType.TEXT,
             "My assignment answer"
         );
-    }
-
-    @Test
-    void missingIdentityProviderReturns503() throws Exception {
-
-        // ObjectProvider mock returns null by default.
-
-        mockMvc.perform(
-            post("/api/contents/30/submissions")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("""
-                    {
-                      "type": "TEXT",
-                      "payload": "My assignment answer"
-                    }
-                    """)
-        )
-        .andExpect(status().isServiceUnavailable());
-
-        verifyNoInteractions(submissionService);
     }
 
     @Test
@@ -190,8 +160,6 @@ class SubmissionHttpTest {
 
     @Test
     void missingContentReturns404() throws Exception {
-
-        mockAuthenticatedStudent();
 
         when(submissionService.submitIndividual(
             30L,
