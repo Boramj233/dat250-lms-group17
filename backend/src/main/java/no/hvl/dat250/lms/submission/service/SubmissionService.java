@@ -20,6 +20,7 @@ import no.hvl.dat250.lms.submission.repository.SubmissionRepository;
 
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
@@ -98,12 +99,15 @@ public class SubmissionService {
             .getId();
 
         // 5. Verify the student and obtain their Enrollment.
-        Enrollment enrollment =
-            enrollmentLookupService
-                .requireActiveStudentEnrollment(
-                    userId,
-                    courseId
-                );
+        Enrollment enrollment;
+        try {
+            enrollment = enrollmentLookupService
+                .requireActiveStudentEnrollment(userId, courseId);
+        } catch (NoSuchElementException | IllegalStateException ex) {
+            // Only this enrollment operation uses these exceptions for missing,
+            // inactive or non-student membership. Do not catch other service work.
+            throw new AccessDeniedException("Active student enrollment required", ex);
+        }
 
         // 6. Calculate lateness using the server clock.
         Instant now = clock.instant();
@@ -112,9 +116,7 @@ public class SubmissionService {
             && now.isAfter(deadline);
 
         if (late && !allowLateSubmission) {
-            throw new IllegalStateException(
-                "Submission deadline has passed"
-            );
+            throw new SubmissionDeadlinePassedException();
         }
 
         // 7. Save a new Submission.
