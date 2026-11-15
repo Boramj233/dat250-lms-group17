@@ -1,15 +1,10 @@
 package no.hvl.dat250.lms.module.domain;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
+import no.hvl.dat250.lms.content.domain.Content;
 import no.hvl.dat250.lms.course.domain.Course;
+
+import java.util.*;
 
 @Entity
 @Table(name = "modules")
@@ -29,6 +24,19 @@ public class Module {
     @JoinColumn(name = "course_id", nullable = false)
     private Course course;
 
+    @OneToMany(mappedBy = "module")
+    @OrderBy("position ASC")
+    private List<Content> contents = new ArrayList<>();
+
+    // Modules that must be completed before this module
+    @ManyToMany
+    @JoinTable(
+            name = "module_dependencies",
+            joinColumns = @JoinColumn(name = "module_id"),
+            inverseJoinColumns = @JoinColumn(name = "required_module_id")
+    )
+    private Set<Module> dependencies = new HashSet<>();
+
     protected Module() {}
 
     public Module(Course course, String title, int position) {
@@ -41,8 +49,16 @@ public class Module {
         return id;
     }
 
+    public void setTitle(String title) {
+        this.title = title;
+    }
+
     public String getTitle() {
         return title;
+    }
+
+    public void setPosition(int position) {
+        this.position = position;
     }
 
     public int getPosition() {
@@ -51,5 +67,21 @@ public class Module {
 
     public Course getCourse() {
         return course;
+    }
+
+    public List<Content> getContents() {
+        return Collections.unmodifiableList(contents);
+    }
+
+    public Set<Module> getDependencies() {
+        return Collections.unmodifiableSet(dependencies);
+    }
+
+    public void addDependency(Module module) {
+        dependencies.add(module);
+    }
+
+    public void removeDependency(Module module) {
+        dependencies.remove(module);
     }
 }

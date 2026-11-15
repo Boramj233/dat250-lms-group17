@@ -1,8 +1,6 @@
 package no.hvl.dat250.lms.module.service;
 
-import java.util.List;
-import java.util.NoSuchElementException;
-import java.util.Optional;
+import java.util.*;
 
 import no.hvl.dat250.lms.course.domain.Course;
 import no.hvl.dat250.lms.course.service.CourseService;
@@ -57,6 +55,36 @@ public class ModuleService {
         return moduleRepository.save(module);
     }
 
+    @Transactional
+    public Module updateModule(
+            Long courseId,
+            Long moduleId,
+            String title,
+            int position) {
+
+        Module module = findModuleInCourse(courseId, moduleId)
+                .orElseThrow(() -> new NoSuchElementException(
+                        "Module not found"
+                ));
+
+        if (title == null || title.isBlank()) {
+            throw new IllegalArgumentException(
+                    "Module title must not be blank"
+            );
+        }
+
+        if (position < 0) {
+            throw new IllegalArgumentException(
+                    "Position cannot be negative"
+            );
+        }
+
+        module.setTitle(title);
+        module.setPosition(position);
+
+        return module;
+    }
+
     public Optional<Module> findModuleById(Long id) {
 
         if (id == null) {
@@ -97,5 +125,100 @@ public class ModuleService {
             moduleId,
             courseId
         );
+    }
+
+    @Transactional
+    public Module addDependency(
+            Long courseId,
+            Long moduleId,
+            Long requiredModuleId) {
+
+        Module module = findModuleInCourse(courseId, moduleId)
+                .orElseThrow(() -> new NoSuchElementException(
+                        "Module not found"
+                ));
+
+        Module requiredModule =
+                findModuleInCourse(courseId, requiredModuleId)
+                        .orElseThrow(() -> new NoSuchElementException(
+                                "Required module not found"
+                        ));
+
+        // self-dependency
+        if (module.getId().equals(requiredModule.getId())) {
+            throw new IllegalArgumentException(
+                    "A module cannot depend on itself"
+            );
+        }
+
+        // circular-dependency
+        if (hasDependencyPath(requiredModule, module.getId(),
+                new HashSet<>())) {
+            throw new IllegalArgumentException(
+                    "Circular module dependency detected"
+            );
+        }
+
+        module.addDependency(requiredModule);
+
+        return module;
+    }
+
+    @Transactional
+    public Set<Module> getDependencies(
+            Long courseId,
+            Long moduleId
+    ) {
+
+        Module module = findModuleInCourse(courseId, moduleId)
+                .orElseThrow(() -> new NoSuchElementException(
+                        "Module not found"
+                ));
+
+        return Set.copyOf(module.getDependencies());
+    }
+
+    @Transactional
+    public void removeDependency(
+            Long courseId,
+            Long moduleId,
+            Long requiredModuleId
+    ) {
+
+        Module module = findModuleInCourse(courseId, moduleId)
+                .orElseThrow(() -> new NoSuchElementException(
+                        "Module not found"
+                ));
+
+        Module requiredModule = findModuleInCourse(courseId, requiredModuleId)
+                .orElseThrow(() -> new NoSuchElementException(
+                        "Required module not found"
+                ));
+
+        module.removeDependency(requiredModule);
+    }
+
+    // ---------------------------------------------------------------- helpers
+
+    private boolean hasDependencyPath(
+            Module current,
+            Long targetId,
+            Set<Long> visited) {
+
+        if (current.getId().equals(targetId)) {
+            return true;
+        }
+
+        if (!visited.add(current.getId())) {
+            return false;
+        }
+
+        for (Module dependency : current.getDependencies()) {
+            if (hasDependencyPath(dependency, targetId, visited)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }
