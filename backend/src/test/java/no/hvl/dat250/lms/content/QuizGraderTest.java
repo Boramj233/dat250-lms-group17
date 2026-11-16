@@ -2,6 +2,7 @@
 package no.hvl.dat250.lms.content;
 
 import java.util.List;
+import java.util.Set;
 
 import no.hvl.dat250.lms.content.domain.ChoiceOption;
 import no.hvl.dat250.lms.content.service.QuizGrader;
@@ -14,6 +15,25 @@ import static org.mockito.Mockito.*;
 class QuizGraderTest {
 
     private final QuizGrader grader = new QuizGrader();
+
+    @Test
+    void textMatchingTrimsEdgesAndIgnoresCaseButPreservesInternalSpaces() {
+        Set<String> accepted = Set.of(" Java ", "Java language");
+        assertTrue(grader.isTextCorrect(accepted, "  JAVA  "));
+        assertTrue(grader.isTextCorrect(accepted, "java LANGUAGE"));
+        assertFalse(grader.isTextCorrect(accepted, "Java  language"));
+        assertFalse(grader.isTextCorrect(accepted, "J a v a"));
+        assertFalse(grader.isTextCorrect(accepted, ""));
+        assertFalse(grader.isTextCorrect(accepted, "   "));
+        assertFalse(grader.isTextCorrect(accepted, "Python"));
+    }
+
+    @Test
+    void textMatchingRejectsMissingOrOversizedInputAndMissingKey() {
+        assertThrows(IllegalArgumentException.class, () -> grader.isTextCorrect(Set.of("Java"), null));
+        assertThrows(IllegalArgumentException.class, () -> grader.isTextCorrect(Set.of("Java"), "a".repeat(256)));
+        assertThrows(IllegalStateException.class, () -> grader.isTextCorrect(Set.of(), "Java"));
+    }
 
     private ChoiceOption option(long id, boolean correct) {
         ChoiceOption option = mock(ChoiceOption.class);

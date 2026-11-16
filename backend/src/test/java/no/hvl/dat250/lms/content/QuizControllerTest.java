@@ -8,6 +8,7 @@ import no.hvl.dat250.lms.content.api.controllers.QuizController;
 import no.hvl.dat250.lms.content.domain.ChoiceOption;
 import no.hvl.dat250.lms.content.domain.Quiz;
 import no.hvl.dat250.lms.content.domain.QuizQuestion;
+import no.hvl.dat250.lms.content.domain.QuestionType;
 import no.hvl.dat250.lms.content.service.QuizService;
 import no.hvl.dat250.lms.content.service.QuizService.OptionDraft;
 import no.hvl.dat250.lms.content.service.QuizService.QuestionWithOptions;
@@ -161,7 +162,7 @@ class QuizControllerTest {
             "Which are Java access modifiers?",
             0,
             "Think about visibility",
-            options
+            options, QuestionType.MULTIPLE_CHOICE, List.of()
         )).thenReturn(question);
 
         mockMvc.perform(
@@ -207,7 +208,7 @@ class QuizControllerTest {
             "Which are Java access modifiers?",
             0,
             "Think about visibility",
-            options
+            options, QuestionType.MULTIPLE_CHOICE, List.of()
         );
     }
 
@@ -275,7 +276,7 @@ class QuizControllerTest {
         );
 
         when(quizService.addQuestion(
-            7L, "Java question", 0, null, options
+            7L, "Java question", 0, null, options, QuestionType.MULTIPLE_CHOICE, List.of()
         )).thenThrow(
             new IllegalArgumentException(
                 "At least one option must be correct"
@@ -307,7 +308,7 @@ class QuizControllerTest {
         .andExpect(status().isBadRequest());
 
         verify(quizService).addQuestion(
-            7L, "Java question", 0, null, options
+            7L, "Java question", 0, null, options, QuestionType.MULTIPLE_CHOICE, List.of()
         );
     }
 
@@ -320,7 +321,7 @@ class QuizControllerTest {
         );
 
         when(quizService.addQuestion(
-            99L, "Java question", 0, null, options
+            99L, "Java question", 0, null, options, QuestionType.MULTIPLE_CHOICE, List.of()
         )).thenThrow(
             new NoSuchElementException("Quiz not found: 99")
         );

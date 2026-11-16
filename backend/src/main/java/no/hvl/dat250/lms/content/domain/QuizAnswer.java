@@ -41,6 +41,27 @@ public class QuizAnswer {
     @Column(name = "is_correct", nullable = false)
     private boolean correct;
 
+    @Column(name = "text_answer", length = 255)
+    private String textAnswer;
+
+    public String getTextAnswer() { return textAnswer; }
+
+    public QuizAnswer(QuizAttempt attempt, QuizQuestion question, Set<ChoiceOption> selectedOptions,
+                      boolean correct, String textAnswer) {
+        this(attempt, question, selectedOptions, correct);
+        if (textAnswer != null && textAnswer.length() > 255) {
+            throw new IllegalArgumentException("Text answer must not exceed 255 characters");
+        }
+        if (question.getType() == QuestionType.FILL_IN_BLANK) {
+            if (textAnswer == null || !selectedOptions.isEmpty()) {
+                throw new IllegalArgumentException("Fill-in answers require text and no selected options");
+            }
+        } else if (textAnswer != null) {
+            throw new IllegalArgumentException("Choice answers must not include text");
+        }
+        this.textAnswer = textAnswer;
+    }
+
     protected QuizAnswer() {}
 
     public QuizAnswer(
