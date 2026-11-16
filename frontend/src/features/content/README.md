@@ -119,6 +119,18 @@ its correct options. Proposed, for the quiz page:
   `MULTIPLE_CHOICE` (every correct answer) or `TRUE_FALSE` (two options). The page
   shows each type differently; missing means `SINGLE_CHOICE`.
 
+### Looking at an earlier attempt (proposed)
+
+Students can see how they answered each earlier attempt, with every question marked
+correct or wrong. The backend already stores this per question (`QuizAnswer`:
+selected options and `correct`); it only needs an endpoint to read it:
+
+- `GET /api/quizzes/{quizId}/attempts/{attemptId}` → `QuizAttemptResponse` plus
+  `answers: [{ questionId, selectedOptionIds, correct }]`. Only the user's own attempt;
+  404 for anyone else's.
+- It does not include which options are correct, so the review does not give the
+  answers away while the student has attempts left.
+
 ### Pass requirement (proposed)
 
 The teacher sets how many questions must be correct for an attempt to pass; the

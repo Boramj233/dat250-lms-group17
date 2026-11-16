@@ -113,6 +113,7 @@ export default function CourseGroupsPage() {
       title: `Delete ${groupName(group)}?`,
       message: `${members}This cannot be undone.`,
       confirmLabel: 'Delete group',
+      danger: true,
     })
     if (!confirmed) return
     setNotice(null)

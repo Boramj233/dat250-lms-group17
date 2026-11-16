@@ -1,7 +1,7 @@
 import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
-import { getMyQuizAttempts, submitQuizAnswers, } from "./api";
+import { getMyQuizAttempt, getMyQuizAttempts, submitQuizAnswers } from "./api";
 import { quizKeys } from "./queryKeys";
-import type { QuizAttemptScore, QuizId } from "./types";
+import type { QuizAttemptId, QuizAttemptScore, QuizId } from "./types";
 
 // The logged-in user's attempts at a quiz, newest first (proposed endpoint).
 export function useMyQuizAttempts(quizId: QuizId) {
@@ -41,5 +41,15 @@ export function useMyQuizAttemptsFor(quizIds: QuizId[]) {
       ),
       isPending: results.some(result => result.isPending),
     }),
+  });
+}
+
+// One of the user's attempts with the answers (proposed endpoint). An attempt never
+// changes, so it is fetched once.
+export function useMyQuizAttempt(quizId: QuizId, attemptId: QuizAttemptId) {
+  return useQuery({
+    queryKey: quizKeys.myAttempt(quizId, attemptId),
+    queryFn: () => getMyQuizAttempt(quizId, attemptId),
+    staleTime: Infinity,
   });
 }

@@ -12,6 +12,8 @@ type ConfirmDialogProps = {
   cancelLabel?: string
   /** Disables the buttons, e.g. while the action runs. */
   busy?: boolean
+  /** A destructive action (delete, remove, discard): the confirm button is red. */
+  danger?: boolean
   onConfirm: () => void
   /** Cancel, Esc, or a click outside the box. */
   onCancel: () => void
@@ -23,7 +25,7 @@ type ConfirmDialogProps = {
  * by accident.
  */
 export default function ConfirmDialog(
-  { open, title, children, confirmLabel, cancelLabel = 'Cancel', busy = false, onConfirm, onCancel }: ConfirmDialogProps,
+  { open, title, children, confirmLabel, cancelLabel = 'Cancel', busy = false, danger = false, onConfirm, onCancel }: ConfirmDialogProps,
 ) {
   const ref = useRef<HTMLDialogElement>(null)
   const titleId = useId()
@@ -52,7 +54,7 @@ export default function ConfirmDialog(
           <button type="button" className="button-secondary" autoFocus disabled={busy} onClick={onCancel}>
             {cancelLabel}
           </button>
-          <button type="button" className="button-primary" disabled={busy} onClick={onConfirm}>
+          <button type="button" className={danger ? 'button-danger' : 'button-primary'} disabled={busy} onClick={onConfirm}>
             {confirmLabel}
           </button>
         </div>

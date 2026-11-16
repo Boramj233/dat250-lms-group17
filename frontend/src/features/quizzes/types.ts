@@ -27,3 +27,20 @@ export interface SubmitQuizAnswersInput {
   quizId: QuizId;
   answers: { questionId: string | number; selectedOptionIds: (string | number)[] }[];
 }
+
+/**
+ * Proposed: one of the user's attempts with the answers (GET
+ * /api/quizzes/{quizId}/attempts/{attemptId}). The backend already stores them
+ * (QuizAnswer); it has no endpoint to read them yet.
+ */
+export interface QuizAttemptDetail extends QuizAttemptScore {
+  answers: QuizAttemptAnswer[];
+}
+
+/** How the user answered one question in an attempt, and whether it was right. */
+export interface QuizAttemptAnswer {
+  questionId: string | number;
+  /** Empty when the question was not answered. */
+  selectedOptionIds: (string | number)[];
+  correct: boolean;
+}

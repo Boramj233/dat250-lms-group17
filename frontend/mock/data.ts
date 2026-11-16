@@ -247,8 +247,18 @@ export const quizQuestions: MockQuizQuestion[] = [
 /** Quiz attempts, like the backend's QuizAttemptResponse plus who took it. */
 export const quizAttempts: {
   id: number, quizId: number, userId: number, submittedAt: string, correctCount: number, totalQuestions: number
+  /** How each question was answered (the backend's QuizAnswer); read by the proposed attempt endpoint. */
+  answers: { questionId: number, selectedOptionIds: number[], correct: boolean }[]
 }[] = [
-  { id: 1, quizId: 13, userId: 1, submittedAt: inDays(-2, 10, 15), correctCount: 2, totalQuestions: 3 },
+  // Siri: POST right, only "200 OK" of the two success codes (wrong), PUT idempotent right.
+  {
+    id: 1, quizId: 13, userId: 1, submittedAt: inDays(-2, 10, 15), correctCount: 2, totalQuestions: 3,
+    answers: [
+      { questionId: 1, selectedOptionIds: [2], correct: true },
+      { questionId: 2, selectedOptionIds: [4], correct: false },
+      { questionId: 3, selectedOptionIds: [7], correct: true },
+    ],
+  },
 ]
 
 /**

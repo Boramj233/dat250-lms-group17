@@ -15,14 +15,21 @@ type CourseFormProps = {
   error?: ReactNode
   /** More buttons next to the submit button, e.g. a cancel link. */
   actions?: ReactNode
+  /** Called with the current values on every change, e.g. to know if there are unsaved changes. */
+  onChange?: (values: CreateCourseInput) => void
 }
 
 /** The fields of a course: title, description, term and year. Used to create and edit courses. */
-export default function CourseForm({ initial, onSubmit, submitLabel, saving = false, error, actions }: CourseFormProps) {
+export default function CourseForm({ initial, onSubmit, submitLabel, saving = false, error, actions, onChange }: CourseFormProps) {
   const [title, setTitle] = useState(initial.title)
   const [description, setDescription] = useState(initial.description)
   const [term, setTerm] = useState<Term>(initial.term)
   const [year, setYear] = useState(initial.year)
+
+  // Tells the parent the values after a change (the setters run first, so pass the new value).
+  function report(change: Partial<CreateCourseInput>) {
+    onChange?.({ title, description, term, year, ...change })
+  }
 
   function submit(event: FormEvent) {
     event.preventDefault()
@@ -34,17 +41,17 @@ export default function CourseForm({ initial, onSubmit, submitLabel, saving = fa
       <div className="form-field">
         <label htmlFor="course-title">Title</label>
         <input id="course-title" required maxLength={255} value={title}
-          onChange={event => setTitle(event.target.value)} placeholder="DAT250 Advanced Software Technologies" />
+          onChange={event => { setTitle(event.target.value); report({ title: event.target.value }) }} placeholder="DAT250 Advanced Software Technologies" />
       </div>
       <div className="form-field">
         <label htmlFor="course-description">Description</label>
         <textarea id="course-description" required value={description}
-          onChange={event => setDescription(event.target.value)} />
+          onChange={event => { setDescription(event.target.value); report({ description: event.target.value }) }} />
       </div>
       <div className="form-row">
         <div className="form-field">
           <label htmlFor="course-term">Term</label>
-          <select id="course-term" value={term} onChange={event => setTerm(event.target.value as Term)}>
+          <select id="course-term" value={term} onChange={event => { setTerm(event.target.value as Term); report({ term: event.target.value as Term }) }}>
             <option value="SPRING">Spring</option>
             <option value="AUTUMN">Autumn</option>
           </select>
@@ -52,7 +59,7 @@ export default function CourseForm({ initial, onSubmit, submitLabel, saving = fa
         <div className="form-field">
           <label htmlFor="course-year">Year</label>
           <input id="course-year" type="number" required min={1} value={year}
-            onChange={event => setYear(Number(event.target.value))} />
+            onChange={event => { setYear(Number(event.target.value)); report({ year: Number(event.target.value) }) }} />
         </div>
       </div>
       {error && <p className="form-error" role="alert">{error}</p>}

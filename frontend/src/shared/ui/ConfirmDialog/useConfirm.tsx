@@ -8,6 +8,8 @@ export type ConfirmOptions = {
   /** The confirm button's text, e.g. "Delete group". */
   confirmLabel: string
   cancelLabel?: string
+  /** A destructive action: the confirm button is red. */
+  danger?: boolean
 }
 
 type Request = ConfirmOptions & { resolve: (confirmed: boolean) => void }
@@ -34,6 +36,7 @@ export function useConfirm(): [(options: ConfirmOptions) => Promise<boolean>, Re
       title={request?.title ?? ''}
       confirmLabel={request?.confirmLabel ?? ''}
       cancelLabel={request?.cancelLabel}
+      danger={request?.danger}
       onConfirm={() => answer(true)}
       onCancel={() => answer(false)}
     >

@@ -4,6 +4,7 @@ import { fromDateTimeLocal, toDateTimeLocal } from '../../../../shared/lib/dateF
 import type { Content, ContentFields, ContentType, NewQuizQuestion } from '../../../content/types'
 import { checkContentVisibleFrom } from '../../../content/visibility'
 import type { CourseModule } from '../../../modules/types'
+import { useLeaveGuard } from '../../../../shared/ui/SaveBar'
 import { combineExtensions, FILE_TYPE_PRESETS, formatExtensions, splitExtensions } from '../../fileTypes'
 import VisibleFromField from '../VisibleFromField'
 import { emptyQuestion, firstInvalidQuestion, questionsFromContent } from './quizQuestions'
@@ -55,10 +56,13 @@ export default function ContentForm(
   const [requiredCorrect, setRequiredCorrect] = useState(start.requiredCorrect)
   const [questions, setQuestions] = useState<NewQuizQuestion[]>(start.questions)
   const [problem, setProblem] = useState<string | null>(null)
+  // Changed since the form opened or was last sent: leaving (also Cancel) asks first.
+  const [dirty, setDirty] = useState(false)
+  const leaveDialog = useLeaveGuard(dirty)
 
-  /** Wraps a setter so every change also tells the parent (e.g. to hide "Saved."). */
+  /** Wraps a setter so every change marks the form changed and tells the parent. */
   function changed<T>(set: (value: T) => void) {
-    return (value: T) => { set(value); onChange?.() }
+    return (value: T) => { set(value); setDirty(true); onChange?.() }
   }
 
   function submit(event: FormEvent) {
@@ -85,6 +89,7 @@ export default function ContentForm(
       setProblem(visibleProblem)
       return
     }
+    setDirty(false)
     const base = { title: title.trim(), visibleFrom: visibleFromIso }
     const deadlineIso = fromDateTimeLocal(deadline)
     onSubmit(
@@ -221,8 +226,10 @@ export default function ContentForm(
           {pending ? 'Saving…' : submitLabel}
         </button>
         <Link className="button-secondary" to={cancelTo}>Cancel</Link>
-        {success && <span className="form-success" role="status">{success}</span>}
+        {dirty && !pending && <span className="form-hint">Unsaved changes</span>}
+        {success && !dirty && <span className="form-success" role="status">{success}</span>}
       </div>
+      {leaveDialog}
     </form>
   )
 }

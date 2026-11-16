@@ -858,17 +858,21 @@ const routes: MockHandler[] = [
       const { answers } = body as { answers?: { questionId: number, selectedOptionIds: number[] }[] }
       if (!Array.isArray(answers) || answers.length === 0) return badRequest('Answers are required')
       const questions = quizQuestions.filter(q => q.quizId === Number(quiz.id))
-      const correctCount = questions.filter(question => {
-        const chosen = new Set((answers.find(a => Number(a.questionId) === question.id)?.selectedOptionIds ?? []).map(Number))
-        const correct = question.options.filter(o => o.correct).map(o => o.id)
-        return chosen.size === correct.length && correct.every(id => chosen.has(id))
-      }).length
+      // Graded per question and stored, like the backend's QuizAnswer.
+      const graded = questions.map(question => {
+        const selected = (answers.find(a => Number(a.questionId) === question.id)?.selectedOptionIds ?? []).map(Number)
+        const chosen = new Set(selected)
+        const correctIds = question.options.filter(o => o.correct).map(o => o.id)
+        const correct = chosen.size === correctIds.length && correctIds.every(id => chosen.has(id))
+        return { questionId: question.id, selectedOptionIds: selected, correct }
+      })
+      const correctCount = graded.filter(answer => answer.correct).length
       const attempt = {
         id: nextId(quizAttempts), quizId: Number(quiz.id), userId: user.userId,
-        submittedAt: new Date().toISOString(), correctCount, totalQuestions: questions.length,
+        submittedAt: new Date().toISOString(), correctCount, totalQuestions: questions.length, answers: graded,
       }
       quizAttempts.push(attempt)
-      const { userId: _userId, ...response } = attempt
+      const { userId: _userId, answers: _answers, ...response } = attempt
       return created({ ...response, passed: attemptPassedMock(quiz, correctCount) })
     },
   },
@@ -882,7 +886,21 @@ const routes: MockHandler[] = [
       if (!canReadCourse(user, quiz.courseId)) return forbidden()
       return ok(quizAttempts
         .filter(a => a.quizId === Number(quiz.id) && a.userId === user.userId)
-        .map(({ userId: _userId, ...attempt }) => ({ ...attempt, passed: attemptPassedMock(quiz, attempt.correctCount) })))
+        .map(({ userId: _userId, answers: _answers, ...attempt }) => ({ ...attempt, passed: attemptPassedMock(quiz, attempt.correctCount) })))
+    },
+  },
+  {
+    // Proposed: one of the caller's own attempts with its answers (QuizAttemptResponse + answers).
+    method: 'GET',
+    path: '/api/quizzes/:quizId/attempts/:attemptId',
+    handle: ({ user, params }) => {
+      const quiz = contents.find(c => String(c.id) === params.quizId && c.type === 'QUIZ')
+      if (!quiz || quiz.type !== 'QUIZ') return notFound()
+      const attempt = quizAttempts.find(a => String(a.id) === params.attemptId && a.quizId === Number(quiz.id))
+      // Only your own attempts; someone else's looks like it does not exist.
+      if (!attempt || attempt.userId !== user.userId) return notFound()
+      const { userId: _userId, ...response } = attempt
+      return ok({ ...response, passed: attemptPassedMock(quiz, attempt.correctCount) })
     },
   },
   {

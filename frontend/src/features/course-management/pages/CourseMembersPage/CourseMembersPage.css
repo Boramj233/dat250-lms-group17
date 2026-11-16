@@ -87,3 +87,35 @@
   outline: var(--focus-ring-width) solid var(--color-primary);
   outline-offset: calc(-1 * var(--focus-ring-width));
 }
+
+/* Unsaved changes on a row: a coloured left edge, and what will happen as a small tag. */
+.member-row.is-changed {
+  box-shadow: inset var(--space-2) 0 0 var(--color-accent);
+}
+
+.member-row.is-removed {
+  box-shadow: inset var(--space-2) 0 0 var(--color-danger);
+}
+
+.member-row.is-removed .member-name {
+  opacity: 0.7;
+}
+
+.member-row.is-removed .member-email {
+  text-decoration: line-through;
+}
+
+.member-change {
+  display: inline-block;
+  margin-left: var(--space-3);
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  font-family: var(--font-ui);
+  font-size: var(--text-small);
+}
+
+.member-change.is-danger {
+  color: var(--color-on-danger);
+  background: var(--color-danger);
+}

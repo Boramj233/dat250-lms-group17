@@ -155,3 +155,44 @@
   font-style: italic;
 }
 
+
+/* Unsaved changes on a row: a coloured left edge; what will happen as a small tag. */
+.manage-content-table tr.is-changed > :first-child {
+  box-shadow: inset var(--space-2) 0 0 var(--color-accent);
+}
+
+.manage-content-table tr.is-deleted > :first-child {
+  box-shadow: inset var(--space-2) 0 0 var(--color-danger);
+}
+
+.manage-content-table tr.is-deleted .manage-content-title,
+.manage-content-table tr.is-deleted .manage-content-type {
+  text-decoration: line-through;
+  opacity: 0.7;
+}
+
+.manage-content-table .is-changed-cell {
+  background: var(--color-surface);
+}
+
+.manage-change {
+  display: inline-block;
+  margin-left: var(--space-3);
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  font-family: var(--font-ui);
+  font-size: var(--text-small);
+  font-weight: var(--font-weight-bold);
+}
+
+.manage-change.is-danger {
+  color: var(--color-on-danger);
+  background: var(--color-danger);
+}
+
+/* Availability fields that differ from what is saved: the same accent edge as table rows. */
+.module-availability .is-unsaved {
+  padding-left: var(--space-3);
+  box-shadow: inset var(--space-2) 0 0 var(--color-accent);
+}
