@@ -383,5 +383,46 @@ applying `src/main/resources/db/manual/h2-coding-starter-code.sql`. It adds a
 nullable column; existing exercises retain null. The script is not run
 automatically and H2 DDL is not atomic. No development database was migrated.
 
-This phase does not change Submission/Grade, enable CodingExercise review/grading
-or Completion, implement global content visibility, or include frontend changes.
+The 4A changes cover creation/read authorization and starter code only.
+Manual review/grading is described below; Coding Completion, global content
+visibility and frontend integration remain outside these changes.
+
+## CodingExercise 4B: manual review and grading
+
+Teachers can use a CodingExercise as a manually assessed coding task. Assignment
+and CodingExercise submissions now share the existing teacher review and Grade
+APIs; there is no separate CodingGrade or new grading endpoint:
+
+- `GET /api/contents/{contentId}/submissions/review`: latest submission per individual/group sequence.
+- `GET /api/submissions/{submissionId}/review`: submission detail.
+- `GET /api/submissions/{submissionId}/review/history`: that individual/group sequence's history.
+- `PUT /api/submissions/{submissionId}/grade`: save score, feedback, optional passed and version.
+- `GET /api/submissions/{submissionId}/grade/review`: teacher Grade view.
+- `POST /api/submissions/{submissionId}/grade/release`: release using the current version.
+- `GET /api/submissions/{submissionId}/grade`: the owner's released Grade.
+
+Teacher operations require an active TEACHER enrollment in the Content's course.
+Scores remain 0–100 with at most two decimal places; feedback is limited to 10,000
+characters. A draft may have passed=null, but first release requires an explicit
+Pass/Fail decision independent of the numeric score. Students cannot read drafts.
+Only the latest submission in its sequence can be graded or released for the first
+time; released grades cannot be edited, and repeated release is idempotent.
+Resubmission creates a new ungraded version and preserves historical released grades.
+
+CodingExercise supports existing TEXT/GIT_URL individual and group submissions.
+A Group Grade belongs to the concrete Submission and its immutable member snapshot:
+former members retain access to their old released grades, and new members do not
+inherit them. Individual and group sequences remain independent. FILE upload remains
+Assignment-only; reviewing a coding submission does not fetch or execute its repository.
+
+The official description allows assignments to be coding tasks and also describes
+automatically graded coding exercises. This phase supplies the manual teacher workflow
+only. Assignment and CodingExercise remain separate Content types; no assignment/exercise
+mode or automatic/manual grading selector is introduced. Future automatic practice
+requires a separate design, including isolated execution and how automated results
+relate to Grade's required teacher attribution; it must not execute student code in
+the LMS JVM. Manual grading does not fulfill the automatic-grading capability.
+
+CodingExercise Completion remains unsupported (isCompleted=false; required=true is
+rejected). No Entity/schema migration, frontend, automatic grading or hidden tests
+are added in 4B. Existing Assignment behavior and transaction/locking rules are retained.

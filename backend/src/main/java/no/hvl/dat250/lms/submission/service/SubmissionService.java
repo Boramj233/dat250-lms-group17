@@ -328,14 +328,15 @@ public class SubmissionService {
         }
         Submission submission = submissionRepository.findById(submissionId)
             .orElseThrow(() -> new NoSuchElementException("Submission not found"));
-        requireTeacherAssignment(submission.getContent(), teacherUserId);
+        requireTeacherGradableContent(submission.getContent(), teacherUserId);
         return submission;
     }
 
-    private void requireTeacherAssignment(Content content, Long teacherUserId) {
-        // A lazy Content association can be a base-class proxy even for an Assignment.
-        if (!(Hibernate.unproxy(content) instanceof Assignment)) {
-            throw new NoSuchElementException("Assignment not found");
+    private void requireTeacherGradableContent(Content content, Long teacherUserId) {
+        // A lazy Content association may be a base-class proxy for either subtype.
+        Content actualContent = (Content) Hibernate.unproxy(content);
+        if (!(actualContent instanceof Assignment) && !(actualContent instanceof CodingExercise)) {
+            throw new NoSuchElementException("Gradable content not found");
         }
         enrollmentService.requireActiveTeacher(
             teacherUserId, content.getModule().getCourse().getId());
@@ -360,7 +361,7 @@ public class SubmissionService {
             throw new IllegalArgumentException("Page must be nonnegative and size between 1 and 100");
         }
         Content content = contentService.requireContent(contentId);
-        requireTeacherAssignment(content, teacherUserId);
+        requireTeacherGradableContent(content, teacherUserId);
         return submissionRepository.findLatestForReview(
             contentId, PageRequest.of(page, size))
             .map(SubmissionReviewResponse::from);

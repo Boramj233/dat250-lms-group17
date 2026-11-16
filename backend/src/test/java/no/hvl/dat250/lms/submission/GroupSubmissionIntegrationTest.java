@@ -14,6 +14,8 @@ import no.hvl.dat250.lms.submission.domain.*;
 import no.hvl.dat250.lms.submission.service.*;
 import no.hvl.dat250.lms.user.domain.User;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
@@ -46,6 +48,9 @@ class GroupSubmissionIntegrationTest {
     private User user() { return save(new User(UUID.randomUUID()+"@example.com", "Test", "Student")); }
     record Fixture(Long course, Long content, Long group, Long a, Long b, Long c, Long teacher, Long bEnrollment) {}
     private Fixture fixture() {
+        return fixture(false);
+    }
+    private Fixture fixture(boolean coding) {
         return tx(() -> {
             var course = save(new Course("DAT250", "Groups", Term.AUTUMN, 2026));
             var a = user(); var b = user(); var c = user(); var teacher = user();
@@ -54,10 +59,13 @@ class GroupSubmissionIntegrationTest {
             save(new Enrollment(c, course, CourseRole.STUDENT));
             save(new Enrollment(teacher, course, CourseRole.TEACHER));
             var module = save(new no.hvl.dat250.lms.module.domain.Module(course, "Week", 0));
-            var assignment = save(new Assignment(module, "Report", 0, "Write", null, false));
+            Content content = coding
+                ? new CodingExercise(module, "Code", 0, "Implement", "https://example.com/starter.git", null, false)
+                : new Assignment(module, "Report", 0, "Write", null, false);
+            save(content);
             var group = new Group(1, course);
             group.addGroupMember(a); group.addGroupMember(b); save(group);
-            return new Fixture(course.getId(), assignment.getId(), group.getGroupId(), a.getUserId(),
+            return new Fixture(course.getId(), content.getId(), group.getGroupId(), a.getUserId(),
                 b.getUserId(), c.getUserId(), teacher.getUserId(), eb.getId());
         });
     }
@@ -72,8 +80,10 @@ class GroupSubmissionIntegrationTest {
             .andExpect(status().is(status));
     }
 
-    @Test void historicalSnapshotSurvivesMembershipChangesAndWithdrawal() throws Exception {
-        var f = fixture(); Long first = submit(f, f.a);
+    @ParameterizedTest(name = "coding={0}")
+    @ValueSource(booleans = {false, true})
+    void historicalSnapshotSurvivesMembershipChangesAndWithdrawal(boolean coding) throws Exception {
+        var f = fixture(coding); Long first = submit(f, f.a);
         var grade = grades.save(first, f.teacher, BigDecimal.TEN, "Feedback", null, true);
         grades.release(first, f.teacher, grade.version());
         groups.removeGroupMember(f.course, f.group, f.b);
@@ -97,8 +107,10 @@ class GroupSubmissionIntegrationTest {
         getAs("/api/submissions/"+first, f.b, 200);
     }
 
-    @Test void latestAndHistoryUseGroupRatherThanSubmitterAndSeparateIndividuals() {
-        var f = fixture(); Long first = submit(f, f.a);
+    @ParameterizedTest(name = "coding={0}")
+    @ValueSource(booleans = {false, true})
+    void latestAndHistoryUseGroupRatherThanSubmitterAndSeparateIndividuals(boolean coding) {
+        var f = fixture(coding); Long first = submit(f, f.a);
         Long second = submit(f, f.b);
         submissions.submitIndividual(f.content, f.a, SubmissionType.TEXT, "Personal");
         assertThrows(GradeConflictException.class,
@@ -228,8 +240,10 @@ class GroupSubmissionIntegrationTest {
         } finally { release.countDown(); }
     }
 
-    @Test void resubmissionAndFirstReleaseShareGroupLock() throws Exception {
-        var f = fixture(); Long first = submit(f, f.a);
+    @ParameterizedTest(name = "coding={0}")
+    @ValueSource(booleans = {false, true})
+    void resubmissionAndFirstReleaseShareGroupLock(boolean coding) throws Exception {
+        var f = fixture(coding); Long first = submit(f, f.a);
         var grade = grades.save(first, f.teacher, BigDecimal.TEN, null, null, true);
         var locked = new java.util.concurrent.CountDownLatch(1);
         var release = new java.util.concurrent.CountDownLatch(1);
@@ -276,7 +290,7 @@ class GroupSubmissionIntegrationTest {
         assertEquals(1, groups.getAllGroups(f.course).stream().filter(g -> g.memberIds().contains(f.c)).count());
     }
 
-    @Test void codingExerciseGroupAcceptsGitWithoutAddingGradingExecution() {
+    @Test void codingExerciseGroupGitSubmissionCanBeManuallyGraded() throws Exception {
         var f = fixture();
         Long codingId = tx(() -> {
             var assignment = em.find(Assignment.class, f.content);
@@ -286,6 +300,32 @@ class GroupSubmissionIntegrationTest {
         Long id = submissions.submit(codingId, f.b, SubmissionType.GIT_URL,
             "https://example.com/answer.git", f.group).getId();
         assertEquals(2, submissions.findOwnSubmission(id, f.a).getMembers().size());
+        mvc.perform(get("/api/submissions/{id}/review", id)
+                .header("Authorization", token(f.teacher)))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.type").value("GIT_URL"))
+            .andExpect(jsonPath("$.members.length()").value(2));
+        mvc.perform(put("/api/submissions/{id}/grade", id)
+                .header("Authorization", token(f.teacher)).contentType("application/json")
+                .content("{\"score\":75,\"feedback\":\"Good solution\",\"passed\":true}"))
+            .andExpect(status().isOk());
+        getAs("/api/submissions/" + id + "/grade", f.a, 404);
+        getAs("/api/submissions/" + id + "/grade", f.b, 404);
+        mvc.perform(post("/api/submissions/{id}/grade/release", id)
+                .header("Authorization", token(f.teacher)).contentType("application/json")
+                .content("{\"version\":0}"))
+            .andExpect(status().isOk());
+        for (Long member : List.of(f.a, f.b)) {
+            mvc.perform(get("/api/submissions/{id}/grade", id).header("Authorization", token(member)))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.score").value(75))
+                .andExpect(jsonPath("$.feedback").value("Good solution"))
+                .andExpect(jsonPath("$.passed").value(true));
+        }
+        getAs("/api/submissions/" + id + "/grade", f.c, 404);
+        org.mockito.Mockito.clearInvocations(storage);
+        getAs("/api/submissions/" + id + "/review/file", f.teacher, 404);
+        mvc.perform(head("/api/submissions/{id}/review/file", id)
+            .header("Authorization", token(f.teacher))).andExpect(status().isNotFound());
+        org.mockito.Mockito.verifyNoInteractions(storage);
     }
 
 }
