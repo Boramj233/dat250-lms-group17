@@ -21,7 +21,7 @@ export function contentChanges(draft: ContentDraft): number {
 /** Switches "required"; switching back to the saved value is no longer a change. */
 export function withRequired(draft: ContentDraft, item: ContentSummary, required: boolean): ContentDraft {
   const next = { ...draft.required }
-  if (required === (item.requiredForCompletion ?? false)) delete next[String(item.id)]
+  if (required === (item.requiredForModuleCompletion ?? false)) delete next[String(item.id)]
   else next[String(item.id)] = required
   return { ...draft, required: next }
 }
@@ -55,6 +55,6 @@ export function itemDraft(draft: ContentDraft, item: ContentSummary) {
     deleted: draft.deletes.includes(id),
     movedTo: draft.moves[id] as ModuleId | undefined,
     requiredChanged,
-    required: requiredChanged ? draft.required[id] : (item.requiredForCompletion ?? false),
+    required: requiredChanged ? draft.required[id] : (item.requiredForModuleCompletion ?? false),
   }
 }

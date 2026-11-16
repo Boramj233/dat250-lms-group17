@@ -11,11 +11,12 @@ export interface ContentSummary {
   title: string
   position: number
   /**
-   * The user must complete this item to complete its module. Proposed field (see
-   * README), not in the backend yet; missing means not required. Separate from an
-   * assignment's `mandatory` (must be passed for the course).
+   * The user must complete this item to complete its module. Sent in the content list
+   * (ContentSummaryResponse); the detail responses leave it out, so missing means "not
+   * known here", not "not required". Changed with PATCH /api/contents/{id}/completion-settings.
+   * Separate from an assignment's `mandatoryForExam`.
    */
-  requiredForCompletion?: boolean
+  requiredForModuleCompletion?: boolean
   /**
    * Students can see the item. Teachers switch it off to prepare content before it is
    * shown, or to hide it. Proposed field (see README), not in the backend yet; missing
@@ -53,26 +54,39 @@ export interface QuizContent extends ContentDetailBase {
   /** Proposed (see README): ISO 8601 instant after which it cannot be taken; null for none. */
   deadline?: string | null
   /**
-   * Proposed (see README): how many questions must be correct for an attempt to pass.
-   * Null or missing: the quiz has no pass requirement.
+   * Percentage (1–100) of the questions that must be correct for an attempt to pass;
+   * the backend's default is 60. Changed with PATCH /api/contents/{id}/completion-settings.
    */
-  requiredCorrectAnswers?: number | null
+  passingPercentage: number
 }
 
 /**
- * Proposed (see README): how a question is answered. All are choice questions, so the
- * answer is always the chosen option ids. Missing means SINGLE_CHOICE.
+ * The backend's QuestionType. MULTIPLE_CHOICE (the default) and TRUE_FALSE are answered
+ * with option ids; FILL_IN_BLANK with a text; ORDERING with the item ids in order;
+ * MATCHING with left/right item id pairs.
  */
-export type QuizQuestionType = 'SINGLE_CHOICE' | 'MULTIPLE_CHOICE' | 'TRUE_FALSE'
+export type QuizQuestionType = 'MULTIPLE_CHOICE' | 'TRUE_FALSE' | 'FILL_IN_BLANK' | 'ORDERING' | 'MATCHING'
+
+// QuizDetailResponse.ItemResponse: an item of an ORDERING or MATCHING question.
+export interface QuizContentItem {
+  /** A UUID. */
+  id: string
+  text: string
+}
 
 // QuizDetailResponse.QuestionResponse.
 export interface QuizContentQuestion {
   id: string | number
   questionText: string
   position: number
+  type: QuizQuestionType
+  /** Empty for FILL_IN_BLANK, ORDERING and MATCHING. */
   options: QuizContentOption[]
-  /** Proposed (see README); missing means SINGLE_CHOICE. */
-  questionType?: QuizQuestionType
+  /** ORDERING: the items to put in order (not in the correct order); empty otherwise. */
+  items?: QuizContentItem[]
+  /** MATCHING: the items on the left and the right side; empty otherwise. */
+  leftItems?: QuizContentItem[]
+  rightItems?: QuizContentItem[]
   /**
    * Proposed, for teachers of the course only (see README): the hint. The backend
    * leaves it out today, so students cannot see it either.
@@ -100,10 +114,10 @@ export interface AssignmentContent extends ContentDetailBase {
   deadline: string | null
   allowLateSubmission: boolean
   /**
-   * Whether the assignment must be passed. Proposed field, not in the backend's
-   * AssignmentResponse yet; the UI leaves it out while it is missing.
+   * Whether the assignment must be passed to sit the exam. Set on creation, changed with
+   * PATCH /api/assignments/{id}/exam-requirement.
    */
-  mandatory?: boolean
+  mandatoryForExam: boolean
   /**
    * Whether students hand in as a group (one submission per group). Proposed field,
    * not in the backend yet; missing until it is.
@@ -154,8 +168,8 @@ export interface CreateAssignmentInput extends CreateContentBase {
   /** ISO 8601 instant, or null for no deadline. */
   deadline: string | null
   allowLateSubmission: boolean
-  /** Proposed; the backend ignores it until it has the field. */
-  mandatory: boolean
+  /** CreateAssignmentRequest.mandatoryForExam. */
+  mandatoryForExam: boolean
   /** Proposed (see AssignmentContent.groupAssignment). */
   groupAssignment: boolean
   /** Proposed (see AssignmentContent.acceptedFileTypes); empty for any file type. */
@@ -183,8 +197,11 @@ export interface NewQuizQuestion {
 export interface CreateQuizInput extends CreateContentBase {
   type: 'QUIZ'
   maxAttempts: number
-  /** Proposed: correct answers needed to pass; null for no pass requirement. */
-  requiredCorrectAnswers: number | null
+  /**
+   * 1–100. Not in CreateQuizRequest: set right after the quiz is created, with
+   * PATCH /api/contents/{id}/completion-settings.
+   */
+  passingPercentage: number
   /** Added one by one after the quiz is created (POST /api/quizzes/{id}/questions). */
   questions: NewQuizQuestion[]
 }
@@ -212,9 +229,17 @@ export interface EditContentInput {
 export interface UpdateContentInput {
   moduleId: ModuleId
   contentId: ContentId
-  changes: Partial<
-    Pick<StaticPageContent, 'title' | 'position' | 'body' | 'requiredForCompletion' | 'active' | 'visibleFrom'>
-  >
+  changes: Partial<Pick<StaticPageContent, 'title' | 'position' | 'body' | 'active' | 'visibleFrom'>>
+}
+
+// The backend's ContentCompletionController.Settings:
+// PATCH /api/contents/{contentId}/completion-settings (teachers, 204).
+export interface CompletionSettingsInput {
+  moduleId: ModuleId
+  contentId: ContentId
+  requiredForModuleCompletion: boolean
+  /** Quizzes only, 1–100; leave out to keep the current one. */
+  passingPercentage?: number
 }
 
 export interface DeleteContentInput {

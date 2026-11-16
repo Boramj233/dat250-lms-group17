@@ -9,7 +9,6 @@ import {
 const module = { id: 1, title: 'Module 1', position: 0, availableFrom: null }
 const question = {
   questionText: '2 + 2?',
-  questionType: 'SINGLE_CHOICE',
   options: [
     { optionText: '4', correct: true },
     { optionText: '5', correct: false },
@@ -17,10 +16,11 @@ const question = {
 }
 const values = changes => ({ ...initialValues(undefined), title: '  Week 1  ', body: 'Read it.', ...changes })
 
-test('a new form starts empty, with one empty question and one attempt', () => {
+test("a new form starts empty, with one empty question, one attempt and the backend's passing percentage", () => {
   const start = initialValues(undefined)
   assert.equal(start.title, '')
   assert.equal(start.maxAttempts, 1)
+  assert.equal(start.passingPercentage, 60)
   assert.equal(start.questions.length, 1)
   assert.deepEqual(start.fileTypePresets, [])
 })
@@ -33,13 +33,13 @@ test('editing starts from the saved item', () => {
     instructions: 'Write.',
     deadline: null,
     allowLateSubmission: true,
-    mandatory: true,
+    mandatoryForExam: true,
     acceptedFileTypes: ['.pdf', '.py'],
   })
   assert.equal(start.title, 'Essay')
   assert.equal(start.body, 'Write.')
   assert.equal(start.allowLate, true)
-  assert.equal(start.mandatory, true)
+  assert.equal(start.mandatoryForExam, true)
   assert.deepEqual(start.fileTypePresets, ['PDF'])
   assert.equal(start.otherFileTypes, '.py')
 })
@@ -49,11 +49,12 @@ test('formProblem: a coding exercise needs a starter repository or starter code'
   assert.equal(formProblem('CODING_EXERCISE', values({ starterCode: 'print()' }), module), null)
 })
 
-test('formProblem: a quiz needs complete questions and a pass requirement within the questions', () => {
+test('formProblem: a quiz needs complete questions and a passing percentage from 1 to 100', () => {
   assert.match(formProblem('QUIZ', values({}), module), /^Question 1 needs/)
   assert.equal(formProblem('QUIZ', values({ questions: [question] }), module), null)
-  assert.match(formProblem('QUIZ', values({ questions: [question], requiredCorrect: '2' }), module), /from 1 to 1/)
-  assert.match(formProblem('QUIZ', values({ questions: [question], requiredCorrect: '0.5' }), module), /whole number/)
+  assert.match(formProblem('QUIZ', values({ questions: [question], passingPercentage: 0 }), module), /1 to 100/)
+  assert.match(formProblem('QUIZ', values({ questions: [question], passingPercentage: 101 }), module), /1 to 100/)
+  assert.match(formProblem('QUIZ', values({ questions: [question], passingPercentage: 50.5 }), module), /whole number/)
 })
 
 test('formProblem: content cannot be visible before its module opens', () => {
@@ -84,9 +85,10 @@ test('toFields sends only the fields of the type, trimmed', () => {
   assert.equal('starterCode' in assignment, false)
 })
 
-test('toFields: an empty pass requirement is sent as null', () => {
+test('toFields: a quiz sends its passing percentage, an assignment mandatoryForExam', () => {
   const quiz = toFields('QUIZ', values({ questions: [question], maxAttempts: 3 }))
-  assert.equal(quiz.requiredCorrectAnswers, null)
+  assert.equal(quiz.passingPercentage, 60)
   assert.equal(quiz.maxAttempts, 3)
-  assert.equal(toFields('QUIZ', values({ questions: [question], requiredCorrect: '1' })).requiredCorrectAnswers, 1)
+  assert.equal(toFields('QUIZ', values({ questions: [question], passingPercentage: 80 })).passingPercentage, 80)
+  assert.equal(toFields('ASSIGNMENT', values({ mandatoryForExam: true })).mandatoryForExam, true)
 })

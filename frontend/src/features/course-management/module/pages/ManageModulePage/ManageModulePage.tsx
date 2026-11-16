@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router'
 import { fromDateTimeLocal } from '@shared/lib/dateFormat'
 import { paths } from '@shared/paths'
 import type { ContentId, ModuleId } from '@shared/types'
-import { useCourseContent, useDeleteContent, useMoveContent, useUpdateContent } from '@domain/content/hooks'
+import { useCourseContent, useDeleteContent, useMoveContent, useUpdateCompletionSettings } from '@domain/content/hooks'
 import type { ContentSummary } from '@domain/content/types'
 import type { ActionMenuItem } from '@shared/ui/ActionMenu'
 import { useConfirm } from '@shared/ui/ConfirmDialog'
@@ -42,7 +42,7 @@ export default function ManageModulePage() {
   const navigate = useNavigate()
   const moveContent = useMoveContent()
   const deleteContent = useDeleteContent()
-  const updateContent = useUpdateContent()
+  const updateCompletionSettings = useUpdateCompletionSettings()
   const updateModule = useUpdateModule()
   // Content counts of all modules, so moved content goes to the end of its new module.
   const allContent = useCourseContent(
@@ -138,10 +138,11 @@ export default function ManageModulePage() {
           done('required', id)
           continue
         }
-        await updateContent.mutateAsync({
+        // A quiz's passing percentage is left out, so it is kept.
+        await updateCompletionSettings.mutateAsync({
           contentId: id,
           moduleId: module.id,
-          changes: { requiredForCompletion: required },
+          requiredForModuleCompletion: required,
         })
         done('required', id)
       }

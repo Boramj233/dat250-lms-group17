@@ -136,12 +136,6 @@ function sequenceOf(s: MockSubmission) {
     .sort((a, b) => Date.parse(b.submittedAt) - Date.parse(a.submittedAt))
 }
 
-/** Proposed QuizAttemptResponse.passed: null when the quiz has no pass requirement. */
-function attemptPassedMock(quiz: { requiredCorrectAnswers?: number | null }, correctCount: number) {
-  const required = quiz.requiredCorrectAnswers ?? null
-  return required === null ? null : correctCount >= required
-}
-
 /** GradeReviewResponse (teachers). */
 function gradeReviewResponse(s: MockSubmission) {
   const g = s.grade!
@@ -250,7 +244,7 @@ function quizQuestionsResponse(quizId: string | number, forTeacher: boolean) {
       id: q.id,
       questionText: q.questionText,
       position: q.position,
-      questionType: q.questionType ?? 'SINGLE_CHOICE',
+      type: q.type ?? 'MULTIPLE_CHOICE',
       ...(forTeacher ? { hint: q.hint } : {}),
       options: [...q.options]
         .sort((a, b) => a.position - b.position)
@@ -279,7 +273,7 @@ function detailResponse(content: Content & { courseId: number }, forTeacher = fa
         ...base,
         courseId: content.courseId,
         maxAttempts: content.maxAttempts,
-        requiredCorrectAnswers: content.requiredCorrectAnswers ?? null,
+        passingPercentage: content.passingPercentage,
         description: content.description ?? null,
         deadline: content.deadline ?? null,
         questions: quizQuestionsResponse(content.id, forTeacher),
@@ -290,7 +284,7 @@ function detailResponse(content: Content & { courseId: number }, forTeacher = fa
         instructions: content.instructions,
         deadline: content.deadline,
         allowLateSubmission: content.allowLateSubmission,
-        mandatory: content.mandatory,
+        mandatoryForExam: content.mandatoryForExam,
         groupAssignment: content.groupAssignment ?? false,
         acceptedFileTypes: content.acceptedFileTypes ?? [],
       }
@@ -324,9 +318,16 @@ function publishedContent(content: { active?: boolean; visibleFrom?: string | nu
 /** The fields each type may change with PATCH (proposed), besides title and visibleFrom. */
 const EDITABLE_FIELDS: Record<ContentType, string[]> = {
   STATIC_PAGE: ['body'],
-  ASSIGNMENT: ['instructions', 'deadline', 'allowLateSubmission', 'mandatory', 'groupAssignment', 'acceptedFileTypes'],
+  ASSIGNMENT: [
+    'instructions',
+    'deadline',
+    'allowLateSubmission',
+    'mandatoryForExam',
+    'groupAssignment',
+    'acceptedFileTypes',
+  ],
   CODING_EXERCISE: ['instructions', 'deadline', 'allowLateSubmission', 'starterRepositoryUrl', 'starterCode'],
-  QUIZ: ['maxAttempts', 'requiredCorrectAnswers', 'description', 'deadline'],
+  QUIZ: ['maxAttempts', 'passingPercentage', 'description', 'deadline'],
 }
 
 type QuestionRequest = {
@@ -400,7 +401,7 @@ const routes: MockHandler[] = [
                   title: content.title,
                   deadline: content.deadline,
                   allowLateSubmission: content.allowLateSubmission,
-                  ...(content.type === 'ASSIGNMENT' ? { mandatory: content.mandatory } : {}),
+                  ...(content.type === 'ASSIGNMENT' ? { mandatoryForExam: content.mandatoryForExam } : {}),
                   courseId: content.courseId,
                   courseTitle: courses.find(c => c.id === content.courseId)?.title ?? '',
                   moduleId: content.moduleId,
@@ -465,7 +466,7 @@ const routes: MockHandler[] = [
             type: BACKEND_TYPE[c.type],
             title: c.title,
             position: c.position,
-            requiredForCompletion: c.requiredForCompletion ?? false,
+            requiredForModuleCompletion: c.requiredForModuleCompletion ?? false,
             active: c.active ?? true,
             visibleFrom: c.visibleFrom ?? null,
           })),
@@ -619,7 +620,7 @@ const routes: MockHandler[] = [
   },
   {
     // Proposed endpoint (src/domain/modules/README.md). The mock calls a module completed
-    // when the user has completed all its content marked requiredForCompletion; with
+    // when the user has completed all its content marked requiredForModuleCompletion; with
     // none marked, all its assignments, coding exercises and quizzes (and it has at
     // least one). The backend decides the real rule.
     method: 'GET',
@@ -633,7 +634,7 @@ const routes: MockHandler[] = [
         courseModules
           .filter(module => {
             const inModule = contents.filter(c => c.moduleId === module.id && c.active !== false)
-            const required = inModule.filter(c => c.requiredForCompletion)
+            const required = inModule.filter(c => c.requiredForModuleCompletion)
             const tasks = required.length > 0 ? required : inModule.filter(c => c.type !== 'STATIC_PAGE')
             return tasks.length > 0 && tasks.every(task => done.has(Number(task.id)))
           })
@@ -979,25 +980,19 @@ const routes: MockHandler[] = [
         module.availableFrom,
       )
       if (visibleProblem) return badRequest(visibleProblem)
-      // Proposed: correct answers to pass, null for none. The questions are added after the
-      // quiz is created, so it cannot be checked against their number here.
-      const required = fields.requiredCorrectAnswers
-      if (
-        type === 'QUIZ' &&
-        required !== undefined &&
-        required !== null &&
-        (!Number.isInteger(required) || (required as number) < 1)
-      ) {
-        return badRequest('requiredCorrectAnswers must be a positive integer or null')
-      }
       const content = {
         ...fields,
         id: nextId(contents),
         courseId: module.courseId,
         moduleId: module.id,
         type,
+        requiredForModuleCompletion: false,
         // Optional fields the backend fills in.
         ...(type === 'ASSIGNMENT' || type === 'CODING_EXERCISE' ? { deadline: fields.deadline ?? null } : {}),
+        ...(type === 'ASSIGNMENT' ? { mandatoryForExam: fields.mandatoryForExam === true } : {}),
+        // CreateQuizRequest has no passing percentage: the backend's default, changed
+        // afterwards with PATCH …/completion-settings.
+        ...(type === 'QUIZ' ? { passingPercentage: 60 } : {}),
       } as (typeof contents)[number]
       contents.push(content)
       return created(detailResponse(content))
@@ -1007,7 +1002,7 @@ const routes: MockHandler[] = [
     // Proposed (data/content/README.md): { moduleId, position } -> the moved content.
     // The content may only move to another module in the same course.
     method: 'PATCH',
-    path: '/api/content/:contentId/move',
+    path: '/api/contents/:contentId/move',
     handle: ({ user, params, body }) => {
       const content = contents.find(c => String(c.id) === params.contentId)
       if (!content) return notFound()
@@ -1021,11 +1016,36 @@ const routes: MockHandler[] = [
     },
   },
   {
-    // Proposed (src/domain/content/README.md): active, position and requiredForCompletion
-    // at any time; every other field (title, visibleFrom and the type's own) only until the
-    // content is published: 409 after.
+    // Backend (exists, ContentCompletionController): { requiredForModuleCompletion,
+    // passingPercentage } -> 204. passingPercentage (1–100) only for quizzes; null keeps it.
     method: 'PATCH',
-    path: '/api/content/:contentId',
+    path: '/api/contents/:contentId/completion-settings',
+    handle: ({ user, params, body }) => {
+      const content = contents.find(c => String(c.id) === params.contentId)
+      if (!content) return notFound()
+      if (!isTeacher(user, content.courseId)) return forbidden()
+      const { requiredForModuleCompletion, passingPercentage } = body as {
+        requiredForModuleCompletion?: boolean
+        passingPercentage?: number | null
+      }
+      if (typeof requiredForModuleCompletion !== 'boolean') return badRequest('requiredForModuleCompletion is required')
+      if (passingPercentage !== undefined && passingPercentage !== null) {
+        if (content.type !== 'QUIZ') return badRequest('Only quizzes have a passing percentage')
+        if (!Number.isInteger(passingPercentage) || passingPercentage < 1 || passingPercentage > 100) {
+          return badRequest('Passing percentage must be between 1 and 100')
+        }
+        content.passingPercentage = passingPercentage
+      }
+      content.requiredForModuleCompletion = requiredForModuleCompletion
+      return noContent()
+    },
+  },
+  {
+    // Proposed (src/domain/content/README.md): active and position at any time; every
+    // other field (title, visibleFrom and the type's own) only until the content is
+    // published: 409 after.
+    method: 'PATCH',
+    path: '/api/contents/:contentId',
     handle: ({ user, params, body }) => {
       const content = contents.find(c => String(c.id) === params.contentId)
       if (!content) return notFound()
@@ -1034,14 +1054,11 @@ const routes: MockHandler[] = [
         title: string
         position: number
         body: string
-        requiredForCompletion: boolean
         active: boolean
         visibleFrom: string | null
       }> &
         Record<string, unknown>
-      const contentChanges = Object.keys(changes).filter(
-        key => !['active', 'position', 'requiredForCompletion'].includes(key),
-      )
+      const contentChanges = Object.keys(changes).filter(key => !['active', 'position'].includes(key))
       if (contentChanges.length > 0 && publishedContent(content)) return conflict('Published content cannot be changed')
       if (changes.title !== undefined && !changes.title.trim()) return badRequest('Title is required')
       const typeFields = EDITABLE_FIELDS[content.type].filter(key => key in changes && key !== 'body')
@@ -1054,7 +1071,6 @@ const routes: MockHandler[] = [
       }
       if (changes.title !== undefined) content.title = changes.title
       if (changes.position !== undefined) content.position = changes.position
-      if (changes.requiredForCompletion !== undefined) content.requiredForCompletion = changes.requiredForCompletion
       if (changes.active !== undefined) content.active = changes.active
       if (changes.body !== undefined && content.type === 'STATIC_PAGE') content.body = changes.body
       return ok(detailResponse(content))
@@ -1063,7 +1079,7 @@ const routes: MockHandler[] = [
   {
     // Proposed (data/content/README.md).
     method: 'DELETE',
-    path: '/api/content/:contentId',
+    path: '/api/contents/:contentId',
     handle: ({ user, params }) => {
       const index = contents.findIndex(c => String(c.id) === params.contentId)
       if (index < 0) return notFound()
@@ -1107,7 +1123,12 @@ const routes: MockHandler[] = [
       }
       quizAttempts.push(attempt)
       const { userId: _userId, answers: _answers, ...response } = attempt
-      return created({ ...response, passed: attemptPassedMock(quiz, correctCount) })
+      // Like the backend: hints for the questions answered wrong that have one.
+      const hints = graded.flatMap(answer => {
+        const hint = questions.find(q => q.id === answer.questionId)?.hint
+        return !answer.correct && hint ? [{ questionId: answer.questionId, hint }] : []
+      })
+      return created({ ...response, hints })
     },
   },
   {
@@ -1121,10 +1142,7 @@ const routes: MockHandler[] = [
       return ok(
         quizAttempts
           .filter(a => a.quizId === Number(quiz.id) && a.userId === user.userId)
-          .map(({ userId: _userId, answers: _answers, ...attempt }) => ({
-            ...attempt,
-            passed: attemptPassedMock(quiz, attempt.correctCount),
-          })),
+          .map(({ userId: _userId, answers: _answers, ...attempt }) => attempt),
       )
     },
   },
@@ -1139,7 +1157,7 @@ const routes: MockHandler[] = [
       // Only your own attempts; someone else's looks like it does not exist.
       if (!attempt || attempt.userId !== user.userId) return notFound()
       const { userId: _userId, ...response } = attempt
-      return ok({ ...response, passed: attemptPassedMock(quiz, attempt.correctCount) })
+      return ok(response)
     },
   },
   {

@@ -9,7 +9,7 @@ import type { GradeEntry } from '@domain/grades/types'
 import type { CourseModule } from '@domain/modules/types'
 import { useMyQuizAttemptsFor } from '@domain/quizzes/hooks'
 import type { QuizAttemptScore } from '@domain/quizzes/types'
-import { bestAttempt, quizPassed } from '@domain/quizzes/passRule'
+import { bestAttempt, passRequirementText, quizPassed } from '@domain/quizzes/passRule'
 import DataTable, { type Column } from '@shared/ui/DataTable'
 import MandatoryLabel from '../../components/MandatoryLabel'
 import PassedBadge from '../../components/PassedBadge'
@@ -104,12 +104,7 @@ export default function ContentTypeTable({
         header: 'To pass',
         cell: ({ details }) => {
           if (details?.type !== 'QUIZ') return '…'
-          const required = details.requiredCorrectAnswers ?? null
-          return required === null ? (
-            <span className="text-meta">–</span>
-          ) : (
-            `${required} of ${details.questions?.length ?? '?'} correct`
-          )
+          return passRequirementText(details.passingPercentage, details.questions?.length ?? 0)
         },
       },
     )
@@ -170,7 +165,7 @@ function QuizStatus({
   )
   if (!quiz) return '…'
 
-  const passed = quizPassed(attempts, quiz.requiredCorrectAnswers)
+  const passed = quizPassed(attempts, quiz.passingPercentage)
   if (passed === false) {
     const left = Math.max(0, quiz.maxAttempts - attempts.length)
     return left > 0 ? (

@@ -1,35 +1,36 @@
 import type { QuizAttemptScore } from './types'
 
+// The backend's rule (QuizAttemptRepository.countPassing): an attempt passes when
+// correctCount * 100 >= passingPercentage * totalQuestions. Every quiz has a passing
+// percentage (default 60). The backend does not send `passed` for an attempt.
+
 /**
- * Whether an attempt passed: the backend's `passed` when it sends it, otherwise
- * worked out from the quiz's requiredCorrectAnswers. Null when the quiz has no pass
- * requirement.
+ * Whether an attempt passed the quiz's passing percentage. Null while the percentage
+ * is not known (the quiz's details are loading).
  */
-export function attemptPassed(
-  attempt: QuizAttemptScore,
-  requiredCorrectAnswers: number | null | undefined,
-): boolean | null {
-  if (attempt.passed !== undefined) return attempt.passed
-  if (requiredCorrectAnswers === null || requiredCorrectAnswers === undefined) return null
-  return attempt.correctCount >= requiredCorrectAnswers
+export function attemptPassed(attempt: QuizAttemptScore, passingPercentage: number | undefined): boolean | null {
+  if (passingPercentage === undefined) return null
+  return attempt.correctCount * 100 >= passingPercentage * attempt.totalQuestions
 }
 
 /**
- * The quiz is passed once any attempt passed. Null without a pass requirement or
- * attempts.
+ * The quiz is passed once any attempt passed. Null without attempts or while the
+ * percentage is not known.
  */
-export function quizPassed(
-  attempts: QuizAttemptScore[],
-  requiredCorrectAnswers: number | null | undefined,
-): boolean | null {
-  const results = attempts.map(attempt => attemptPassed(attempt, requiredCorrectAnswers))
+export function quizPassed(attempts: QuizAttemptScore[], passingPercentage: number | undefined): boolean | null {
+  const results = attempts.map(attempt => attemptPassed(attempt, passingPercentage))
   if (results.includes(true)) return true
   return results.includes(false) ? false : null
 }
 
-/** "3 of 5 correct". */
-export function passRequirementText(requiredCorrectAnswers: number, totalQuestions: number): string {
-  return `${requiredCorrectAnswers} of ${totalQuestions} correct`
+/** The fewest correct answers that pass, out of `totalQuestions`. */
+export function correctAnswersToPass(passingPercentage: number, totalQuestions: number): number {
+  return Math.ceil((passingPercentage * totalQuestions) / 100)
+}
+
+/** "60 % (3 of 5 correct)". */
+export function passRequirementText(passingPercentage: number, totalQuestions: number): string {
+  return `${passingPercentage} % (${correctAnswersToPass(passingPercentage, totalQuestions)} of ${totalQuestions} correct)`
 }
 
 /** The attempt with the most correct answers (the earliest in the list on a tie); undefined without attempts. */

@@ -10,6 +10,7 @@ import {
   getContent,
   getModuleContent,
   moveContent,
+  updateCompletionSettings,
   updateContent,
 } from './api'
 import { contentKeys } from './queryKeys'
@@ -107,4 +108,9 @@ export function useEditContent() {
 
 export function useUpdateContent() {
   return useInvalidatingMutation(updateContent, itemKeys)
+}
+
+/** Teachers: "required for module completion" (and a quiz's passing percentage). */
+export function useUpdateCompletionSettings() {
+  return useInvalidatingMutation(updateCompletionSettings, itemKeys)
 }

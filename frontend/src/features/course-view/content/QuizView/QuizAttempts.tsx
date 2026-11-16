@@ -10,7 +10,8 @@ import QuizQuestion from './QuizQuestion'
 type AttemptListProps = {
   /** Newest first. */
   attempts: QuizAttemptScore[]
-  required: number | null
+  /** The quiz's passing percentage. */
+  required: number
   onView: (attemptId: QuizAttemptScore['id']) => void
 }
 
@@ -44,7 +45,8 @@ type AttemptReviewProps = {
   /** All the student's attempts, newest first (for the attempt's number). */
   attempts: QuizAttemptScore[]
   attemptId: QuizAttemptScore['id']
-  required: number | null
+  /** The quiz's passing percentage. */
+  required: number
   onBack: () => void
 }
 

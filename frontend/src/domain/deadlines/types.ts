@@ -11,8 +11,8 @@ export interface UpcomingDeadline {
   /** ISO 8601 instant, as the backend's `Instant deadline`. */
   deadline: string
   allowLateSubmission: boolean
-  /** Assignments only: whether it is mandatory. Left out for coding exercises. */
-  mandatory?: boolean
+  /** Assignments only: as AssignmentResponse.mandatoryForExam. Left out for coding exercises. */
+  mandatoryForExam?: boolean
   courseId: CourseId
   courseTitle: string
   moduleId: ModuleId

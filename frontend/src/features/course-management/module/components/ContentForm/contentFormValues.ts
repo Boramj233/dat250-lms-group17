@@ -15,17 +15,20 @@ export type ContentFormValues = {
   body: string
   deadline: string
   allowLate: boolean
-  mandatory: boolean
+  mandatoryForExam: boolean
   groupAssignment: boolean
   fileTypePresets: string[]
   otherFileTypes: string
   starterUrl: string
   starterCode: string
   maxAttempts: number
-  /** Correct answers needed to pass; empty for no pass requirement. */
-  requiredCorrect: string
+  /** Percentage of the questions that must be correct to pass, 1–100. */
+  passingPercentage: number
   questions: NewQuizQuestion[]
 }
+
+/** The backend's default (Quiz.passingPercentage). */
+export const DEFAULT_PASSING_PERCENTAGE = 60
 
 /** The form's starting values: empty for a new item, otherwise the saved item's. */
 export function initialValues(content: Content | undefined): ContentFormValues {
@@ -37,15 +40,14 @@ export function initialValues(content: Content | undefined): ContentFormValues {
     body: content?.type === 'STATIC_PAGE' ? content.body : (submittable?.instructions ?? ''),
     deadline: toDateTimeLocal(submittable?.deadline),
     allowLate: submittable?.allowLateSubmission ?? false,
-    mandatory: content?.type === 'ASSIGNMENT' ? (content.mandatory ?? false) : false,
+    mandatoryForExam: content?.type === 'ASSIGNMENT' ? content.mandatoryForExam : false,
     groupAssignment: content?.type === 'ASSIGNMENT' ? (content.groupAssignment ?? false) : false,
     fileTypePresets: files?.presetLabels ?? [],
     otherFileTypes: files?.other ?? '',
     starterUrl: content?.type === 'CODING_EXERCISE' ? (content.starterRepositoryUrl ?? '') : '',
     starterCode: content?.type === 'CODING_EXERCISE' ? (content.starterCode ?? '') : '',
     maxAttempts: content?.type === 'QUIZ' ? content.maxAttempts : 1,
-    requiredCorrect:
-      content?.type === 'QUIZ' && content.requiredCorrectAnswers != null ? String(content.requiredCorrectAnswers) : '',
+    passingPercentage: content?.type === 'QUIZ' ? content.passingPercentage : DEFAULT_PASSING_PERCENTAGE,
     questions:
       content?.type === 'QUIZ' && content.questions?.length
         ? questionsFromContent(content.questions)
@@ -53,22 +55,13 @@ export function initialValues(content: Content | undefined): ContentFormValues {
   }
 }
 
-/** The quiz's pass requirement as a number; null when the field is empty. */
-function requiredCorrectAnswers(values: ContentFormValues): number | null {
-  return values.requiredCorrect.trim() === '' ? null : Number(values.requiredCorrect)
-}
-
 /** Why the form cannot be sent yet, or null when it can. The browser checks required fields itself. */
 export function formProblem(type: ContentType, values: ContentFormValues, module: CourseModule): string | null {
   const invalid = type === 'QUIZ' ? firstInvalidQuestion(values.questions) : undefined
   if (invalid) return `Question ${invalid} needs a text, text in every answer and at least one correct answer.`
-  const required = requiredCorrectAnswers(values)
-  if (
-    type === 'QUIZ' &&
-    required !== null &&
-    (!Number.isInteger(required) || required < 1 || required > values.questions.length)
-  ) {
-    return `Correct answers to pass must be a whole number from 1 to ${values.questions.length} (the number of questions), or empty.`
+  const percentage = values.passingPercentage
+  if (type === 'QUIZ' && (!Number.isInteger(percentage) || percentage < 1 || percentage > 100)) {
+    return 'The passing percentage must be a whole number from 1 to 100.'
   }
   if (type === 'CODING_EXERCISE' && !values.starterUrl.trim() && !values.starterCode.trim()) {
     return 'Add a starter repository, starter code, or both.'
@@ -90,7 +83,7 @@ export function toFields(type: ContentType, values: ContentFormValues): ContentF
         instructions: values.body,
         deadline,
         allowLateSubmission: values.allowLate,
-        mandatory: values.mandatory,
+        mandatoryForExam: values.mandatoryForExam,
         groupAssignment: values.groupAssignment,
         acceptedFileTypes: combineExtensions(values.fileTypePresets, values.otherFileTypes),
       }
@@ -109,7 +102,7 @@ export function toFields(type: ContentType, values: ContentFormValues): ContentF
         ...base,
         type,
         maxAttempts: values.maxAttempts,
-        requiredCorrectAnswers: requiredCorrectAnswers(values),
+        passingPercentage: values.passingPercentage,
         questions: values.questions,
       }
   }

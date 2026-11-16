@@ -87,11 +87,8 @@ export interface GradeReview {
   /** 0–100, at most two decimals. */
   score: number
   feedback: string | null
-  /**
-   * Proposed: the teacher's passed / not passed verdict. Null: not decided. Missing
-   * until the backend sends it.
-   */
-  passed?: boolean | null
+  /** The teacher's passed / not passed verdict; null when not decided. */
+  passed: boolean | null
   /**
    * Proposed: when the grade becomes visible to the student by itself; null when it
    * waits to be published. Each grade has its own. Missing until the backend sends it.
@@ -111,11 +108,8 @@ export interface ReleasedGrade {
   submissionId: SubmissionId
   score: number
   feedback: string | null
-  /**
-   * Proposed: the teacher's passed / not passed verdict. Null: not decided. Missing
-   * until the backend sends it.
-   */
-  passed?: boolean | null
+  /** The teacher's passed / not passed verdict; null when not decided. */
+  passed: boolean | null
   releasedAt: string
 }
 
@@ -128,7 +122,7 @@ export interface SaveGradeInput {
   contentId: ContentId
   score: number
   feedback: string
-  /** Proposed: passed / not passed; null when not decided. */
+  /** Passed / not passed; null when not decided. */
   passed: boolean | null
   /** Proposed: ISO instant (in the future) the grade becomes visible; null to wait for Publish. */
   visibleFrom: string | null

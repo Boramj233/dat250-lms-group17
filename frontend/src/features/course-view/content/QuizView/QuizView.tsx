@@ -26,7 +26,7 @@ type Mode =
 
 /**
  * A quiz: its explanation with a Start button, and a panel with the deadline, attempts
- * best score and, when the quiz has one, how many correct answers it takes to pass.
+ * best score and the passing percentage (with how many correct answers that is).
  * Starting shows one box per question, styled by its type; submitting grades it at once
  * and shows the score and whether the attempt passed. Students can look at each earlier
  * attempt's answers, with every question marked correct or wrong.
@@ -40,7 +40,7 @@ export default function QuizView({ content, isTeacher }: QuizViewProps) {
   const deadline = content.deadline ? new Date(content.deadline) : null
   const used = attempts.data?.length ?? 0
   const best = attempts.data && bestAttempt(attempts.data)
-  const required = content.requiredCorrectAnswers ?? null
+  const required = content.passingPercentage
   const passed = attempts.data ? quizPassed(attempts.data, required) : null
   const attemptsLeft = Math.max(0, content.maxAttempts - used)
 
@@ -67,12 +67,8 @@ export default function QuizView({ content, isTeacher }: QuizViewProps) {
       )}
       <dt>Questions</dt>
       <dd>{questions.length}</dd>
-      {required !== null && (
-        <>
-          <dt>To pass</dt>
-          <dd>{passRequirementText(required, questions.length)}</dd>
-        </>
-      )}
+      <dt>To pass</dt>
+      <dd>{passRequirementText(required, questions.length)}</dd>
       {!isTeacher && (
         <>
           <dt>Best score</dt>
@@ -85,32 +81,28 @@ export default function QuizView({ content, isTeacher }: QuizViewProps) {
               '–'
             )}
           </dd>
-          {required !== null && (
-            <>
-              <dt>Result</dt>
-              <dd>
-                {attempts.isPending ? (
-                  '…'
-                ) : passed === true ? (
-                  <PassedBadge passed />
-                ) : passed === false ? (
-                  attemptsLeft > 0 ? (
-                    <>
-                      <strong>Not passed yet</strong>
-                      <span className="text-meta"> · {formatCount(attemptsLeft, 'attempt')} left</span>
-                    </>
-                  ) : (
-                    <>
-                      <PassedBadge passed={false} />
-                      <span className="text-meta"> · no attempts left</span>
-                    </>
-                  )
-                ) : (
-                  'Not taken yet'
-                )}
-              </dd>
-            </>
-          )}
+          <dt>Result</dt>
+          <dd>
+            {attempts.isPending ? (
+              '…'
+            ) : passed === true ? (
+              <PassedBadge passed />
+            ) : passed === false ? (
+              attemptsLeft > 0 ? (
+                <>
+                  <strong>Not passed yet</strong>
+                  <span className="text-meta"> · {formatCount(attemptsLeft, 'attempt')} left</span>
+                </>
+              ) : (
+                <>
+                  <PassedBadge passed={false} />
+                  <span className="text-meta"> · no attempts left</span>
+                </>
+              )
+            ) : (
+              'Not taken yet'
+            )}
+          </dd>
         </>
       )}
     </dl>
@@ -120,12 +112,10 @@ export default function QuizView({ content, isTeacher }: QuizViewProps) {
     <DetailLayout panelLabel="Quiz details" panel={panel}>
       <Card id="quiz-about-title" title="About this quiz">
         <div className="submittable-text">{content.description || 'No description.'}</div>
-        {required !== null && (
-          <p className="quiz-pass-rule">
-            To pass, you need at least <strong>{passRequirementText(required, questions.length)}</strong> answers in one
-            attempt. It is checked automatically when you submit.
-          </p>
-        )}
+        <p className="quiz-pass-rule">
+          To pass, at least <strong>{passRequirementText(required, questions.length)}</strong> of your answers in one
+          attempt must be correct. It is checked automatically when you submit.
+        </p>
         {mode.kind === 'info' && (
           <div className="submittable-actions">
             {isTeacher ? (
@@ -190,7 +180,7 @@ export default function QuizView({ content, isTeacher }: QuizViewProps) {
           </p>
           {attemptPassed(mode.score, required) === false && (
             <p className="text-meta">
-              You needed {passRequirementText(required ?? 0, mode.score.totalQuestions)} to pass.
+              You needed {passRequirementText(required, mode.score.totalQuestions)} to pass.
               {attemptsLeft > 0
                 ? ` You have ${formatCount(attemptsLeft, 'attempt')} left.`
                 : ' You have no attempts left.'}

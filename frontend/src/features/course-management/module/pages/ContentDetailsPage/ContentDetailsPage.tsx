@@ -33,7 +33,7 @@ export default function ContentDetailsPage() {
     <>
       <PageHeader
         title={item.title}
-        kicker={`${contentTypeLabel(item.type)} · Module ${number}${item.requiredForCompletion ? ' · Required to complete the module' : ''}`}
+        kicker={`${contentTypeLabel(item.type)} · Module ${number}${item.requiredForModuleCompletion ? ' · Required to complete the module' : ''}`}
       />
       <QueryState query={content} loading="Loading the content…" error="Could not load the content.">
         {data => (

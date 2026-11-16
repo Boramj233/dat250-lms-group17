@@ -1,5 +1,6 @@
 import RequiredMark from '@shared/ui/RequiredMark'
 import type { ContentType } from '@domain/content/types'
+import { passRequirementText } from '@domain/quizzes/passRule'
 import { Field, type SetFormValue } from '@shared/ui/Form'
 import type { ContentFormValues } from './contentFormValues'
 import { combineExtensions, FILE_TYPE_PRESETS, formatExtensions } from './fileTypes'
@@ -74,10 +75,10 @@ export function SubmissionFields({ type, values, set }: FieldsProps & { type: Co
           <label className="form-check">
             <input
               type="checkbox"
-              checked={values.mandatory}
-              onChange={event => set('mandatory')(event.target.checked)}
+              checked={values.mandatoryForExam}
+              onChange={event => set('mandatoryForExam')(event.target.checked)}
             />
-            Mandatory
+            Mandatory for the exam
           </label>
           <label className="form-check">
             <input
@@ -150,11 +151,12 @@ export function QuizFields({ values, set }: FieldsProps) {
         )}
       </Field>
       <Field
-        label="Correct answers to pass"
+        label="Passing percentage"
+        required
         hint={
           <>
-            An attempt is passed automatically when at least this many of the {count}
-            {count === 1 ? ' question is' : ' questions are'} correct. Leave it empty for no pass requirement.
+            An attempt is passed automatically when at least this percentage of the questions are correct: now{' '}
+            {passRequirementText(values.passingPercentage, count)}.
           </>
         }
       >
@@ -163,12 +165,11 @@ export function QuizFields({ values, set }: FieldsProps) {
             {...props}
             type="number"
             min={1}
-            max={count}
+            max={100}
             step={1}
             inputMode="numeric"
-            value={values.requiredCorrect}
-            placeholder="No pass requirement"
-            onChange={event => set('requiredCorrect')(event.target.value)}
+            value={values.passingPercentage}
+            onChange={event => set('passingPercentage')(Number(event.target.value))}
           />
         )}
       </Field>

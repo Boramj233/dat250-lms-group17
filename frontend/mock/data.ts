@@ -129,7 +129,7 @@ export const submissions: {
   submittedAt: string
   late: boolean
   groupId?: number
-  /** `passed` is proposed: the teacher's passed / not passed; null when not decided. */
+  /** The teacher's passed / not passed (GradeReviewResponse.passed); null when not decided. */
   // `visibleFrom` (proposed): the grade becomes visible to the student at that time by itself.
   grade: {
     score: number
@@ -272,8 +272,8 @@ export type MockQuizQuestion = {
   quizId: number
   questionText: string
   position: number
-  /** Proposed; missing means SINGLE_CHOICE. */
-  questionType?: 'SINGLE_CHOICE' | 'MULTIPLE_CHOICE' | 'TRUE_FALSE'
+  /** The backend's QuestionType; missing means MULTIPLE_CHOICE (its default). */
+  type?: 'MULTIPLE_CHOICE' | 'TRUE_FALSE' | 'FILL_IN_BLANK' | 'ORDERING' | 'MATCHING'
   hint: string | null
   options: { id: number; optionText: string; position: number; correct: boolean }[]
 }
@@ -298,7 +298,7 @@ export const quizQuestions: MockQuizQuestion[] = [
     questionText: 'Which status codes mean success?',
     position: 1,
     hint: null,
-    questionType: 'MULTIPLE_CHOICE',
+    type: 'MULTIPLE_CHOICE',
     options: [
       { id: 4, optionText: '200 OK', position: 0, correct: true },
       { id: 5, optionText: '201 Created', position: 1, correct: true },
@@ -311,7 +311,7 @@ export const quizQuestions: MockQuizQuestion[] = [
     questionText: 'A PUT request should be idempotent.',
     position: 2,
     hint: null,
-    questionType: 'TRUE_FALSE',
+    type: 'TRUE_FALSE',
     options: [
       { id: 7, optionText: 'True', position: 0, correct: true },
       { id: 8, optionText: 'False', position: 1, correct: false },
@@ -397,8 +397,8 @@ export const contents: (Content & { courseId: number })[] = [
     type: 'QUIZ',
     title: 'REST basics quiz',
     maxAttempts: 3,
-    requiredCorrectAnswers: 3,
-    requiredForCompletion: true,
+    passingPercentage: 100,
+    requiredForModuleCompletion: true,
     description:
       'Three short questions about HTTP methods and status codes. You get your score right after you submit.',
     deadline: inDays(5, 23, 59),
@@ -413,8 +413,8 @@ export const contents: (Content & { courseId: number })[] = [
     instructions: 'Build a REST API for polls with Spring Boot.\n\nHand in a link to your repository.',
     deadline: inDays(0, 23, 59),
     allowLateSubmission: false,
-    mandatory: true,
-    requiredForCompletion: true,
+    mandatoryForExam: true,
+    requiredForModuleCompletion: true,
   },
   {
     id: 104,
@@ -426,7 +426,7 @@ export const contents: (Content & { courseId: number })[] = [
     instructions: 'This deadline has passed, so it is not on the dashboard.',
     deadline: inDays(-3),
     allowLateSubmission: false,
-    mandatory: false,
+    mandatoryForExam: false,
     active: false,
   },
   // DAT250, module 2
@@ -461,6 +461,7 @@ export const contents: (Content & { courseId: number })[] = [
     type: 'QUIZ',
     title: 'Containers quiz',
     maxAttempts: 1,
+    passingPercentage: 60,
     description: 'One question about Docker Compose. You have only one attempt.',
     deadline: null,
   },
@@ -494,7 +495,7 @@ export const contents: (Content & { courseId: number })[] = [
     instructions: 'Send poll events through RabbitMQ.',
     deadline: inDays(9),
     allowLateSubmission: false,
-    mandatory: true,
+    mandatoryForExam: true,
     groupAssignment: true,
     acceptedFileTypes: ['.pdf', '.zip'],
   },
@@ -518,9 +519,18 @@ export const contents: (Content & { courseId: number })[] = [
     instructions: 'Write a short report about your first sprint.',
     deadline: inDays(4),
     allowLateSubmission: false,
-    mandatory: false,
+    mandatoryForExam: false,
   },
-  { id: 61, courseId: 2, moduleId: 6, position: 0, type: 'QUIZ', title: 'Testing quiz', maxAttempts: 2 },
+  {
+    id: 61,
+    courseId: 2,
+    moduleId: 6,
+    position: 0,
+    type: 'QUIZ',
+    title: 'Testing quiz',
+    maxAttempts: 2,
+    passingPercentage: 60,
+  },
   // DAT109
   {
     id: 71,

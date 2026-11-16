@@ -11,14 +11,14 @@ import {
 } from '../src/features/course-management/module/pages/ManageModulePage/contentDraft.ts'
 
 const page = { id: 1, type: 'STATIC_PAGE', title: 'Welcome', position: 0 }
-const quiz = { id: 2, type: 'QUIZ', title: 'Quiz', position: 1, requiredForCompletion: true }
+const quiz = { id: 2, type: 'QUIZ', title: 'Quiz', position: 1, requiredForModuleCompletion: true }
 
 test('switching required back to the saved value is no longer a change', () => {
   const changed = withRequired(EMPTY_DRAFT, page, true)
   assert.deepEqual(changed.required, { 1: true })
   assert.equal(contentChanges(changed), 1)
   assert.deepEqual(withRequired(changed, page, false).required, {})
-  // Missing requiredForCompletion means not required; true is saved for the quiz.
+  // Missing requiredForModuleCompletion means not required; true is saved for the quiz.
   assert.deepEqual(withRequired(EMPTY_DRAFT, quiz, true).required, {})
 })
 

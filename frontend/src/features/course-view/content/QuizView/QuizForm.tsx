@@ -2,7 +2,7 @@ import { useState, type FormEvent } from 'react'
 import type { QuizContent, QuizContentQuestion } from '@domain/content/types'
 import { useSubmitQuizAnswers } from '@domain/quizzes/hooks'
 import type { QuizAttemptScore } from '@domain/quizzes/types'
-import { typeOf } from './questionType'
+import { canAnswer, typeOf } from './questionType'
 import { FormError, SubmitButton } from '@shared/ui/Form'
 import QuizQuestion from './QuizQuestion'
 
@@ -21,6 +21,9 @@ export default function QuizForm({ quizId, questions, preview, onSubmitted, onCa
   // Chosen option ids per question id (as strings).
   const [chosen, setChosen] = useState<Record<string, string[]>>({})
   const answered = questions.filter(q => (chosen[String(q.id)] ?? []).length > 0).length
+  // The backend rejects an attempt with an unanswered fill-in, ordering or matching
+  // question, and this form cannot answer those yet.
+  const unsupported = questions.some(q => !canAnswer(q))
 
   function choose(question: QuizContentQuestion, optionId: string, checked: boolean) {
     const key = String(question.id)
@@ -38,7 +41,7 @@ export default function QuizForm({ quizId, questions, preview, onSubmitted, onCa
 
   function handleSubmit(event: FormEvent) {
     event.preventDefault()
-    if (preview) return
+    if (preview || unsupported) return
     submit.mutate(
       {
         quizId,
@@ -69,10 +72,14 @@ export default function QuizForm({ quizId, questions, preview, onSubmitted, onCa
           Answered {answered} of {questions.length}
           {!preview && answered < questions.length && ' · unanswered questions count as wrong'}
         </p>
-        <FormError>{submit.error && 'Could not submit the quiz. Try again.'}</FormError>
+        <FormError>
+          {!preview && unsupported
+            ? 'This quiz has question types that cannot be answered here yet, so it cannot be submitted.'
+            : submit.error && 'Could not submit the quiz. Try again.'}
+        </FormError>
         <div className="quiz-form-actions">
           {!preview && (
-            <SubmitButton pending={submit.isPending} pendingLabel="Submitting…">
+            <SubmitButton pending={submit.isPending} pendingLabel="Submitting…" disabled={unsupported}>
               Submit quiz
             </SubmitButton>
           )}

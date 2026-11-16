@@ -205,26 +205,26 @@ function StudentSubmission({ content, deadline, now }: StudentSubmissionProps) {
 }
 
 /**
- * Whether an assignment is mandatory or optional, at the top of the panel. Nothing for
- * coding exercises, or while the backend does not send `mandatory` (proposed).
+ * Whether an assignment must be approved to sit the exam (`mandatoryForExam`), at the
+ * top of the panel. Nothing for coding exercises.
  */
 function MandatoryFact({ content }: { content: Submittable }) {
-  if (content.type !== 'ASSIGNMENT' || content.mandatory === undefined) return null
+  if (content.type !== 'ASSIGNMENT') return null
   return (
     <dl className="submittable-facts">
       <dt>Requirement</dt>
       <dd>
-        {content.mandatory ? (
+        {content.mandatoryForExam ? (
           <>
             <span className="tag tag-primary">Mandatory</span>
             <br />
-            <span className="text-meta">Must be approved to complete the course</span>
+            <span className="text-meta">Must be approved to sit the exam</span>
           </>
         ) : (
           <>
             <strong>Optional</strong>
             <br />
-            <span className="text-meta">Not required to complete the course</span>
+            <span className="text-meta">Not required for the exam</span>
           </>
         )}
       </dd>

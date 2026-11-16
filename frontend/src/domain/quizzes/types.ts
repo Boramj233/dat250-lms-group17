@@ -7,7 +7,8 @@ export type QuizAttemptId = string | number
 // Taking a quiz as the backend supports it (QuizAttemptController): all answers are
 // sent at once and graded straight away.
 
-// Matches the backend's QuizAttemptResponse.
+// Matches the backend's QuizAttemptResponse. Whether it passed is not sent; see
+// passRule.ts (the quiz's passingPercentage).
 export interface QuizAttemptScore {
   id: QuizAttemptId
   quizId: QuizId
@@ -16,16 +17,33 @@ export interface QuizAttemptScore {
   correctCount: number
   totalQuestions: number
   /**
-   * Proposed: whether the attempt reached the quiz's requiredCorrectAnswers. Null when
-   * the quiz has no pass requirement; missing until the backend sends it.
+   * Hints for the questions answered wrong, in the answer to POST …/attempts; empty
+   * (or missing) elsewhere.
    */
-  passed?: boolean | null
+  hints?: QuizAttemptHint[]
 }
 
-// Matches the backend's SubmitQuizRequest; an unanswered question has no option ids.
+// QuizAttemptResponse.HintResponse.
+export interface QuizAttemptHint {
+  questionId: string | number
+  hint: string
+}
+
+// Matches the backend's SubmitQuizRequest.Answer. Which field is used depends on the
+// question's type: selectedOptionIds (MULTIPLE_CHOICE, TRUE_FALSE; empty when not
+// answered), textAnswer (FILL_IN_BLANK), orderedItemIds (ORDERING) or matches (MATCHING).
+export interface QuizAnswerInput {
+  questionId: string | number
+  selectedOptionIds?: (string | number)[]
+  textAnswer?: string
+  orderedItemIds?: string[]
+  matches?: { leftItemId: string; rightItemId: string }[]
+}
+
+// Matches the backend's SubmitQuizRequest.
 export interface SubmitQuizAnswersInput {
   quizId: QuizId
-  answers: { questionId: string | number; selectedOptionIds: (string | number)[] }[]
+  answers: QuizAnswerInput[]
 }
 
 /**

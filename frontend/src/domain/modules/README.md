@@ -22,7 +22,7 @@ module within its current course; moving modules between courses is not supporte
 
 The backend records content completion per user and considers a module complete
 when all its content is complete for that user. Proposed: only the content marked
-`requiredForCompletion` counts (see `data/content/README.md`). It must define how empty modules
+`requiredForModuleCompletion` counts (see `data/content/README.md`). It must define how empty modules
 are treated. A module may require completion of all modules in
 `prerequisiteModuleIds` before it becomes accessible. Prerequisites are explicit;
 module position alone does not lock a module. The backend must validate that

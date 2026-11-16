@@ -1,18 +1,22 @@
 import type { ReactNode } from 'react'
 import type { QuizContentQuestion, QuizQuestionType } from '@domain/content/types'
-import { typeOf } from './questionType'
+import { canAnswer, typeOf } from './questionType'
 import { CheckIcon, CloseIcon } from '@shared/ui/icons'
 
 const TYPE_LABEL: Record<QuizQuestionType, string> = {
-  SINGLE_CHOICE: 'Single choice',
   MULTIPLE_CHOICE: 'Multiple choice',
   TRUE_FALSE: 'True or false',
+  FILL_IN_BLANK: 'Fill in the blank',
+  ORDERING: 'Ordering',
+  MATCHING: 'Matching',
 }
 
 const TYPE_HINT: Record<QuizQuestionType, string> = {
-  SINGLE_CHOICE: 'Choose one answer.',
   MULTIPLE_CHOICE: 'Choose every answer that is correct.',
   TRUE_FALSE: 'Is the statement true or false?',
+  FILL_IN_BLANK: 'Write the missing word or words.',
+  ORDERING: 'Put the items in the right order.',
+  MATCHING: 'Match each item on the left with one on the right.',
 }
 
 type QuizQuestionProps = {
@@ -30,8 +34,9 @@ type QuizQuestionProps = {
 }
 
 /**
- * One question in its own box. The type decides the look: round buttons in a list
- * (single choice), checkboxes (multiple choice) or two large tiles (true or false).
+ * One question in its own box. The type decides the look: checkboxes (multiple choice;
+ * every correct answer must be chosen) or two large tiles (true or false). Fill-in,
+ * ordering and matching questions cannot be answered here yet and say so.
  */
 export default function QuizQuestion({ question, number, total, chosen, onChoose, result }: QuizQuestionProps) {
   const type = typeOf(question)
@@ -41,7 +46,7 @@ export default function QuizQuestion({ question, number, total, chosen, onChoose
   const resultClass = result === true ? ' is-correct' : result === false ? ' is-wrong' : ''
   return (
     <fieldset
-      className={`quiz-question is-${type.toLowerCase().replace('_', '-')}${reviewing ? ' is-review' : ''}${resultClass}`}
+      className={`quiz-question is-${type.toLowerCase().replaceAll('_', '-')}${reviewing ? ' is-review' : ''}${resultClass}`}
       disabled={reviewing}
     >
       <legend className="quiz-question-legend">
@@ -57,8 +62,16 @@ export default function QuizQuestion({ question, number, total, chosen, onChoose
         </span>
         <span className="quiz-question-text">{question.questionText}</span>
       </legend>
-      {!reviewing && <p className="quiz-question-hint">{TYPE_HINT[type]}</p>}
-      {reviewing && chosen.length === 0 && <p className="quiz-question-hint">You did not answer this question.</p>}
+      {!canAnswer(question) ? (
+        <p className="quiz-question-hint" role="note">
+          {TYPE_LABEL[type]} questions cannot be answered here yet.
+        </p>
+      ) : (
+        !reviewing && <p className="quiz-question-hint">{TYPE_HINT[type]}</p>
+      )}
+      {reviewing && canAnswer(question) && chosen.length === 0 && (
+        <p className="quiz-question-hint">You did not answer this question.</p>
+      )}
       <div className="quiz-options">
         {options.map(option => {
           const id = String(option.id)

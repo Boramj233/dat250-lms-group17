@@ -21,16 +21,24 @@ as text in React; do not insert it as raw HTML.
 | GET    | `/api/assignments/{assignmentId}`                     | —            | `AssignmentContent` (without `type`)     |
 | GET    | `/api/coding-exercises/{exerciseId}`                  | —            | `CodingExerciseContent` (without `type`) |
 
-## Content required to complete a module (proposed)
+## Content required to complete a module (backend: ContentCompletionController)
 
-`ContentSummary.requiredForCompletion` (boolean) marks an item the user must
-complete to complete its module, for every content type. Teachers switch it on and
-off with `PATCH /api/content/{contentId}` (`{ requiredForCompletion }`). The module
-content list (`GET .../modules/{moduleId}/contents`) should include it; missing
-means not required.
+`ContentSummary.requiredForModuleCompletion` (boolean) marks an item the user must
+complete to complete its module, for every content type. The module content list
+(`GET .../modules/{moduleId}/contents`) sends it; the detail responses do not.
 
-It is separate from an assignment's `mandatory`, which means the assignment must be
-passed for the course (for example to take the exam).
+| Method | Endpoint                                        | Request body                                         | Response                                                              |
+| ------ | ----------------------------------------------- | ---------------------------------------------------- | --------------------------------------------------------------------- |
+| PATCH  | `/api/contents/{contentId}/completion-settings` | `{ requiredForModuleCompletion, passingPercentage }` | `204` (teachers; `passingPercentage` only for quizzes, null keeps it) |
+| GET    | `/api/contents/{contentId}/completion`          | —                                                    | `{ contentId, requiredForModuleCompletion, completed }` (students)    |
+| PUT    | `/api/contents/{contentId}/completion`          | `{ completed }`                                      | the same; pages only (marked as read by the student)                  |
+
+The frontend uses the PATCH (`useUpdateCompletionSettings`); the two student endpoints
+have no UI yet. A page is completed when the student marks it, a quiz when an attempt
+reaches its passing percentage, an assignment when a released grade is passed.
+
+It is separate from an assignment's `mandatoryForExam`, which means the assignment must
+be passed to sit the exam.
 
 The backend's module progress (`data/modules/README.md`) should then count a module
 as completed when the user has completed all its required items. How a module with
@@ -41,7 +49,7 @@ assignments, coding exercises and quizzes, as before.
 
 `ContentSummary.active` (boolean) says whether students can see an item. Teachers
 switch it off to prepare content before it is shown, or to hide it again, with
-`PATCH /api/content/{contentId}` (`{ active }`). New content is active. The module
+`PATCH /api/contents/{contentId}` (`{ active }`). New content is active. The module
 content list includes it; missing means active.
 
 The UI no longer switches `active`; it shows items with `active: false` as "Hidden from
@@ -58,7 +66,7 @@ all appear at once. The `Content` entity already has `visibleFrom`; the API does
 use it yet.
 
 - `visibleFrom` (ISO instant or null) on every create request (pages, assignments,
-  coding exercises, quizzes), on `PATCH /api/content/{id}`, and on
+  coding exercises, quizzes), on `PATCH /api/contents/{id}`, and on
   `ContentSummaryResponse` and the detail responses.
 - Null: the item **inherits its module's start date** (`availableFrom`), or is visible
   at once if the module has none.
@@ -76,15 +84,15 @@ An item is **published** once its visible date has passed (its own `visibleFrom`
 module's start date); that alone decides it, and the module's table shows it as
 Published / Unpublished. A teacher can change **everything** about an item until then:
 
-- `PATCH /api/content/{contentId}` takes any of the fields the item was created with:
+- `PATCH /api/contents/{contentId}` takes any of the fields the item was created with:
   `title`, `visibleFrom`, and per type `body` (pages); `instructions`, `deadline`,
-  `allowLateSubmission`, `mandatory`, `groupAssignment`, `acceptedFileTypes`
+  `allowLateSubmission`, `mandatoryForExam`, `groupAssignment`, `acceptedFileTypes`
   (assignments); `instructions`, `deadline`, `allowLateSubmission`,
   `starterRepositoryUrl`, `starterCode` (coding exercises); `maxAttempts`,
-  `requiredCorrectAnswers` (quizzes).
+  `passingPercentage` (quizzes).
 - `PUT /api/quizzes/{quizId}/questions` replaces all of a quiz's questions.
-- Once published, both answer **409**. Only `position` and `requiredForCompletion` (and
-  `active`) can still be changed with PATCH.
+- Once published, both answer **409**. Only `position` and `active` can still be changed
+  with PATCH (and the completion settings, which have their own endpoint).
 - `POST /api/quizzes/{quizId}/questions` stays open, since a new quiz's questions are
   added right after it is created.
 
@@ -106,18 +114,29 @@ options, and say that the correct answers are not available.
 ## Taking a quiz (partly proposed)
 
 The backend grades a quiz in one request: `POST /api/quizzes/{quizId}/attempts` with
-`{ answers: [{ questionId, selectedOptionIds }] }` returns `QuizAttemptResponse`
-`{ id, quizId, submittedAt, correctCount, totalQuestions }`, and refuses when the user
-has used `maxAttempts`. A question is correct when the chosen options are exactly
-its correct options. Proposed, for the quiz page:
+`{ answers: [{ questionId, selectedOptionIds, textAnswer, orderedItemIds, matches }] }`
+returns `QuizAttemptResponse` `{ id, quizId, submittedAt, correctCount, totalQuestions,
+hints }` (hints for the questions answered wrong), and refuses (409) when the user has
+used `maxAttempts`.
+
+Each question has a `type` (backend `QuestionType`; default `MULTIPLE_CHOICE`):
+
+| Type              | Shown with                | Answered with                                 | In the UI        |
+| ----------------- | ------------------------- | --------------------------------------------- | ---------------- |
+| `MULTIPLE_CHOICE` | `options`                 | `selectedOptionIds`: exactly the correct ones | yes (checkboxes) |
+| `TRUE_FALSE`      | two `options`             | `selectedOptionIds`                           | yes              |
+| `FILL_IN_BLANK`   | —                         | `textAnswer` (compared without case)          | not yet          |
+| `ORDERING`        | `items` (UUIDs)           | `orderedItemIds`: every item once             | not yet          |
+| `MATCHING`        | `leftItems`, `rightItems` | `matches: [{ leftItemId, rightItemId }]`, all | not yet          |
+
+The backend answers **400** for the whole attempt when a fill-in, ordering or matching
+answer is missing, so the quiz form does not let a student submit a quiz with those
+types until it can answer them. Proposed, for the quiz page:
 
 - `GET /api/quizzes/{quizId}/attempts/me`: the user's earlier attempts
   (`QuizAttemptResponse[]`), for "attempts used" and the best score.
 - On `QuizDetailResponse`: `description` (text shown before the quiz is started) and
   `deadline` (ISO 8601 instant or null; no attempts after it).
-- On each question: `questionType`, one of `SINGLE_CHOICE` (one answer),
-  `MULTIPLE_CHOICE` (every correct answer) or `TRUE_FALSE` (two options). The page
-  shows each type differently; missing means `SINGLE_CHOICE`.
 
 ### Looking at an earlier attempt (proposed)
 
@@ -131,23 +150,16 @@ selected options and `correct`); it only needs an endpoint to read it:
 - It does not include which options are correct, so the review does not give the
   answers away while the student has attempts left.
 
-### Pass requirement (proposed)
+### Passing percentage (backend)
 
-The teacher sets how many questions must be correct for an attempt to pass; the
-backend checks it when it grades the attempt.
+Every quiz has a `passingPercentage` (1–100, default 60) in `QuizDetailResponse`. An
+attempt passes when `correctCount * 100 >= passingPercentage * totalQuestions`, and the
+quiz is completed once any attempt passed. `CreateQuizRequest` has no field for it, so
+`createContent` sets it right after creating the quiz with
+`PATCH /api/contents/{id}/completion-settings`.
 
-- `requiredCorrectAnswers` (Integer, nullable) on `CreateQuizRequest` and
-  `QuizDetailResponse`. Null: no pass requirement. Otherwise at least 1 and at most the
-  number of questions (400 otherwise).
-- `passed` (Boolean, nullable) on `QuizAttemptResponse`: `correctCount >=
-requiredCorrectAnswers`, null when the quiz has no requirement. The quiz counts as
-  passed once any attempt passed.
-- A quiz with a requirement is only completed (e.g. for `requiredForCompletion` and
-  module prerequisites) once it is passed, not after any attempt. The frontend shows it
-  that way: "Not passed yet" while attempts are left, never "Completed".
-
-Until the backend sends `passed`, the frontend works it out from
-`requiredCorrectAnswers` (`domain/quizzes/passRule.ts`).
+The backend does not send `passed` on an attempt; the frontend works it out with the
+same rule (`domain/quizzes/passRule.ts`).
 
 ## Starter code for coding exercises (proposed)
 
@@ -175,12 +187,12 @@ Two more fields on `AssignmentContent`, set when the assignment is created:
 The backend should add both to the `Assignment` entity, `CreateAssignmentRequest`
 and `AssignmentResponse`. Until then they are missing and the UI does not show them.
 
-## Mandatory assignments (proposed)
+## Mandatory for the exam (backend)
 
-`AssignmentContent.mandatory` (boolean) says whether the assignment must be passed.
-It is not in the backend's `AssignmentResponse` (or the `Assignment` entity) yet; the
-backend should add it to the entity, `CreateAssignmentRequest` and
-`AssignmentResponse`. Until then the field is missing and the UI does not show it.
+`AssignmentContent.mandatoryForExam` (boolean) says whether the assignment must be
+passed to sit the exam. It is sent on `CreateAssignmentRequest` and returned in
+`AssignmentResponse`; the backend changes it with
+`PATCH /api/assignments/{assignmentId}/exam-requirement` (`{ mandatoryForExam }`, 204).
 
 ## Other endpoints
 
@@ -188,10 +200,10 @@ Proposed (not in the backend yet):
 
 | Method | Endpoint                          | Request body                                                          | Response         |
 | ------ | --------------------------------- | --------------------------------------------------------------------- | ---------------- |
-| PATCH  | `/api/content/{contentId}`        | Any of the item's fields (see "Editing until published")              | `Content`        |
+| PATCH  | `/api/contents/{contentId}`       | Any of the item's fields (see "Editing until published")              | `Content`        |
 | PUT    | `/api/quizzes/{quizId}/questions` | `CreateQuizQuestionRequest[]`: all of an unpublished quiz's questions | the questions    |
-| DELETE | `/api/content/{contentId}`        | —                                                                     | `204 No Content` |
-| PATCH  | `/api/content/{contentId}/move`   | `{ moduleId, position }`                                              | `Content`        |
+| DELETE | `/api/contents/{contentId}`       | —                                                                     | `204 No Content` |
+| PATCH  | `/api/contents/{contentId}/move`  | `{ moduleId, position }`                                              | `Content`        |
 
 Content is created with the backend's endpoint for its type
 (`POST /api/courses/{courseId}/modules/{moduleId}/contents/{pages|assignments|coding-exercises|quizzes}`)
