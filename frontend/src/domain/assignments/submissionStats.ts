@@ -1,4 +1,4 @@
-import type { GradeReview, ReviewSubmission } from '@domain/assignments/types'
+import type { GradeReview, ReviewSubmission } from './types'
 import type { CourseEnrollment } from '@domain/courses/types'
 
 export type SubmissionStats = {

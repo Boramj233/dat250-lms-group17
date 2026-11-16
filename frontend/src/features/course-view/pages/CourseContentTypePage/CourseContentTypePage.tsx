@@ -3,7 +3,7 @@ import PageHeader from '@shared/ui/PageHeader'
 import type { ContentType } from '@domain/content/types'
 import { useCourseView } from '../../courseContext'
 import { useCourseItems } from '../../useCourseItems'
-import ContentTypeTable from '../ContentTypeTable'
+import ContentTypeTable from '../../content/ContentTypeTable'
 
 type CourseContentTypePageProps = {
   type: ContentType

@@ -20,7 +20,7 @@ src/
 │   ├── lib/              dateFormat, safeUrl, useDebounced, moveItem
 │   ├── navigation/       breadcrumbs (Trail)
 │   ├── styles/           tokens, global styles, forms.css
-│   ├── ui/               QueryState, PageHeader, Pager, Tabs, ActionMenu (the "⋯" menu),
+│   ├── ui/               QueryState, PageHeader, DataTable, Pager, Tabs, ActionMenu (the "⋯" menu),
 │   │                     ConfirmDialog, SaveBar, RequiredMark, NotFoundPage
 │   ├── paths.ts          URL patterns and link builders
 │   └── types.ts          id types (CourseId, ModuleId, ...)
@@ -39,17 +39,26 @@ src/
 │   ├── modules/          + prerequisites
 │   ├── content/          + contentTypes, visibility
 │   ├── quizzes/          + passRule
-│   ├── assignments/      + scoreFormat
+│   ├── assignments/      + scoreFormat, submissionStats
 │   └── grades/, groups/, users/
 └── features/
     ├── dashboard/        DashboardPage (student and course manager variants)
     ├── my-courses/       CoursesPage (all my courses by term)
     ├── profile/          ProfilePage (the logged-in user)
-    ├── course-view/      one course as its members see it: CourseLayout (collapsible course
-    │                     menu, Manage for teachers) and Home, Modules, Assignments, People,
-    │                     Groups, Quizzes, Grades, Submissions (teachers), Files, Code Exercises
-    │   └── module/       ModuleLayout (module menu: Files, Pages, Assignments, Quizzes,
-    │                     Code Exercises), the module overview and one content item
+    ├── course-view/      one course as its members see it (/courses/:courseId)
+    │   ├── courseContext.ts, courseMenu.ts, contentSections.ts, useCourseItems.ts, usePeopleNames.ts
+    │   ├── pages/        CourseLayout (collapsible course menu, Manage for teachers),
+    │   │                 CourseMenuLayout and the menu's pages: Home, Modules, Assignments,
+    │   │                 Quizzes, Code Exercises, People, Groups, Grades, Files, and
+    │   │                 CourseSectionItemPage (one item opened from those lists)
+    │   ├── content/      one content item, wherever it is opened (not routed):
+    │   │                 ContentView picks QuizView or SubmittableContent (assignments and
+    │   │                 coding exercises); ContentTypeTable lists the items of one type
+    │   ├── submissions/  teachers: pages/ CourseSubmissions, ContentSubmissions, SubmissionGrading
+    │   ├── module/       ModuleLayout (module menu: Files, Pages, Assignments, Quizzes,
+    │   │                 Code Exercises), the module overview and one content item
+    │   └── components/   DetailLayout (cards + details panel of an item's page), SideMenuLayout,
+    │                     PassedBadge, VisibleFromTag, SubmissionAnswer, ...
     └── course-management/  course managers: Manage courses, New course,
         │                 ManageCourseLayout (breadcrumbs) and CourseTabsLayout
         │                 (Content, Members, Details)

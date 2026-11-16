@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { errorMessage } from '@shared/api/errorMessage'
 import { useCurrentUser } from '@shared/auth/useAuth'
 import type { UserId } from '@shared/types'
 import PageHeader from '@shared/ui/PageHeader'
@@ -7,11 +6,13 @@ import QueryState from '@shared/ui/QueryState'
 import { useCourseEnrollments } from '@domain/courses/hooks'
 import ConfirmDialog, { useConfirm } from '@shared/ui/ConfirmDialog'
 import {
-  groupName, groupOfUser, SwitchGroupError, useCourseGroups, useDeleteGroup, useJoinGroup, useLeaveGroup, useSwitchGroup,
+  groupName, groupOfUser, useCourseGroups, useDeleteGroup, useJoinGroup, useLeaveGroup, useSwitchGroup,
 } from '@domain/groups/hooks'
 import type { CourseGroup } from '@domain/groups/types'
 import { useCourseView } from '../../courseContext'
 import CreateGroupForm from './CreateGroupForm'
+import GroupBox from './GroupBox'
+import { deleteError, joinError, leaveError, switchError } from './groupErrors'
 import '@shared/styles/forms.css'
 import './CourseGroupsPage.css'
 
@@ -170,60 +171,22 @@ export default function CourseGroupsPage() {
                   ? <p>You are not in any group in this course.</p>
                   : (
                     <ul className="course-groups">
-                      {shown.map(group => {
-                        const id = String(group.id)
-                        const expanded = open.has(id)
-                        const mine = isMember(group, user.userId)
-                        const count = group.memberIds.length
-                        const label = groupName(group)
-                        return (
-                          <li key={id} className={`course-group${expanded ? ' is-open' : ''}`}>
-                            <div className="course-group-row">
-                              <h2 className="course-group-header">
-                                <button
-                                  type="button"
-                                  className="course-group-toggle"
-                                  aria-expanded={expanded}
-                                  aria-controls={`course-group-${id}`}
-                                  onClick={() => toggle(id)}
-                                >
-                                  <svg className="course-group-chevron" width="18" height="18" viewBox="0 0 24 24"
-                                    fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"
-                                    strokeLinejoin="round" aria-hidden="true" focusable="false">
-                                    <path d="M9 6l6 6-6 6" />
-                                  </svg>
-                                  <span className="course-group-name">{label}</span>
-                                  {mine && <span className="course-group-tag">Your group</span>}
-                                  <span className="course-group-count">{count} {count === 1 ? 'member' : 'members'}</span>
-                                </button>
-                              </h2>
-                              <GroupAction
-                                isTeacher={isTeacher}
-                                mine={mine}
-                                label={label}
-                                disabled={busy}
-                                onJoin={() => joinGroup(group, myGroup)}
-                                onLeave={() => leaveGroup(group)}
-                                onDelete={() => deleteGroup(group)}
-                              />
-                            </div>
-                            <div id={`course-group-${id}`} className="course-group-body" hidden={!expanded}>
-                              {count === 0
-                                ? <p className="course-group-empty">No members yet.</p>
-                                : (
-                                  <ul className="course-group-members">
-                                    {group.memberIds.map(userId => (
-                                      <li key={userId}>
-                                        {memberName(group, userId)}
-                                        {String(userId) === String(user.userId) && <span className="course-group-you"> (you)</span>}
-                                      </li>
-                                    ))}
-                                  </ul>
-                                )}
-                            </div>
-                          </li>
-                        )
-                      })}
+                      {shown.map(group => (
+                        <GroupBox
+                          key={group.id}
+                          group={group}
+                          userId={user.userId}
+                          isTeacher={isTeacher}
+                          mine={isMember(group, user.userId)}
+                          expanded={open.has(String(group.id))}
+                          onToggle={() => toggle(String(group.id))}
+                          busy={busy}
+                          memberName={userId => memberName(group, userId)}
+                          onJoin={() => joinGroup(group, myGroup)}
+                          onLeave={() => leaveGroup(group)}
+                          onDelete={() => deleteGroup(group)}
+                        />
+                      ))}
                     </ul>
                   )}
 
@@ -256,82 +219,4 @@ export default function CourseGroupsPage() {
       {confirmDialog}
     </>
   )
-}
-
-type GroupActionProps = {
-  isTeacher: boolean
-  /** The user is in this group. */
-  mine: boolean
-  label: string
-  disabled: boolean
-  onJoin: () => void
-  onLeave: () => void
-  onDelete: () => void
-}
-
-/** Teachers: Delete. Students: Leave on their own group, Join on the others. */
-function GroupAction({ isTeacher, mine, label, disabled, onJoin, onLeave, onDelete }: GroupActionProps) {
-  if (isTeacher) {
-    return (
-      <div className="course-group-actions">
-        <button type="button" className="button-secondary" disabled={disabled}
-          aria-label={`Delete ${label}`} onClick={onDelete}>
-          Delete
-        </button>
-      </div>
-    )
-  }
-  if (mine) {
-    return (
-      <div className="course-group-actions">
-        <button type="button" className="button-secondary" disabled={disabled}
-          aria-label={`Leave ${label}`} onClick={onLeave}>
-          Leave
-        </button>
-      </div>
-    )
-  }
-  return (
-    <div className="course-group-actions">
-      <button type="button" className="button-primary" disabled={disabled}
-        aria-label={`Join ${label}`} onClick={onJoin}>
-        Join
-      </button>
-    </div>
-  )
-}
-
-function joinError(error: Error): string {
-  return errorMessage(error, {
-    409: 'You are already in a group in this course. Leave it before you join another.',
-    403: 'You are not allowed to join this group.',
-    404: 'The group no longer exists.',
-  }, 'You could not join the group. Try again.')
-}
-
-function switchError(error: Error, from: CourseGroup, to: CourseGroup): string {
-  if (error instanceof SwitchGroupError) {
-    const why = joinError(error.cause instanceof Error ? error.cause : error)
-    return error.backInOldGroup
-      ? `${why} You are still in ${groupName(from)}.`
-      : `${why} You are no longer in ${groupName(from)} and not in ${groupName(to)}; join a group again.`
-  }
-  // Leaving the old group failed: nothing changed.
-  return errorMessage(error, {
-    409: `You were no longer in ${groupName(from)}, so nothing was changed. Try joining ${groupName(to)} again.`,
-  }, `${leaveError(error)} You are still in ${groupName(from)}.`)
-}
-
-function leaveError(error: Error): string {
-  return errorMessage(error, {
-    409: 'You are no longer in this group.',
-    403: 'You are not allowed to leave this group.',
-    404: 'The group no longer exists.',
-  }, 'You could not leave the group. Try again.')
-}
-
-function deleteError(error: Error, group: CourseGroup): string {
-  return errorMessage(error, {
-    409: `${groupName(group)} has submissions or other history and cannot be deleted.`,
-  }, `${groupName(group)} could not be deleted. Try again.`)
 }

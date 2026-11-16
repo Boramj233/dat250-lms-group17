@@ -8,12 +8,12 @@ import { useContents } from '@domain/content/hooks'
 import type { Content, ContentSummary } from '@domain/content/types'
 import { useCourseEnrollments } from '@domain/courses/hooks'
 import type { CourseModule } from '@domain/modules/types'
-import DataTable from '../../components/DataTable'
-import MandatoryLabel from '../../components/MandatoryLabel'
-import VisibleFromTag from '../../components/VisibleFromTag'
-import { useCourseView } from '../../courseContext'
-import { useCourseItems } from '../../useCourseItems'
-import { submissionStats, type SubmissionStats } from '../../submissionStats'
+import DataTable from '@shared/ui/DataTable'
+import MandatoryLabel from '../../../components/MandatoryLabel'
+import VisibleFromTag from '../../../components/VisibleFromTag'
+import { useCourseView } from '../../../courseContext'
+import { useCourseItems } from '../../../useCourseItems'
+import { submissionStats, type SubmissionStats } from '@domain/assignments/submissionStats'
 
 type Row = {
   item: ContentSummary

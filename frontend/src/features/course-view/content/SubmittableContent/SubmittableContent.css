@@ -1,0 +1,55 @@
+/* The layout, cards and details panel come from DetailLayout.css; these are the parts
+   only assignments and coding exercises have. */
+
+/* Text or PDF: two options in a row above the answer field. */
+.submittable-kind {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-5);
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+
+.submittable-kind label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  cursor: pointer;
+}
+
+.submittable-empty {
+  font-style: italic;
+}
+
+.submittable-starter {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.submittable-code {
+  margin: 0;
+  padding: var(--space-5);
+  overflow-x: auto;
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  font-family: var(--font-code);
+  font-size: var(--text-small);
+}
+
+.submittable-form {
+  width: 100%;
+}
+
+/* "Mandatory" in the details panel: a filled tag, so it stands out from "Optional". */
+.submittable-mandatory {
+  display: inline-block;
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-control);
+  color: var(--color-on-primary);
+  background: var(--color-primary);
+  font-family: var(--font-ui);
+  font-size: var(--text-small);
+  font-weight: var(--font-weight-bold);
+}

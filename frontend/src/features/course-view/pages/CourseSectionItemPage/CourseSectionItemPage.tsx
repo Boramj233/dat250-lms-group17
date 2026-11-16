@@ -3,9 +3,9 @@ import { Breadcrumbs } from '@shared/navigation/Trail'
 import { paths, type CourseSection } from '@shared/paths'
 import { useCourseView } from '../../courseContext'
 import { useCourseItem } from '../../useCourseItems'
-import ContentView from '../ContentView'
+import ContentView from '../../content/ContentView'
 
-type CourseContentPageProps = {
+type CourseSectionItemPageProps = {
   /** The course page it was opened from, e.g. assignments or grades. */
   section: CourseSection
   /** That page's name, e.g. "Assignments", for the breadcrumbs. */
@@ -17,7 +17,7 @@ type CourseContentPageProps = {
  * /courses/1/assignments/101 shows Course › Assignments › module › item. The same item in its
  * module is /courses/1/modules/2/assignments/101 (ModuleContentPage).
  */
-export default function CourseContentPage({ section, label }: CourseContentPageProps) {
+export default function CourseSectionItemPage({ section, label }: CourseSectionItemPageProps) {
   const { contentId = '' } = useParams()
   const { course, isTeacher } = useCourseView()
   // The same queries as the course's lists, so this is read from the cache.

@@ -7,7 +7,7 @@ import { contentTypeLabel } from '@domain/content/contentTypes'
 import { formatScore } from '@domain/assignments/scoreFormat'
 import { useMyGrades } from '@domain/grades/hooks'
 import type { GradeEntry } from '@domain/grades/types'
-import DataTable from '../../components/DataTable'
+import DataTable from '@shared/ui/DataTable'
 import PassedBadge from '../../components/PassedBadge'
 import { useCourseView } from '../../courseContext'
 

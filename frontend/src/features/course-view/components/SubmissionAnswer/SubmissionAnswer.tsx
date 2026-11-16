@@ -3,6 +3,7 @@ import { apiDownload } from '@shared/api/apiClient'
 import { formatDateTime } from '@shared/lib/dateFormat'
 import { safeHttpUrl } from '@shared/lib/safeUrl'
 import type { MySubmission } from '@domain/assignments/types'
+import './SubmissionAnswer.css'
 
 /** "1.2 MB", "340 kB". */
 function formatSize(bytes: number): string {
@@ -13,8 +14,7 @@ function formatSize(bytes: number): string {
 /**
  * What was handed in, in its own box: the text, the repository as a link, or the PDF
  * with a download button (the download needs the token, so it goes through the API).
- * Styled by the submittable-* classes in pages/ContentView/SubmittableContent.css,
- * which the pages using it load.
+ * Shown inside a Card of DetailLayout, which styles its label, text and muted parts.
  */
 export default function SubmissionAnswer({ submission }: { submission: MySubmission }) {
   const [downloading, setDownloading] = useState(false)

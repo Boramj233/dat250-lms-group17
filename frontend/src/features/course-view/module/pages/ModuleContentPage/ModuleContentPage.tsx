@@ -1,6 +1,6 @@
 import { useParams } from 'react-router'
 import { useCourseView } from '../../../courseContext'
-import ContentView from '../../../pages/ContentView'
+import ContentView from '../../../content/ContentView'
 import { useModuleView } from '../../moduleContext'
 
 /** One content item in its module, with the module menu: …/modules/2/assignments/101. */

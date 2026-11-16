@@ -4,7 +4,7 @@ import PageHeader from '@shared/ui/PageHeader'
 import QueryState from '@shared/ui/QueryState'
 import { useCourseEnrollments } from '@domain/courses/hooks'
 import type { CourseEnrollment, CourseRole } from '@domain/courses/types'
-import DataTable from '../../components/DataTable'
+import DataTable from '@shared/ui/DataTable'
 import { useCourseView } from '../../courseContext'
 import './CoursePeoplePage.css'
 

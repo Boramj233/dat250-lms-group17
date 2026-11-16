@@ -6,8 +6,8 @@ import { useContent } from '@domain/content/hooks'
 import type { Content, ContentSummary } from '@domain/content/types'
 import type { CourseModule } from '@domain/modules/types'
 import VisibleFromTag from '../../components/VisibleFromTag'
-import QuizView from './QuizView'
-import SubmittableContent from './SubmittableContent'
+import QuizView from '../QuizView'
+import SubmittableContent from '../SubmittableContent'
 import './ContentView.css'
 
 type ContentViewProps = {

@@ -1,7 +1,7 @@
 import PageHeader from '@shared/ui/PageHeader'
 import type { ContentType } from '@domain/content/types'
 import { useCourseView } from '../../../courseContext'
-import ContentTypeTable from '../../../pages/ContentTypeTable'
+import ContentTypeTable from '../../../content/ContentTypeTable'
 import { useModuleView } from '../../moduleContext'
 
 type ModuleContentTypePageProps = {
