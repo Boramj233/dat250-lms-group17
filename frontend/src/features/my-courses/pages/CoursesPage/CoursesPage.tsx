@@ -27,11 +27,15 @@ export default function CoursesPage() {
             const { current, previous } = splitByCurrentTerm(all)
             return (
               <>
-                {current.map(group => <TermSection key={group.key} group={group} />)}
+                {current.map(group => (
+                  <TermSection key={group.key} group={group} />
+                ))}
                 {previous.length > 0 && (
                   <>
                     <h2 className="section-title">Previous terms</h2>
-                    {previous.map(group => <TermSection key={group.key} group={group} />)}
+                    {previous.map(group => (
+                      <TermSection key={group.key} group={group} />
+                    ))}
                   </>
                 )}
               </>

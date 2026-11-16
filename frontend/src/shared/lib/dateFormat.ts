@@ -3,7 +3,7 @@ const HOUR = 60 * MINUTE
 const DAY = 24 * HOUR
 
 /** Deadlines closer than this are highlighted. */
-export const SOON_MS = 2 * DAY
+const SOON_MS = 2 * DAY
 
 const dateTimeFormat = new Intl.DateTimeFormat('en-GB', {
   weekday: 'short',

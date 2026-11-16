@@ -47,7 +47,10 @@ export default function ManageModulePage() {
   const updateContent = useUpdateContent()
   const updateModule = useUpdateModule()
   // Content counts of all modules, so moved content goes to the end of its new module.
-  const allContent = useCourseContent(course.id, modules.map(m => m.id))
+  const allContent = useCourseContent(
+    course.id,
+    modules.map(m => m.id),
+  )
   const [confirm, confirmDialog] = useConfirm()
   const [now] = useState(() => Date.now())
   const [draft, setDraft] = useState<Draft>(EMPTY_DRAFT)
@@ -58,8 +61,11 @@ export default function ManageModulePage() {
   const savedDates = savedAvailability(module)
   const [availability, setAvailability] = useState<AvailabilityDraft>(savedDates)
 
-  const changes = Object.keys(draft.required).length + Object.keys(draft.moves).length + draft.deletes.length
-    + availabilityChanges(availability, savedDates)
+  const changes =
+    Object.keys(draft.required).length +
+    Object.keys(draft.moves).length +
+    draft.deletes.length +
+    availabilityChanges(availability, savedDates)
   const moduleLabel = (id: ModuleId) => {
     const index = modules.findIndex(m => String(m.id) === String(id))
     return index >= 0 ? `Module ${index + 1}: ${modules[index].title}` : 'another module'
@@ -109,9 +115,11 @@ export default function ManageModulePage() {
 
   /** Removes one applied change from the draft, so a failed save can be tried again. */
   function done(kind: keyof Draft, id: ContentId) {
-    setDraft(d => kind === 'deletes'
-      ? { ...d, deletes: d.deletes.filter(other => other !== String(id)) }
-      : { ...d, [kind]: Object.fromEntries(Object.entries(d[kind]).filter(([key]) => key !== String(id))) })
+    setDraft(d =>
+      kind === 'deletes'
+        ? { ...d, deletes: d.deletes.filter(other => other !== String(id)) }
+        : { ...d, [kind]: Object.fromEntries(Object.entries(d[kind]).filter(([key]) => key !== String(id))) },
+    )
   }
 
   async function save() {
@@ -124,8 +132,9 @@ export default function ManageModulePage() {
       prerequisiteModuleIds: modules.filter(m => availability.prerequisites.includes(String(m.id))).map(m => m.id),
     }
     if (availabilityChanged) {
-      const dateProblem = checkAvailabilityDates(moduleChanges.availableFrom, moduleChanges.openToAllFrom)
-        ?? checkModuleStartAgainstContent(moduleChanges.availableFrom, content)
+      const dateProblem =
+        checkAvailabilityDates(moduleChanges.availableFrom, moduleChanges.openToAllFrom) ??
+        checkModuleStartAgainstContent(moduleChanges.availableFrom, content)
       if (dateProblem) {
         setError(dateProblem)
         return
@@ -138,7 +147,13 @@ export default function ManageModulePage() {
         message: (
           <>
             <p>Saving also deletes {deleting.length === 1 ? 'this item' : 'these items'}. This cannot be undone.</p>
-            {deleting.length > 1 && <ul>{deleting.map(item => <li key={item.id}>{item.title}</li>)}</ul>}
+            {deleting.length > 1 && (
+              <ul>
+                {deleting.map(item => (
+                  <li key={item.id}>{item.title}</li>
+                ))}
+              </ul>
+            )}
           </>
         ),
         confirmLabel: deleting.length === 1 ? 'Delete and save' : `Delete ${deleting.length} and save`,
@@ -153,14 +168,24 @@ export default function ManageModulePage() {
         await updateModule.mutateAsync({ courseId: course.id, moduleId: module.id, changes: moduleChanges })
       }
       for (const [id, required] of Object.entries(draft.required)) {
-        if (draft.deletes.includes(id)) { done('required', id); continue }
-        await updateContent.mutateAsync({ contentId: id, moduleId: module.id, changes: { requiredForCompletion: required } })
+        if (draft.deletes.includes(id)) {
+          done('required', id)
+          continue
+        }
+        await updateContent.mutateAsync({
+          contentId: id,
+          moduleId: module.id,
+          changes: { requiredForCompletion: required },
+        })
         done('required', id)
       }
       // Moved items go to the end of their new module, in the order they are moved.
       const added = new Map<string, number>()
       for (const [id, target] of Object.entries(draft.moves)) {
-        if (draft.deletes.includes(id)) { done('moves', id); continue }
+        if (draft.deletes.includes(id)) {
+          done('moves', id)
+          continue
+        }
         const already = added.get(String(target)) ?? 0
         await moveContent.mutateAsync({
           contentId: id,
@@ -195,13 +220,17 @@ export default function ManageModulePage() {
         label: 'Edit',
         onSelect: async () => {
           // Editing opens another page, so unsaved changes here would be lost.
-          if (changes > 0 && !(await confirm({
-            title: 'Discard unsaved changes?',
-            message: 'You have changes in this module that are not saved. If you open the item, they are lost.',
-            confirmLabel: 'Discard and edit',
-            cancelLabel: 'Stay on this page',
-            danger: true,
-          }))) return
+          if (
+            changes > 0 &&
+            !(await confirm({
+              title: 'Discard unsaved changes?',
+              message: 'You have changes in this module that are not saved. If you open the item, they are lost.',
+              confirmLabel: 'Discard and edit',
+              cancelLabel: 'Stay on this page',
+              danger: true,
+            }))
+          )
+            return
           navigate(paths.manageContent(course.id, module.id, item.id))
         },
       },
@@ -229,7 +258,9 @@ export default function ManageModulePage() {
       <PageHeader title={module.title} kicker={`Module ${number} of ${modules.length}`} />
 
       <section aria-labelledby="new-content-title">
-        <h2 id="new-content-title" className="section-title">Create</h2>
+        <h2 id="new-content-title" className="section-title">
+          Create
+        </h2>
         <ul className="new-content-types">
           {CONTENT_TYPES.map(info => (
             <li key={info.type}>
@@ -243,75 +274,85 @@ export default function ManageModulePage() {
       </section>
 
       <section aria-labelledby="module-content-title">
-        <h2 id="module-content-title" className="section-title">Content in this module</h2>
-        {content.length === 0
-          ? <p>No content yet. Create the first one above.</p>
-          : (
-            <div className="manage-content-table-wrap">
-              <table className="manage-content-table">
-                <thead>
-                  <tr>
-                    <th scope="col">Title</th>
-                    <th scope="col">Type</th>
-                    <th scope="col">Visible from</th>
-                    <th scope="col">Status</th>
-                    <th scope="col" className="is-center">Required for module completion</th>
-                    <th scope="col"><span className="visually-hidden">Actions</span></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {content.map(item => {
-                    const id = String(item.id)
-                    const deleted = draft.deletes.includes(id)
-                    const movedTo = draft.moves[id]
-                    const requiredChanged = id in draft.required
-                    const required = requiredChanged ? draft.required[id] : item.requiredForCompletion ?? false
-                    const rowClass = [
-                      item.active === false ? 'is-inactive' : '',
-                      deleted ? 'is-deleted' : movedTo !== undefined || requiredChanged ? 'is-changed' : '',
-                    ].filter(Boolean).join(' ')
-                    return (
-                      <tr key={item.id} className={rowClass || undefined}>
-                        <th scope="row">
-                          <Link className="manage-content-title" to={paths.manageContent(course.id, module.id, item.id)}>
-                            {item.title}
-                          </Link>
-                          {deleted && <span className="tag tag-strong tag-danger manage-change">Will be deleted</span>}
-                          {!deleted && movedTo !== undefined && (
-                            <span className="tag tag-strong manage-change">Moves to {moduleLabel(movedTo)}</span>
-                          )}
-                        </th>
-                        <td className="manage-content-type">{contentTypeLabel(item.type)}</td>
-                        <td className="manage-content-type">
-                          {item.visibleFrom
-                            ? formatDateTime(new Date(item.visibleFrom))
-                            : module.availableFrom
-                              ? <>With the module · {formatDateTime(new Date(module.availableFrom))}</>
-                              : 'With the module'}
-                        </td>
-                        <td>
-                          <PublishStatus published={isPublished(item, module, now)} />
-                        </td>
-                        <td className={`is-center${requiredChanged ? ' is-changed-cell' : ''}`}>
-                          <input
-                            type="checkbox"
-                            className="manage-content-check"
-                            aria-label={`${item.title} is required for module completion${requiredChanged ? ' (not saved)' : ''}`}
-                            checked={required}
-                            disabled={saving || deleted}
-                            onChange={event => setRequired(item, event.target.checked)}
-                          />
-                        </td>
-                        <td className="is-end">
-                          <ActionMenu label={`Actions for ${item.title}`} items={actionsFor(item)} />
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
+        <h2 id="module-content-title" className="section-title">
+          Content in this module
+        </h2>
+        {content.length === 0 ? (
+          <p>No content yet. Create the first one above.</p>
+        ) : (
+          <div className="manage-content-table-wrap">
+            <table className="manage-content-table">
+              <thead>
+                <tr>
+                  <th scope="col">Title</th>
+                  <th scope="col">Type</th>
+                  <th scope="col">Visible from</th>
+                  <th scope="col">Status</th>
+                  <th scope="col" className="is-center">
+                    Required for module completion
+                  </th>
+                  <th scope="col">
+                    <span className="visually-hidden">Actions</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {content.map(item => {
+                  const id = String(item.id)
+                  const deleted = draft.deletes.includes(id)
+                  const movedTo = draft.moves[id]
+                  const requiredChanged = id in draft.required
+                  const required = requiredChanged ? draft.required[id] : (item.requiredForCompletion ?? false)
+                  const rowClass = [
+                    item.active === false ? 'is-inactive' : '',
+                    deleted ? 'is-deleted' : movedTo !== undefined || requiredChanged ? 'is-changed' : '',
+                  ]
+                    .filter(Boolean)
+                    .join(' ')
+                  return (
+                    <tr key={item.id} className={rowClass || undefined}>
+                      <th scope="row">
+                        <Link className="manage-content-title" to={paths.manageContent(course.id, module.id, item.id)}>
+                          {item.title}
+                        </Link>
+                        {deleted && <span className="tag tag-strong tag-danger manage-change">Will be deleted</span>}
+                        {!deleted && movedTo !== undefined && (
+                          <span className="tag tag-strong manage-change">Moves to {moduleLabel(movedTo)}</span>
+                        )}
+                      </th>
+                      <td className="manage-content-type">{contentTypeLabel(item.type)}</td>
+                      <td className="manage-content-type">
+                        {item.visibleFrom ? (
+                          formatDateTime(new Date(item.visibleFrom))
+                        ) : module.availableFrom ? (
+                          <>With the module · {formatDateTime(new Date(module.availableFrom))}</>
+                        ) : (
+                          'With the module'
+                        )}
+                      </td>
+                      <td>
+                        <PublishStatus published={isPublished(item, module, now)} />
+                      </td>
+                      <td className={`is-center${requiredChanged ? ' is-changed-cell' : ''}`}>
+                        <input
+                          type="checkbox"
+                          className="manage-content-check"
+                          aria-label={`${item.title} is required for module completion${requiredChanged ? ' (not saved)' : ''}`}
+                          checked={required}
+                          disabled={saving || deleted}
+                          onChange={event => setRequired(item, event.target.checked)}
+                        />
+                      </td>
+                      <td className="is-end">
+                        <ActionMenu label={`Actions for ${item.title}`} items={actionsFor(item)} />
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
       </section>
 
       <ModuleAvailability

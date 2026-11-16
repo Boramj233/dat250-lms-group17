@@ -1,6 +1,5 @@
-import type { CourseId } from "@shared/types";
+import type { CourseId } from '@shared/types'
 
 export const moduleKeys = {
-  courseModules: (courseId: CourseId) =>
-    ["modules", "course", String(courseId)] as const,
-};
+  courseModules: (courseId: CourseId) => ['modules', 'course', String(courseId)] as const,
+}

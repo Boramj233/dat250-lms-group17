@@ -23,7 +23,9 @@ export default function ContentList({ rows }: { rows: ContentRow[] }) {
     <ul className="content-list">
       {rows.map(({ item, to, meta, module }) => (
         <li key={item.id}>
-          <Link className="content-list-title" to={to}>{item.title}</Link>
+          <Link className="content-list-title" to={to}>
+            {item.title}
+          </Link>
           {item.active === false && <span className="content-list-hidden">Hidden from students</span>}
           {module && <VisibleFromTag item={item} module={module} className="content-list-hidden" />}
           {meta && <span className="content-list-meta">{meta}</span>}

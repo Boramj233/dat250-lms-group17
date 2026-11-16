@@ -16,10 +16,11 @@ export default function Sidebar({ isOpen }: SidebarProps) {
   // All courses, the course pages and Manage courses (with every page under it) are
   // reached from the panel.
   const { pathname } = useLocation()
-  const inCourses = pathname === paths.courses
-    || pathname.startsWith(`${paths.courses}/`)
-    || pathname === paths.manageCourses
-    || pathname.startsWith(`${paths.manageCourses}/`)
+  const inCourses =
+    pathname === paths.courses ||
+    pathname.startsWith(`${paths.courses}/`) ||
+    pathname === paths.manageCourses ||
+    pathname.startsWith(`${paths.manageCourses}/`)
 
   // Close the courses panel on Escape or a click outside the sidebar and the panel.
   useEffect(() => {

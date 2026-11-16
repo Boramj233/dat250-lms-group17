@@ -16,8 +16,7 @@ export const MAX_TRAIL = 5
 export function readTrail(state: unknown): Crumb[] {
   const trail = (state as { trail?: unknown } | null)?.trail
   if (!Array.isArray(trail)) return []
-  return trail.filter((crumb): crumb is Crumb =>
-    typeof crumb?.label === 'string' && typeof crumb?.to === 'string')
+  return trail.filter((crumb): crumb is Crumb => typeof crumb?.label === 'string' && typeof crumb?.to === 'string')
 }
 
 /**

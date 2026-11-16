@@ -1,7 +1,6 @@
 ﻿/* Load base values before semantic tokens. */
 
-@import "./primitive.css";
+@import './primitive.css';
 
-@import "./semantic.css";
-@import "./global.css";
-
+@import './semantic.css';
+@import './global.css';

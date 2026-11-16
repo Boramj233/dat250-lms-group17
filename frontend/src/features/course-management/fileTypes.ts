@@ -1,5 +1,5 @@
 /** Common file types a teacher can tick for an assignment. */
-export const FILE_TYPE_PRESETS: { label: string, extensions: string[] }[] = [
+export const FILE_TYPE_PRESETS: { label: string; extensions: string[] }[] = [
   { label: 'PDF', extensions: ['.pdf'] },
   { label: 'Word', extensions: ['.docx'] },
   { label: 'ZIP', extensions: ['.zip'] },
@@ -23,9 +23,9 @@ export function parseExtensions(text: string): string[] {
 
 /** The ticked presets plus the typed extensions, without duplicates, in a stable order. */
 export function combineExtensions(presetLabels: string[], typed: string): string[] {
-  const fromPresets = FILE_TYPE_PRESETS
-    .filter(preset => presetLabels.includes(preset.label))
-    .flatMap(preset => preset.extensions)
+  const fromPresets = FILE_TYPE_PRESETS.filter(preset => presetLabels.includes(preset.label)).flatMap(
+    preset => preset.extensions,
+  )
   return [...new Set([...fromPresets, ...parseExtensions(typed)])]
 }
 
@@ -38,7 +38,7 @@ export function formatExtensions(extensions: string[]): string {
  * The other way round, to edit saved extensions: the presets whose extensions are all
  * in the list, and the rest as typed text (".py, .java").
  */
-export function splitExtensions(extensions: string[]): { presetLabels: string[], other: string } {
+export function splitExtensions(extensions: string[]): { presetLabels: string[]; other: string } {
   const saved = new Set(extensions)
   const presets = FILE_TYPE_PRESETS.filter(preset => preset.extensions.every(extension => saved.has(extension)))
   const covered = new Set(presets.flatMap(preset => preset.extensions))

@@ -7,8 +7,7 @@ import CourseGrid from '@domain/courses/components/CourseGrid'
 import { byNewest } from '@domain/courses/courseFormat'
 import { TrailLink } from '@shared/navigation/Trail'
 
-const teaching = (courses: EnrolledCourse[]) =>
-  courses.filter(course => course.role === 'TEACHER').sort(byNewest)
+const teaching = (courses: EnrolledCourse[]) => courses.filter(course => course.role === 'TEACHER').sort(byNewest)
 
 /**
  * Course managers: the courses they teach (newest first), and a button to the page
@@ -22,7 +21,9 @@ export default function CourseManagerDashboard() {
     <section className="dashboard-section" aria-labelledby="dashboard-teaching">
       <header className="dashboard-section-header">
         <h2 id="dashboard-teaching">Courses I teach</h2>
-        <TrailLink className="button-primary" to={paths.manageCourses}>Manage courses</TrailLink>
+        <TrailLink className="button-primary" to={paths.manageCourses}>
+          Manage courses
+        </TrailLink>
       </header>
       <QueryState
         query={courses}

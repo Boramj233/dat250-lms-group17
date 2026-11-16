@@ -13,7 +13,7 @@ import PassedBadge from '../../../components/PassedBadge'
 import '@shared/styles/forms.css'
 
 /** The passed / not passed choice in the grading form (proposed in the backend). */
-const PASSED_CHOICES: { value: boolean | null, label: string }[] = [
+const PASSED_CHOICES: { value: boolean | null; label: string }[] = [
   { value: true, label: 'Passed' },
   { value: false, label: 'Not passed' },
   { value: null, label: 'Not decided yet' },
@@ -51,8 +51,12 @@ export default function GradeCard({ submission, contentId, courseId, grade, isLa
   const failed = save.error ?? release.error
 
   const number = Number(score.replace(',', '.'))
-  const scoreValid = score.trim() !== '' && Number.isFinite(number) && number >= 0 && number <= MAX_SCORE
-    && Math.round(number * 100) === number * 100
+  const scoreValid =
+    score.trim() !== '' &&
+    Number.isFinite(number) &&
+    number >= 0 &&
+    number <= MAX_SCORE &&
+    Math.round(number * 100) === number * 100
 
   if (grade?.releasedAt) {
     return (
@@ -61,7 +65,10 @@ export default function GradeCard({ submission, contentId, courseId, grade, isLa
           {formatScore(grade.score)} <PassedBadge passed={grade.passed} />
         </p>
         <div className="submittable-text">{grade.feedback || <span className="text-meta">No feedback.</span>}</div>
-        <p className="text-meta submittable-note">Visible to the student since {formatDateTime(new Date(grade.releasedAt))}. A published grade cannot be changed.</p>
+        <p className="text-meta submittable-note">
+          Visible to the student since {formatDateTime(new Date(grade.releasedAt))}. A published grade cannot be
+          changed.
+        </p>
       </Card>
     )
   }
@@ -71,7 +78,12 @@ export default function GradeCard({ submission, contentId, courseId, grade, isLa
       <Card id="grade-title" title="Grade and feedback">
         <p className="text-meta submittable-note">
           A newer submission exists. Only the latest submission can be graded.
-          {newestId !== undefined && <> <Link to={paths.courseSubmission(courseId, contentId, newestId)}>Go to the latest</Link></>}
+          {newestId !== undefined && (
+            <>
+              {' '}
+              <Link to={paths.courseSubmission(courseId, contentId, newestId)}>Go to the latest</Link>
+            </>
+          )}
         </p>
       </Card>
     )
@@ -106,14 +118,27 @@ export default function GradeCard({ submission, contentId, courseId, grade, isLa
     <Card id="grade-title" title="Grade and feedback">
       <form className="form grading-form" onSubmit={handleSubmit}>
         <div className="form-field grading-score-field">
-          <label htmlFor="grading-score">Score (0–{MAX_SCORE})<RequiredMark /></label>
+          <label htmlFor="grading-score">
+            Score (0–{MAX_SCORE})<RequiredMark />
+          </label>
           <div className="grading-score-input">
-            <input id="grading-score" type="number" inputMode="decimal" min={0} max={MAX_SCORE} step={0.01}
-              value={score} onChange={event => setScore(event.target.value)} required />
+            <input
+              id="grading-score"
+              type="number"
+              inputMode="decimal"
+              min={0}
+              max={MAX_SCORE}
+              step={0.01}
+              value={score}
+              onChange={event => setScore(event.target.value)}
+              required
+            />
             <span className="text-meta">/ {MAX_SCORE}</span>
           </div>
           {score.trim() !== '' && !scoreValid && (
-            <p className="form-error" role="alert">A number from 0 to {MAX_SCORE}, with at most two decimals.</p>
+            <p className="form-error" role="alert">
+              A number from 0 to {MAX_SCORE}, with at most two decimals.
+            </p>
           )}
         </div>
 
@@ -121,8 +146,12 @@ export default function GradeCard({ submission, contentId, courseId, grade, isLa
           <legend className="form-label">Passed</legend>
           {PASSED_CHOICES.map(choice => (
             <label key={String(choice.value)} className="form-check">
-              <input type="radio" name="grading-passed" checked={passed === choice.value}
-                onChange={() => setPassed(choice.value)} />
+              <input
+                type="radio"
+                name="grading-passed"
+                checked={passed === choice.value}
+                onChange={() => setPassed(choice.value)}
+              />
               {choice.label}
             </label>
           ))}
@@ -130,14 +159,25 @@ export default function GradeCard({ submission, contentId, courseId, grade, isLa
 
         <div className="form-field">
           <label htmlFor="grading-feedback">Feedback to the student</label>
-          <textarea id="grading-feedback" rows={6} maxLength={10000} value={feedback}
-            onChange={event => setFeedback(event.target.value)} />
+          <textarea
+            id="grading-feedback"
+            rows={6}
+            maxLength={10000}
+            value={feedback}
+            onChange={event => setFeedback(event.target.value)}
+          />
         </div>
 
         <div className="form-field">
           <label htmlFor="grading-visible-from">Visible date</label>
-          <input id="grading-visible-from" type="datetime-local" className="grading-visible-input" value={visibleDate}
-            aria-describedby="grading-visible-from-hint" onChange={event => setVisibleDate(event.target.value)} />
+          <input
+            id="grading-visible-from"
+            type="datetime-local"
+            className="grading-visible-input"
+            value={visibleDate}
+            aria-describedby="grading-visible-from-hint"
+            onChange={event => setVisibleDate(event.target.value)}
+          />
           <p id="grading-visible-from-hint" className={visibleInPast ? 'form-error' : 'form-hint'}>
             {visibleInPast
               ? 'Choose a time in the future, or use Save and publish now.'
@@ -145,7 +185,11 @@ export default function GradeCard({ submission, contentId, courseId, grade, isLa
           </p>
         </div>
 
-        {failed && <p className="form-error" role="alert">{gradeError(failed)}</p>}
+        {failed && (
+          <p className="form-error" role="alert">
+            {gradeError(failed)}
+          </p>
+        )}
         {done && (
           <p className="form-success" role="status">
             {done === 'published'
@@ -160,7 +204,12 @@ export default function GradeCard({ submission, contentId, courseId, grade, isLa
           <button type="submit" className="button-primary" disabled={busy || !scoreValid || visibleInPast}>
             {save.isPending && !release.isPending ? 'Saving…' : 'Save'}
           </button>
-          <button type="button" className="button-secondary" disabled={busy || !scoreValid} onClick={() => void submit(true)}>
+          <button
+            type="button"
+            className="button-secondary"
+            disabled={busy || !scoreValid}
+            onClick={() => void submit(true)}
+          >
             {release.isPending ? 'Publishing…' : 'Save and publish now'}
           </button>
         </div>
@@ -174,9 +223,13 @@ export default function GradeCard({ submission, contentId, courseId, grade, isLa
 
 /** A message for a failed save or release, from the backend's status code. */
 function gradeError(error: unknown): string {
-  return errorMessage(error, {
-    409: 'The grade was changed in the meantime, it is already published, or a newer submission exists. Reload the page and try again.',
-    400: `The score must be a number from 0 to ${MAX_SCORE}, with at most two decimals, and the visible date in the future.`,
-    403: 'Only active teachers of the course can grade.',
-  }, 'Could not save the grade. Try again.')
+  return errorMessage(
+    error,
+    {
+      409: 'The grade was changed in the meantime, it is already published, or a newer submission exists. Reload the page and try again.',
+      400: `The score must be a number from 0 to ${MAX_SCORE}, with at most two decimals, and the visible date in the future.`,
+      403: 'Only active teachers of the course can grade.',
+    },
+    'Could not save the grade. Try again.',
+  )
 }

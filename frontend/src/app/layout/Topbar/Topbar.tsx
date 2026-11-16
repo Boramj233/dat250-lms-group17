@@ -33,21 +33,21 @@ export default function Topbar({ sidebarOpen, onToggleSidebar }: TopbarProps) {
           aria-hidden="true"
           focusable="false"
         >
-          {sidebarOpen ? (
-            <path d="M6 6l12 12M6 18L18 6" />
-          ) : (
-            <path d="M4 6h16M4 12h16M4 18h16" />
-          )}
+          {sidebarOpen ? <path d="M6 6l12 12M6 18L18 6" /> : <path d="M4 6h16M4 12h16M4 18h16" />}
         </svg>
       </button>
-      <Link className="brand" to={paths.home}>DAT250 LMS</Link>
+      <Link className="brand" to={paths.home}>
+        DAT250 LMS
+      </Link>
       <nav className="main-nav" aria-label="Main navigation">
         {currentUser.data && (
           <>
             <span className="current-user">
               {currentUser.data.firstName} {currentUser.data.lastName}
             </span>
-            <button type="button" className="button-secondary" onClick={logout}>Log out</button>
+            <button type="button" className="button-secondary" onClick={logout}>
+              Log out
+            </button>
           </>
         )}
       </nav>

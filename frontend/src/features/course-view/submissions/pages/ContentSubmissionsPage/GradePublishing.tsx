@@ -23,36 +23,56 @@ export default function GradePublishing({ contentId, unpublished }: GradePublish
     if (!unpublished) return
     const confirmed = await confirm({
       title: `Publish ${unpublished} ${unpublished === 1 ? 'grade' : 'grades'}?`,
-      message: 'The students see their score and feedback right away, also for grades with a later visible date. A published grade cannot be changed.',
+      message:
+        'The students see their score and feedback right away, also for grades with a later visible date. A published grade cannot be changed.',
       confirmLabel: 'Publish all',
     })
     if (!confirmed) return
     setPublished(null)
     releaseAll.mutate(undefined, {
-      onSuccess: result => setPublished(`${result.released} ${result.released === 1 ? 'grade is' : 'grades are'} now visible to the students.`),
+      onSuccess: result =>
+        setPublished(
+          `${result.released} ${result.released === 1 ? 'grade is' : 'grades are'} now visible to the students.`,
+        ),
     })
   }
 
   return (
     <section className="teacher-panel grade-publishing" aria-labelledby="grade-publishing-title">
-      <h2 id="grade-publishing-title" className="teacher-panel-title">Publishing grades</h2>
+      <h2 id="grade-publishing-title" className="teacher-panel-title">
+        Publishing grades
+      </h2>
       <p className="grade-publishing-status">
-        A grade is visible to the student from its visible date, which you set when you grade it, or
-        from when you publish it.
+        A grade is visible to the student from its visible date, which you set when you grade it, or from when you
+        publish it.
       </p>
       <div className="form-actions">
-        <button type="button" className="button-primary" onClick={() => void publishAll()}
-          disabled={!unpublished || releaseAll.isPending}>
+        <button
+          type="button"
+          className="button-primary"
+          onClick={() => void publishAll()}
+          disabled={!unpublished || releaseAll.isPending}
+        >
           {releaseAll.isPending ? 'Publishing…' : `Publish all${unpublished ? ` (${unpublished})` : ''}`}
         </button>
         <span className="form-hint">
-          {unpublished === undefined ? '…'
-            : unpublished === 0 ? 'No saved grades are waiting to be published.'
-            : `${unpublished} saved ${unpublished === 1 ? 'grade is' : 'grades are'} not visible to the students yet.`}
+          {unpublished === undefined
+            ? '…'
+            : unpublished === 0
+              ? 'No saved grades are waiting to be published.'
+              : `${unpublished} saved ${unpublished === 1 ? 'grade is' : 'grades are'} not visible to the students yet.`}
         </span>
       </div>
-      {releaseAll.error && <p className="form-error" role="alert">Could not publish the grades. Try again.</p>}
-      {published && <p className="form-success" role="status">{published}</p>}
+      {releaseAll.error && (
+        <p className="form-error" role="alert">
+          Could not publish the grades. Try again.
+        </p>
+      )}
+      {published && (
+        <p className="form-success" role="status">
+          {published}
+        </p>
+      )}
       {confirmDialog}
     </section>
   )

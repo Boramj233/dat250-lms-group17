@@ -12,12 +12,19 @@ export default function AuthGate() {
   const currentUser = useCurrentUser()
 
   if (loginRequired) return <LandingPage />
-  if (currentUser.isPending) return <p className="auth-status" role="status">Loading…</p>
+  if (currentUser.isPending)
+    return (
+      <p className="auth-status" role="status">
+        Loading…
+      </p>
+    )
   if (currentUser.error) {
     return (
       <p className="auth-status" role="alert">
         Could not load your profile. Try again later.{' '}
-        <button type="button" onClick={() => currentUser.refetch()}>Try again</button>
+        <button type="button" onClick={() => currentUser.refetch()}>
+          Try again
+        </button>
       </p>
     )
   }

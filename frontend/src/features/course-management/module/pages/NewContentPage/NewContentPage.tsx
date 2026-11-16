@@ -35,7 +35,12 @@ export default function NewContentPage() {
         cancelTo={backTo}
         onSubmit={fields => {
           // At the end of the module.
-          const input = { ...fields, courseId: course.id, moduleId: module.id, position: content.length } as CreateContentInput
+          const input = {
+            ...fields,
+            courseId: course.id,
+            moduleId: module.id,
+            position: content.length,
+          } as CreateContentInput
           createContent.mutate(input, { onSuccess: () => navigate(backTo) })
         }}
       />

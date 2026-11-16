@@ -17,22 +17,34 @@ export default function AddModuleForm({ courseId, position }: AddModuleFormProps
 
   function submit(event: FormEvent) {
     event.preventDefault()
-    createModule.mutate(
-      { courseId, title: title.trim(), position },
-      { onSuccess: () => setTitle('') },
-    )
+    createModule.mutate({ courseId, title: title.trim(), position }, { onSuccess: () => setTitle('') })
   }
 
   return (
     <section className="teacher-panel" aria-labelledby="add-module-title">
-      <h2 id="add-module-title" className="teacher-panel-title">Add a module</h2>
+      <h2 id="add-module-title" className="teacher-panel-title">
+        Add a module
+      </h2>
       <form className="form" onSubmit={submit}>
         <div className="form-field">
-          <label htmlFor="module-title">Title<RequiredMark /></label>
-          <input id="module-title" required maxLength={255} value={title}
-            onChange={event => setTitle(event.target.value)} placeholder="e.g. Messaging" />
+          <label htmlFor="module-title">
+            Title
+            <RequiredMark />
+          </label>
+          <input
+            id="module-title"
+            required
+            maxLength={255}
+            value={title}
+            onChange={event => setTitle(event.target.value)}
+            placeholder="e.g. Messaging"
+          />
         </div>
-        {createModule.error && <p className="form-error" role="alert">Could not add the module. Try again.</p>}
+        {createModule.error && (
+          <p className="form-error" role="alert">
+            Could not add the module. Try again.
+          </p>
+        )}
         <div className="form-actions">
           <button type="submit" className="button-primary" disabled={createModule.isPending}>
             {createModule.isPending ? 'Adding…' : 'Add module'}

@@ -24,7 +24,11 @@ export default function NewCoursePage() {
         saving={createCourse.isPending}
         error={createCourse.error && 'Could not create the course. Try again.'}
         onSubmit={values => createCourse.mutate(values, { onSuccess: () => navigate(paths.manageCourses) })}
-        actions={<TrailLink className="button-secondary" to={paths.manageCourses}>Cancel</TrailLink>}
+        actions={
+          <TrailLink className="button-secondary" to={paths.manageCourses}>
+            Cancel
+          </TrailLink>
+        }
       />
     </TrailPage>
   )

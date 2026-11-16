@@ -35,7 +35,9 @@ export default function CreateGroupForm({ courseId, groups }: CreateGroupFormPro
 
   return (
     <section className="teacher-panel" aria-labelledby="create-group-title">
-      <h2 id="create-group-title" className="teacher-panel-title">Create a group</h2>
+      <h2 id="create-group-title" className="teacher-panel-title">
+        Create a group
+      </h2>
       <form className="form" onSubmit={submit} noValidate>
         <div className="form-row course-groups-create">
           <div className="form-field">
@@ -49,7 +51,11 @@ export default function CreateGroupForm({ courseId, groups }: CreateGroupFormPro
               value={number}
               placeholder={String(suggested)}
               aria-describedby="group-number-hint"
-              onChange={event => { setNumber(event.target.value); setCreated(null); create.reset() }}
+              onChange={event => {
+                setNumber(event.target.value)
+                setCreated(null)
+                create.reset()
+              }}
             />
           </div>
           <div className="form-actions">
@@ -65,17 +71,29 @@ export default function CreateGroupForm({ courseId, groups }: CreateGroupFormPro
               ? `Group ${groupNumber} already exists.`
               : 'The group starts empty; students join it themselves, one group each.'}
         </p>
-        {create.error && <p className="form-error" role="alert">{createError(create.error, groupNumber)}</p>}
-        {created && <p className="form-success" role="status">{created}</p>}
+        {create.error && (
+          <p className="form-error" role="alert">
+            {createError(create.error, groupNumber)}
+          </p>
+        )}
+        {created && (
+          <p className="form-success" role="status">
+            {created}
+          </p>
+        )}
       </form>
     </section>
   )
 }
 
 function createError(error: Error, groupNumber: number): string {
-  return errorMessage(error, {
-    409: `Group ${groupNumber} already exists.`,
-    400: 'The number must be a whole number of 1 or more.',
-    403: 'Only teachers of the course can create groups.',
-  }, 'The group could not be created. Try again.')
+  return errorMessage(
+    error,
+    {
+      409: `Group ${groupNumber} already exists.`,
+      400: 'The number must be a whole number of 1 or more.',
+      403: 'Only teachers of the course can create groups.',
+    },
+    'The group could not be created. Try again.',
+  )
 }

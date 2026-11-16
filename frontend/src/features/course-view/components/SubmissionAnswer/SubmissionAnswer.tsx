@@ -50,12 +50,21 @@ export default function SubmissionAnswer({ submission }: { submission: MySubmiss
           <button type="button" className="button-secondary" onClick={() => void download()} disabled={downloading}>
             {downloading ? 'Downloading…' : 'Download'}
           </button>
-          {failed && <p className="form-error" role="alert">Could not download the file. Try again.</p>}
+          {failed && (
+            <p className="form-error" role="alert">
+              Could not download the file. Try again.
+            </p>
+          )}
         </div>
       )}
-      {submission.type === 'GIT_URL' && (
-        url ? <a href={url} target="_blank" rel="noreferrer">{url}</a> : <span>{submission.payload}</span>
-      )}
+      {submission.type === 'GIT_URL' &&
+        (url ? (
+          <a href={url} target="_blank" rel="noreferrer">
+            {url}
+          </a>
+        ) : (
+          <span>{submission.payload}</span>
+        ))}
       {submission.type === 'TEXT' && <div className="submittable-text">{submission.payload}</div>}
     </div>
   )

@@ -3,13 +3,13 @@
 The backend's `GroupController` (`/api/courses/{courseId}/groups`). `GroupDTO` is
 `{ id, groupNumber, memberIds }`; types are in `types.ts`.
 
-| Method | Endpoint | Body | Who | Frontend |
-| --- | --- | --- | --- | --- |
-| GET | `/api/courses/{courseId}/groups` | — | members of the course | `useCourseGroups` |
-| POST | `/api/courses/{courseId}/groups` | `{ groupNumber }` | teachers | `useCreateGroup` |
-| DELETE | `/api/courses/{courseId}/groups/{groupId}` | — | teachers | `useDeleteGroup` |
-| POST | `/api/courses/{courseId}/groups/{groupId}/members` | the user id, e.g. `5` | teachers, **proposed: the student themselves** | `useJoinGroup` |
-| DELETE | `/api/courses/{courseId}/groups/{groupId}/members/{userId}` | — | teachers, **proposed: the student themselves** | `useLeaveGroup` |
+| Method | Endpoint                                                    | Body                  | Who                                            | Frontend          |
+| ------ | ----------------------------------------------------------- | --------------------- | ---------------------------------------------- | ----------------- |
+| GET    | `/api/courses/{courseId}/groups`                            | —                     | members of the course                          | `useCourseGroups` |
+| POST   | `/api/courses/{courseId}/groups`                            | `{ groupNumber }`     | teachers                                       | `useCreateGroup`  |
+| DELETE | `/api/courses/{courseId}/groups/{groupId}`                  | —                     | teachers                                       | `useDeleteGroup`  |
+| POST   | `/api/courses/{courseId}/groups/{groupId}/members`          | the user id, e.g. `5` | teachers, **proposed: the student themselves** | `useJoinGroup`    |
+| DELETE | `/api/courses/{courseId}/groups/{groupId}/members/{userId}` | —                     | teachers, **proposed: the student themselves** | `useLeaveGroup`   |
 
 Rules the backend already has (the frontend shows a message for each):
 
@@ -31,7 +31,7 @@ backend (`npm run dev:mock`) already works like this.
 
 So the Groups page of a course can show names:
 
-| Field | Type | Meaning |
-| --- | --- | --- |
-| `name` | `string \| null` | A name for the group. Null: the frontend shows "Group {groupNumber}". |
+| Field     | Type                                | Meaning                                                                                    |
+| --------- | ----------------------------------- | ------------------------------------------------------------------------------------------ |
+| `name`    | `string \| null`                    | A name for the group. Null: the frontend shows "Group {groupNumber}".                      |
 | `members` | `{ userId, firstName, lastName }[]` | The members' names. Students cannot look users up, so without this they only see user ids. |

@@ -81,15 +81,14 @@ const LOGIN_POPUP_POLL_MS = 250
  */
 export type PopupLoginResult = 'success' | 'failed' | 'closed'
 
-let pendingPopupLogin: { popup: Window, result: Promise<PopupLoginResult> } | undefined
+let pendingPopupLogin: { popup: Window; result: Promise<PopupLoginResult> } | undefined
 
 /**
  * Popups are for desktop browsers. On phones and tablets (touch, narrow screen) the
  * login replaces the whole page instead, as with login().
  */
 export function canUseLoginPopup(): boolean {
-  return typeof window.matchMedia === 'function'
-    && window.matchMedia('(pointer: fine) and (min-width: 768px)').matches
+  return typeof window.matchMedia === 'function' && window.matchMedia('(pointer: fine) and (min-width: 768px)').matches
 }
 
 /** True in the popup window that loginWithPopup() opened. */
@@ -141,14 +140,15 @@ export function loginWithPopup(): Promise<PopupLoginResult> | undefined {
         return
       }
       // Still about:blank, or on the way through Spring Boot's OAuth2 endpoints.
-      if (address.origin !== window.location.origin
-          || address.pathname.startsWith('/oauth2/')
-          || address.pathname.startsWith('/login/oauth2/')) {
+      if (
+        address.origin !== window.location.origin ||
+        address.pathname.startsWith('/oauth2/') ||
+        address.pathname.startsWith('/login/oauth2/')
+      ) {
         return
       }
       popup.close()
-      const failed = address.searchParams.has('login_error')
-        || address.searchParams.get('state') === 'login_error'
+      const failed = address.searchParams.has('login_error') || address.searchParams.get('state') === 'login_error'
       finish(failed ? 'failed' : 'success')
     }, LOGIN_POPUP_POLL_MS)
   })
@@ -184,11 +184,13 @@ export function getAccessToken(): Promise<string | undefined> {
           return undefined
         }
         if (!response.ok) throw new Error(`Token request failed: ${response.status}`)
-        currentToken = await response.json() as TokenResponse
+        currentToken = (await response.json()) as TokenResponse
         setLoginRequired(false)
         return currentToken.accessToken
       })
-      .finally(() => { pendingToken = undefined })
+      .finally(() => {
+        pendingToken = undefined
+      })
   }
   return pendingToken
 }

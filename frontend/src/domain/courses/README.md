@@ -4,16 +4,16 @@
 others are not implemented yet (the home page uses `GET /api/users/{userId}/courses`). These endpoints and DTO shapes
 are frontend assumptions to agree on when implementing the backend.
 
-| Method | Endpoint | Request body | Response |
-| --- | --- | --- | --- |
-| GET | `/api/courses/{courseId}` | — | `Course` |
-| GET | `/api/users/{userId}/courses` | — | `EnrolledCourse[]` |
-| GET | `/api/courses/{courseId}/enrollments` | — | `CourseEnrollment[]` (every member of the course: the People page) |
-| POST | `/api/courses` | `CreateCourseInput` | `Course` |
-| PATCH | `/api/courses/{courseId}` | `UpdateCourseInput.changes` | `Course` |
-| POST | `/api/courses/{courseId}/enrollments` | `{ userId, role? }` | `204 No Content` |
-| DELETE | `/api/courses/{courseId}/enrollments/{userId}` | — | `204 No Content` |
-| PATCH | `/api/courses/{courseId}/enrollments/{userId}` | `{ role }` | `204 No Content` |
+| Method | Endpoint                                       | Request body                | Response                                                           |
+| ------ | ---------------------------------------------- | --------------------------- | ------------------------------------------------------------------ |
+| GET    | `/api/courses/{courseId}`                      | —                           | `Course`                                                           |
+| GET    | `/api/users/{userId}/courses`                  | —                           | `EnrolledCourse[]`                                                 |
+| GET    | `/api/courses/{courseId}/enrollments`          | —                           | `CourseEnrollment[]` (every member of the course: the People page) |
+| POST   | `/api/courses`                                 | `CreateCourseInput`         | `Course`                                                           |
+| PATCH  | `/api/courses/{courseId}`                      | `UpdateCourseInput.changes` | `Course`                                                           |
+| POST   | `/api/courses/{courseId}/enrollments`          | `{ userId, role? }`         | `204 No Content`                                                   |
+| DELETE | `/api/courses/{courseId}/enrollments/{userId}` | —                           | `204 No Content`                                                   |
+| PATCH  | `/api/courses/{courseId}/enrollments/{userId}` | `{ role }`                  | `204 No Content`                                                   |
 
 Types are defined in `types.ts`. A course has `id`, `title`, `description`,
 `term` (`SPRING` or `AUTUMN`) and `year`, as in the backend's `CourseResponse`. An enrolled course also includes the specified user's
@@ -30,19 +30,19 @@ Types are defined in `types.ts`. A course has `id`, `title`, `description`,
   roles, add modules and content, see all submissions and grade them.
 - Finding users to enroll uses `GET /api/users/search?search=` (exists, but only
   for `COURSE_MANAGER`/`ADMIN`; a teacher without that access cannot search yet). Authentication and
-authorization must be enforced by the backend, including who may create courses
-and assign teacher roles.
+  authorization must be enforced by the backend, including who may create courses
+  and assign teacher roles.
 
 Query hooks take the relevant ID. Mutation hooks take their input via `mutate`
 or `mutateAsync`:
 
 ```tsx
-const course = useCourse(courseId);
-const updateCourse = useUpdateCourse();
-const enrollInCourse = useEnrollInCourse();
+const course = useCourse(courseId)
+const updateCourse = useUpdateCourse()
+const enrollInCourse = useEnrollInCourse()
 
-updateCourse.mutate({ courseId, changes: { description: "New description" } });
-enrollInCourse.mutate({ courseId, userId });
+updateCourse.mutate({ courseId, changes: { description: 'New description' } })
+enrollInCourse.mutate({ courseId, userId })
 ```
 
 Mutations invalidate affected queries after success. Query IDs are normalized to

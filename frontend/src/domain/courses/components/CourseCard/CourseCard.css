@@ -34,7 +34,6 @@
   overflow: hidden;
 }
 
-
 /* The title's link covers the whole card, so the card is one click target. */
 .course-card-link {
   color: var(--color-text);

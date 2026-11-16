@@ -28,28 +28,40 @@ export default function AddMemberForm({ courseId, members }: AddMemberFormProps)
   function submit(event: FormEvent) {
     event.preventDefault()
     if (!selected) return
-    enroll.mutate({ courseId, userId: selected.userId, role }, {
-      onSuccess: () => {
-        setAdded(`${selected.firstName} ${selected.lastName} was added as ${ROLE_LABEL[role].toLowerCase()}.`)
-        setSelected(null)
-        setSearch('')
+    enroll.mutate(
+      { courseId, userId: selected.userId, role },
+      {
+        onSuccess: () => {
+          setAdded(`${selected.firstName} ${selected.lastName} was added as ${ROLE_LABEL[role].toLowerCase()}.`)
+          setSelected(null)
+          setSearch('')
+        },
       },
-    })
+    )
   }
 
   return (
     <section className="teacher-panel" aria-labelledby="add-member-title">
-      <h2 id="add-member-title" className="teacher-panel-title">Add a member</h2>
+      <h2 id="add-member-title" className="teacher-panel-title">
+        Add a member
+      </h2>
       <form className="form" onSubmit={submit}>
         <div className="form-field">
-          <label htmlFor="member-search">Name or email<RequiredMark /></label>
+          <label htmlFor="member-search">
+            Name or email
+            <RequiredMark />
+          </label>
           <input
             id="member-search"
             aria-required="true"
             type="search"
             autoComplete="off"
             value={search}
-            onChange={event => { setSearch(event.target.value); setSelected(null); setAdded(null) }}
+            onChange={event => {
+              setSearch(event.target.value)
+              setSelected(null)
+              setAdded(null)
+            }}
             placeholder="Search for a user"
           />
         </div>
@@ -65,10 +77,19 @@ export default function AddMemberForm({ courseId, members }: AddMemberFormProps)
                   const enrolled = memberIds.has(String(user.userId))
                   return (
                     <li key={user.userId}>
-                      <button type="button" className="member-result" disabled={enrolled}
-                        onClick={() => setSelected(user)}>
-                        <span className="member-full-name">{user.firstName} {user.lastName}</span>
-                        <span className="member-email">{user.email}{enrolled && ' · already in the course'}</span>
+                      <button
+                        type="button"
+                        className="member-result"
+                        disabled={enrolled}
+                        onClick={() => setSelected(user)}
+                      >
+                        <span className="member-full-name">
+                          {user.firstName} {user.lastName}
+                        </span>
+                        <span className="member-email">
+                          {user.email}
+                          {enrolled && ' · already in the course'}
+                        </span>
                       </button>
                     </li>
                   )
@@ -81,12 +102,22 @@ export default function AddMemberForm({ courseId, members }: AddMemberFormProps)
         {selected && (
           <div className="form-row">
             <p className="member-selected">
-              <span className="member-full-name">{selected.firstName} {selected.lastName}</span>
+              <span className="member-full-name">
+                {selected.firstName} {selected.lastName}
+              </span>
               <span className="member-email">{selected.email}</span>
             </p>
             <div className="form-field">
-              <label htmlFor="member-role">Role<RequiredMark /></label>
-              <select id="member-role" required value={role} onChange={event => setRole(event.target.value as CourseRole)}>
+              <label htmlFor="member-role">
+                Role
+                <RequiredMark />
+              </label>
+              <select
+                id="member-role"
+                required
+                value={role}
+                onChange={event => setRole(event.target.value as CourseRole)}
+              >
                 <option value="STUDENT">{ROLE_LABEL.STUDENT}</option>
                 <option value="TEACHER">{ROLE_LABEL.TEACHER}</option>
               </select>
@@ -94,8 +125,16 @@ export default function AddMemberForm({ courseId, members }: AddMemberFormProps)
           </div>
         )}
 
-        {enroll.error && <p className="form-error" role="alert">Could not add the member. Try again.</p>}
-        {added && <p className="form-success" role="status">{added}</p>}
+        {enroll.error && (
+          <p className="form-error" role="alert">
+            Could not add the member. Try again.
+          </p>
+        )}
+        {added && (
+          <p className="form-success" role="status">
+            {added}
+          </p>
+        )}
         <div className="form-actions">
           <button type="submit" className="button-primary" disabled={!selected || enroll.isPending}>
             {enroll.isPending ? 'Adding…' : 'Add to course'}

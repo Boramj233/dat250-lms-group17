@@ -30,9 +30,10 @@ export function submissionStats(
   const answeredIds = new Set<string>()
   for (const submission of submissions) {
     // A group submission counts for every member of the group when it was handed in.
-    const ids = submission.groupId !== null && submission.members.length > 0
-      ? submission.members.map(member => String(member.userId))
-      : [String(submission.studentUserId)]
+    const ids =
+      submission.groupId !== null && submission.members.length > 0
+        ? submission.members.map(member => String(member.userId))
+        : [String(submission.studentUserId)]
     for (const id of ids) if (!studentIds || studentIds.has(id)) answeredIds.add(id)
   }
   const grades = submissions.map(gradeOf)

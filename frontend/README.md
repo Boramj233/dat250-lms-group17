@@ -20,7 +20,7 @@ src/
 │   ├── lib/              dateFormat, safeUrl, useDebounced, moveItem
 │   ├── navigation/       breadcrumbs (Trail)
 │   ├── styles/           tokens, global styles, forms.css
-│   ├── ui/               QueryState, PageHeader, DataTable, Pager, Tabs, ActionMenu (the "⋯" menu),
+│   ├── ui/               QueryState, PageHeader, DataTable, Tabs, ActionMenu (the "⋯" menu),
 │   │                     ConfirmDialog, SaveBar, RequiredMark, NotFoundPage
 │   ├── paths.ts          URL patterns and link builders
 │   └── types.ts          id types (CourseId, ModuleId, ...)
@@ -123,9 +123,15 @@ the two in sync).
   Hooks, contexts and helpers without JSX (for example `courseFormat.ts`) are plain
   files at the root of their domain or feature. Parts that only one page uses live in
   that page's folder (for example `DashboardPage/StudentDashboard.tsx`).
+
 - Use existing style tokens where possible.
 
 Folder placement organizes the source; `src/app/routes.tsx` defines routing.
+
+`npm run lint` checks the import rules above (`.oxlintrc.json`): layers only import
+downwards, features never import each other through `@features/…`, and there are no
+import cycles. It does not see a relative import from one feature into another
+(`../../../dashboard/…`), so use the aliases between folders.
 
 ## Running
 
@@ -134,6 +140,14 @@ Run `npm install` first, then from this directory:
 - `npm run dev:mock`: frontend only, with test data and test users instead of the
   backend and Keycloak. No Docker needed. See [mock/README.md](mock/README.md).
 - `npm run dev`: frontend against the real backend (start it with Docker first).
+
+Before you push:
+
+- `npm run format`: formats all files with Prettier (`.prettierrc.json`); `npm run format:check`
+  only reports files that are not formatted. Set your editor to format with Prettier on save.
+- `npm run lint`: oxlint, including the import rules (see Rules above).
+- `npm test`: the unit tests in `test/`.
+- `npm run build`: type checks everything (also `mock/`) and builds.
 
 ## Navigation
 

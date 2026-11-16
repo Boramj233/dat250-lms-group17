@@ -20,9 +20,19 @@ type GroupBoxProps = {
 }
 
 /** One group: a header that unfolds its members, with Join, Leave or Delete next to it. */
-export default function GroupBox(
-  { group, userId, isTeacher, mine, expanded, onToggle, busy, memberName, onJoin, onLeave, onDelete }: GroupBoxProps,
-) {
+export default function GroupBox({
+  group,
+  userId,
+  isTeacher,
+  mine,
+  expanded,
+  onToggle,
+  busy,
+  memberName,
+  onJoin,
+  onLeave,
+  onDelete,
+}: GroupBoxProps) {
   const id = String(group.id)
   const count = group.memberIds.length
   const label = groupName(group)
@@ -37,14 +47,26 @@ export default function GroupBox(
             aria-controls={`course-group-${id}`}
             onClick={onToggle}
           >
-            <svg className="disclosure-chevron" width="18" height="18" viewBox="0 0 24 24"
-              fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"
-              strokeLinejoin="round" aria-hidden="true" focusable="false">
+            <svg
+              className="disclosure-chevron"
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+              focusable="false"
+            >
               <path d="M9 6l6 6-6 6" />
             </svg>
             <span className="course-group-name">{label}</span>
             {mine && <span className="tag">Your group</span>}
-            <span className="course-group-count">{count} {count === 1 ? 'member' : 'members'}</span>
+            <span className="course-group-count">
+              {count} {count === 1 ? 'member' : 'members'}
+            </span>
           </button>
         </h2>
         <GroupAction
@@ -58,18 +80,18 @@ export default function GroupBox(
         />
       </div>
       <div id={`course-group-${id}`} className="course-group-body" hidden={!expanded}>
-        {count === 0
-          ? <p className="course-group-empty">No members yet.</p>
-          : (
-            <ul className="course-group-members">
-              {group.memberIds.map(memberId => (
-                <li key={memberId}>
-                  {memberName(memberId)}
-                  {String(memberId) === String(userId) && <span className="course-group-you"> (you)</span>}
-                </li>
-              ))}
-            </ul>
-          )}
+        {count === 0 ? (
+          <p className="course-group-empty">No members yet.</p>
+        ) : (
+          <ul className="course-group-members">
+            {group.memberIds.map(memberId => (
+              <li key={memberId}>
+                {memberName(memberId)}
+                {String(memberId) === String(userId) && <span className="course-group-you"> (you)</span>}
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
     </li>
   )
@@ -90,8 +112,13 @@ function GroupAction({ isTeacher, mine, label, disabled, onJoin, onLeave, onDele
   if (isTeacher) {
     return (
       <div className="course-group-actions">
-        <button type="button" className="button-secondary" disabled={disabled}
-          aria-label={`Delete ${label}`} onClick={onDelete}>
+        <button
+          type="button"
+          className="button-secondary"
+          disabled={disabled}
+          aria-label={`Delete ${label}`}
+          onClick={onDelete}
+        >
           Delete
         </button>
       </div>
@@ -100,8 +127,13 @@ function GroupAction({ isTeacher, mine, label, disabled, onJoin, onLeave, onDele
   if (mine) {
     return (
       <div className="course-group-actions">
-        <button type="button" className="button-secondary" disabled={disabled}
-          aria-label={`Leave ${label}`} onClick={onLeave}>
+        <button
+          type="button"
+          className="button-secondary"
+          disabled={disabled}
+          aria-label={`Leave ${label}`}
+          onClick={onLeave}
+        >
           Leave
         </button>
       </div>
@@ -109,8 +141,13 @@ function GroupAction({ isTeacher, mine, label, disabled, onJoin, onLeave, onDele
   }
   return (
     <div className="course-group-actions">
-      <button type="button" className="button-primary" disabled={disabled}
-        aria-label={`Join ${label}`} onClick={onJoin}>
+      <button
+        type="button"
+        className="button-primary"
+        disabled={disabled}
+        aria-label={`Join ${label}`}
+        onClick={onJoin}
+      >
         Join
       </button>
     </div>

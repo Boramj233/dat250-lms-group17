@@ -32,9 +32,14 @@ const isEmptyArray = (data: unknown) => Array.isArray(data) && data.length === 0
  *     {entries => <GradeSections entries={entries} />}
  *   </QueryState>
  */
-export default function QueryState<T>(
-  { query, loading = 'Loading…', error, empty, isEmpty = isEmptyArray, children }: QueryStateProps<T>,
-) {
+export default function QueryState<T>({
+  query,
+  loading = 'Loading…',
+  error,
+  empty,
+  isEmpty = isEmptyArray,
+  children,
+}: QueryStateProps<T>) {
   if (query.isPending) return <p role="status">{loading}</p>
   if (query.error || query.data === undefined) return <p role="alert">{error}</p>
   if (empty !== undefined && isEmpty(query.data)) return <p>{empty}</p>

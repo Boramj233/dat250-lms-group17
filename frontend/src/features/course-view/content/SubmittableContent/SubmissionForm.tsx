@@ -32,13 +32,18 @@ export default function SubmissionForm({ content, groupId, onDone, onCancel }: S
   const error = submitText.error ?? submitPdf.error
 
   const answer = value.trim()
-  const fileProblem = file && (
-    !file.name.toLowerCase().endsWith('.pdf') ? 'Choose a PDF file.'
-      : file.size > MAX_FILE_BYTES ? 'The file is too large (at most 10 MB).'
-      : null)
+  const fileProblem =
+    file &&
+    (!file.name.toLowerCase().endsWith('.pdf')
+      ? 'Choose a PDF file.'
+      : file.size > MAX_FILE_BYTES
+        ? 'The file is too large (at most 10 MB).'
+        : null)
   const valid = isCode
     ? safeHttpUrl(answer) !== undefined
-    : kind === 'FILE' ? file !== null && !fileProblem : answer !== ''
+    : kind === 'FILE'
+      ? file !== null && !fileProblem
+      : answer !== ''
 
   function handleSubmit(event: FormEvent) {
     event.preventDefault()
@@ -69,33 +74,61 @@ export default function SubmissionForm({ content, groupId, onDone, onCancel }: S
         </fieldset>
       )}
 
-      {!isCode && kind === 'FILE'
-        ? (
-          <div className="form-field">
-            <label htmlFor="submission-file">PDF file</label>
-            <p id="submission-file-hint" className="form-hint">One PDF file, at most 10 MB.</p>
-            <input id="submission-file" type="file" accept="application/pdf,.pdf" aria-describedby="submission-file-hint"
-              onChange={event => setFile(event.target.files?.[0] ?? null)} />
-            {fileProblem && <p className="form-error" role="alert">{fileProblem}</p>}
-          </div>
-        )
-        : (
-          <div className="form-field">
-            <label htmlFor="submission-answer">{isCode ? 'Repository URL' : 'Your answer'}</label>
-            <p id="submission-hint" className="form-hint">
-              {isCode
-                ? 'A link to your Git repository, starting with https://, e.g. https://github.com/you/project.'
-                : 'Write your answer as text (at most 10 000 characters).'}
+      {!isCode && kind === 'FILE' ? (
+        <div className="form-field">
+          <label htmlFor="submission-file">PDF file</label>
+          <p id="submission-file-hint" className="form-hint">
+            One PDF file, at most 10 MB.
+          </p>
+          <input
+            id="submission-file"
+            type="file"
+            accept="application/pdf,.pdf"
+            aria-describedby="submission-file-hint"
+            onChange={event => setFile(event.target.files?.[0] ?? null)}
+          />
+          {fileProblem && (
+            <p className="form-error" role="alert">
+              {fileProblem}
             </p>
+          )}
+        </div>
+      ) : (
+        <div className="form-field">
+          <label htmlFor="submission-answer">{isCode ? 'Repository URL' : 'Your answer'}</label>
+          <p id="submission-hint" className="form-hint">
             {isCode
-              ? <input id="submission-answer" type="url" value={value} aria-describedby="submission-hint"
-                  onChange={event => setValue(event.target.value)} autoFocus />
-              : <textarea id="submission-answer" rows={10} maxLength={10000} value={value}
-                  aria-describedby="submission-hint" onChange={event => setValue(event.target.value)} autoFocus />}
-          </div>
-        )}
+              ? 'A link to your Git repository, starting with https://, e.g. https://github.com/you/project.'
+              : 'Write your answer as text (at most 10 000 characters).'}
+          </p>
+          {isCode ? (
+            <input
+              id="submission-answer"
+              type="url"
+              value={value}
+              aria-describedby="submission-hint"
+              onChange={event => setValue(event.target.value)}
+              autoFocus
+            />
+          ) : (
+            <textarea
+              id="submission-answer"
+              rows={10}
+              maxLength={10000}
+              value={value}
+              aria-describedby="submission-hint"
+              onChange={event => setValue(event.target.value)}
+              autoFocus
+            />
+          )}
+        </div>
+      )}
 
-      {error && <p className="form-error" role="alert">{submitError(error)}</p>}
+      {error && (
+        <p className="form-error" role="alert">
+          {submitError(error)}
+        </p>
+      )}
       <div className="form-actions">
         <button type="submit" className="button-primary" disabled={!valid || pending}>
           {pending ? 'Submitting…' : 'Submit'}
@@ -110,11 +143,15 @@ export default function SubmissionForm({ content, groupId, onDone, onCancel }: S
 
 /** A message for a failed hand-in, from the backend's status code. */
 function submitError(error: unknown): string {
-  return errorMessage(error, {
-    409: 'The deadline has passed, so it could not be handed in.',
-    415: 'Only PDF files are accepted.',
-    413: 'The file is too large (at most 10 MB).',
-    403: 'You cannot hand in here (or for this group).',
-    503: 'Handing in files is not available right now. Try again later.',
-  }, 'Could not submit your answer. Try again.')
+  return errorMessage(
+    error,
+    {
+      409: 'The deadline has passed, so it could not be handed in.',
+      415: 'Only PDF files are accepted.',
+      413: 'The file is too large (at most 10 MB).',
+      403: 'You cannot hand in here (or for this group).',
+      503: 'Handing in files is not available right now. Try again later.',
+    },
+    'Could not submit your answer. Try again.',
+  )
 }

@@ -33,7 +33,9 @@ export default function ContentView({ summary, isTeacher, context, module }: Con
       <PageHeader title={summary.title} kicker={contentTypeLabel(summary.type)}>
         {context && <p className="content-view-context">{context}</p>}
         {summary.active === false && <p className="content-view-hidden">Hidden from students</p>}
-        {module && <VisibleFromTag item={summary} module={module} className="content-view-hidden content-view-visible-from" />}
+        {module && (
+          <VisibleFromTag item={summary} module={module} className="content-view-hidden content-view-visible-from" />
+        )}
       </PageHeader>
       <QueryState query={content} loading="Loading…" error="Could not load this content. Try again later.">
         {data => <ContentBody content={data} isTeacher={isTeacher} />}
@@ -42,7 +44,7 @@ export default function ContentView({ summary, isTeacher, context, module }: Con
   )
 }
 
-function ContentBody({ content, isTeacher }: { content: Content, isTeacher: boolean }) {
+function ContentBody({ content, isTeacher }: { content: Content; isTeacher: boolean }) {
   switch (content.type) {
     case 'STATIC_PAGE':
       return <div className="content-view-text">{content.body}</div>

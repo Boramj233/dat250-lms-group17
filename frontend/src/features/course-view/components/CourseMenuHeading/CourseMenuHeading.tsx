@@ -13,7 +13,9 @@ type CourseMenuHeadingProps = {
 export default function CourseMenuHeading({ title, subtitle, to }: CourseMenuHeadingProps) {
   return (
     <div className="course-menu-heading">
-      <Link className="course-menu-heading-title" to={to}>{title}</Link>
+      <Link className="course-menu-heading-title" to={to}>
+        {title}
+      </Link>
       <span className="course-menu-heading-subtitle">{subtitle}</span>
     </div>
   )

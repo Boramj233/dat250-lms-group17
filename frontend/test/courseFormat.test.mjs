@@ -36,12 +36,21 @@ test('the term of a date: January–July is spring, August–December is autumn'
 
 test('courses are split into the current and later terms and the previous terms', async () => {
   const { splitByCurrentTerm } = await import('../src/domain/courses/courseFormat.ts')
-  const { current, previous } = splitByCurrentTerm([
-    course(1, 'Old', 'AUTUMN', 2025),
-    course(2, 'Now', 'AUTUMN', 2026),
-    course(3, 'Last term', 'SPRING', 2026),
-    course(4, 'Next term', 'SPRING', 2027),
-  ], new Date(2026, 10, 11))
-  assert.deepEqual(current.map(group => group.label), ['Autumn 2026', 'Spring 2027'])
-  assert.deepEqual(previous.map(group => group.label), ['Spring 2026', 'Autumn 2025'])
+  const { current, previous } = splitByCurrentTerm(
+    [
+      course(1, 'Old', 'AUTUMN', 2025),
+      course(2, 'Now', 'AUTUMN', 2026),
+      course(3, 'Last term', 'SPRING', 2026),
+      course(4, 'Next term', 'SPRING', 2027),
+    ],
+    new Date(2026, 10, 11),
+  )
+  assert.deepEqual(
+    current.map(group => group.label),
+    ['Autumn 2026', 'Spring 2027'],
+  )
+  assert.deepEqual(
+    previous.map(group => group.label),
+    ['Spring 2026', 'Autumn 2025'],
+  )
 })

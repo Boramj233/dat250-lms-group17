@@ -39,9 +39,15 @@ export default function ContentDetailsPage() {
         {data => (
           <>
             <p className="content-publish-status">
-              {published
-                ? <><strong>Published.</strong> Students can see it{publishedSince(item, module)}.</>
-                : <><strong>Unpublished.</strong> {notPublishedReason(item, module)}</>}
+              {published ? (
+                <>
+                  <strong>Published.</strong> Students can see it{publishedSince(item, module)}.
+                </>
+              ) : (
+                <>
+                  <strong>Unpublished.</strong> {notPublishedReason(item, module)}
+                </>
+              )}
             </p>
             <EditForm key={data.id} content={data} />
           </>
@@ -91,8 +97,12 @@ function EditForm({ content }: { content: Content }) {
 }
 
 function editError(error: Error): string {
-  return errorMessage(error, {
-    409: 'The server does not allow changing it any more (e.g. because it is published).',
-    400: 'Some of the values are not allowed, e.g. a visible date before the module opens.',
-  }, 'Could not save. Try again.')
+  return errorMessage(
+    error,
+    {
+      409: 'The server does not allow changing it any more (e.g. because it is published).',
+      400: 'Some of the values are not allowed, e.g. a visible date before the module opens.',
+    },
+    'Could not save. Try again.',
+  )
 }

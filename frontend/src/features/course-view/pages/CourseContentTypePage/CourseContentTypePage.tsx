@@ -22,20 +22,20 @@ export default function CourseContentTypePage({ type, title, section }: CourseCo
     <>
       <PageHeader title={title} kicker={course.title} />
       {content.isError && <p role="alert">Could not load the content of some modules.</p>}
-      {content.isPending
-        ? <p role="status">Loading…</p>
-        : (
-          <ContentTypeTable
-            courseId={course.id}
-            type={type}
-            title={title}
-            place={course.title}
-            rows={content.items}
-            showModule
-            isTeacher={isTeacher}
-            courseSection={section}
-          />
-        )}
+      {content.isPending ? (
+        <p role="status">Loading…</p>
+      ) : (
+        <ContentTypeTable
+          courseId={course.id}
+          type={type}
+          title={title}
+          place={course.title}
+          rows={content.items}
+          showModule
+          isTeacher={isTeacher}
+          courseSection={section}
+        />
+      )}
     </>
   )
 }

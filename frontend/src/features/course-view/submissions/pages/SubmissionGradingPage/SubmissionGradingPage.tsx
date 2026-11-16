@@ -45,9 +45,7 @@ export default function SubmissionGradingPage() {
     { label: item?.title ?? '…', to: paths.courseSectionContent(course.id, 'submissions', contentId) },
     { label: studentName },
   ]
-  const deadline = isSubmittable(details.data)
-    ? details.data.deadline
-    : undefined
+  const deadline = isSubmittable(details.data) ? details.data.deadline : undefined
   // The newest submission in the history is the one that can be graded.
   const newest = history.data?.[0]
   const isLatest = newest ? String(newest.id) === submissionId : undefined
@@ -75,7 +73,9 @@ export default function SubmissionGradingPage() {
             <dd>
               <strong>{people.groupLabel(data.groupId)}</strong>
               <ul className="submittable-members">
-                {data.members.map(member => <li key={member.userId}>{people.nameOf(member.userId)}</li>)}
+                {data.members.map(member => (
+                  <li key={member.userId}>{people.nameOf(member.userId)}</li>
+                ))}
               </ul>
             </dd>
           </>
@@ -93,7 +93,12 @@ export default function SubmissionGradingPage() {
         <dt>Score</dt>
         <dd>
           {grade.data ? <strong>{formatScore(grade.data.score)}</strong> : 'Not graded yet'}
-          {grade.data && <> <PassedBadge passed={grade.data.passed} /></>}
+          {grade.data && (
+            <>
+              {' '}
+              <PassedBadge passed={grade.data.passed} />
+            </>
+          )}
           {grade.data && (
             <span className="text-meta">
               <br />
@@ -121,34 +126,43 @@ export default function SubmissionGradingPage() {
                 <SubmissionAnswer submission={data} />
               </Card>
 
-              {grade.isPending || isLatest === undefined
-                ? <p role="status">Loading the grade…</p>
-                : grade.error
-                  ? <p role="alert">Could not load the grade.</p>
-                  : (
-                    <GradeCard
-                      key={data.id}
-                      submission={data}
-                      contentId={contentId}
-                      courseId={course.id}
-                      grade={grade.data ?? null}
-                      isLatest={isLatest}
-                      newestId={newest?.id}
-                    />
-                  )}
+              {grade.isPending || isLatest === undefined ? (
+                <p role="status">Loading the grade…</p>
+              ) : grade.error ? (
+                <p role="alert">Could not load the grade.</p>
+              ) : (
+                <GradeCard
+                  key={data.id}
+                  submission={data}
+                  contentId={contentId}
+                  courseId={course.id}
+                  grade={grade.data ?? null}
+                  isLatest={isLatest}
+                  newestId={newest?.id}
+                />
+              )}
 
               {history.data && history.data.length > 1 && (
-                <SubmissionHistory courseId={course.id} contentId={contentId} history={history.data} currentId={submissionId} />
+                <SubmissionHistory
+                  courseId={course.id}
+                  contentId={contentId}
+                  history={history.data}
+                  currentId={submissionId}
+                />
               )}
 
               <nav className="grading-nav" aria-label="Other submissions">
-                {index > 0
-                  ? <Link to={paths.courseSubmission(course.id, contentId, list[index - 1].id)}>‹ Previous</Link>
-                  : <span />}
+                {index > 0 ? (
+                  <Link to={paths.courseSubmission(course.id, contentId, list[index - 1].id)}>‹ Previous</Link>
+                ) : (
+                  <span />
+                )}
                 <Link to={paths.courseSectionContent(course.id, 'submissions', contentId)}>All submissions</Link>
-                {index >= 0 && index < list.length - 1
-                  ? <Link to={paths.courseSubmission(course.id, contentId, list[index + 1].id)}>Next ›</Link>
-                  : <span />}
+                {index >= 0 && index < list.length - 1 ? (
+                  <Link to={paths.courseSubmission(course.id, contentId, list[index + 1].id)}>Next ›</Link>
+                ) : (
+                  <span />
+                )}
               </nav>
             </DetailLayout>
           </>

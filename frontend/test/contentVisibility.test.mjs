@@ -1,6 +1,11 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { checkContentVisibleFrom, checkModuleStartAgainstContent, effectiveVisibleFrom, isNotYetVisible } from '../src/domain/content/visibility.ts'
+import {
+  checkContentVisibleFrom,
+  checkModuleStartAgainstContent,
+  effectiveVisibleFrom,
+  isNotYetVisible,
+} from '../src/domain/content/visibility.ts'
 
 const module = { availableFrom: '2026-12-01T08:00:00Z' }
 

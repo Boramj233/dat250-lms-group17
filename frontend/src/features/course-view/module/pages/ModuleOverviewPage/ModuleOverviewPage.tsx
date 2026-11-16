@@ -25,7 +25,9 @@ export default function ModuleOverviewPage() {
             header: 'Title',
             cell: item => (
               <>
-                <TrailLink to={paths.courseContent(course.id, module.id, contentSection(item.type), item.id)}>{item.title}</TrailLink>
+                <TrailLink to={paths.courseContent(course.id, module.id, contentSection(item.type), item.id)}>
+                  {item.title}
+                </TrailLink>
                 {item.active === false && <span className="data-table-tag">Hidden from students</span>}
                 <VisibleFromTag item={item} module={module} className="data-table-tag" />
               </>

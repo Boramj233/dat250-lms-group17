@@ -31,8 +31,12 @@ export default function CoursePeoplePage() {
             <DataTable<CourseEnrollment>
               caption={`Members of ${course.title}`}
               // Teachers first, then by last name and first name.
-              rows={[...all].sort((a, b) => ROLE_ORDER[a.role] - ROLE_ORDER[b.role]
-                || a.lastName.localeCompare(b.lastName) || a.firstName.localeCompare(b.firstName))}
+              rows={[...all].sort(
+                (a, b) =>
+                  ROLE_ORDER[a.role] - ROLE_ORDER[b.role] ||
+                  a.lastName.localeCompare(b.lastName) ||
+                  a.firstName.localeCompare(b.firstName),
+              )}
               rowKey={member => String(member.userId)}
               empty="This course has no members yet."
               columns={[
@@ -48,7 +52,9 @@ export default function CoursePeoplePage() {
                 },
               ]}
             />
-            <p className="course-people-count">{all.length} {all.length === 1 ? 'member' : 'members'}</p>
+            <p className="course-people-count">
+              {all.length} {all.length === 1 ? 'member' : 'members'}
+            </p>
           </>
         )}
       </QueryState>

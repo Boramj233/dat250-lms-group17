@@ -20,7 +20,7 @@ type RequireAccessProps = {
  *
  * Whole pages (route guard, also stops users who type the address):
  *   <Route element={<RequireAccess level="COURSE_MANAGER" fallback={<NotFoundPage />} />}>
- *     <Route path="/courses/new" element={<NewCoursePage />} />
+ *     <Route path={paths.newCourse} element={<NewCoursePage />} />
  *   </Route>
  *
  * This only decides what the UI shows; the backend checks every API call itself.

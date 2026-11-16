@@ -47,7 +47,10 @@ export default function DeadlineList({ deadlines }: DeadlineListProps) {
                   `submitted` (see data/deadlines/types.ts). */}
               <p className="deadline-title">
                 {/* Stretched over the row (CSS), so the whole deadline is one link. */}
-                <TrailLink className="deadline-link" to={paths.courseContent(item.courseId, item.moduleId, contentSection(item.type), item.contentId)}>
+                <TrailLink
+                  className="deadline-link"
+                  to={paths.courseContent(item.courseId, item.moduleId, contentSection(item.type), item.contentId)}
+                >
                   {item.title}
                 </TrailLink>
               </p>

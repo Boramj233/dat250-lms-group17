@@ -27,7 +27,8 @@ export function useQueriesById<TItem, TData>(
     combine: results => ({
       byId: new Map<string, TData>(
         results.flatMap((result, index) =>
-          result.data !== undefined ? [[key(items[index]), result.data] as const] : [])
+          result.data !== undefined ? [[key(items[index]), result.data] as const] : [],
+        ),
       ),
       isPending: results.some(result => result.isPending),
       isError: results.some(result => result.isError),

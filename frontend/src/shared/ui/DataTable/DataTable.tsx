@@ -24,21 +24,29 @@ export default function DataTable<T>({ caption, columns, rows, rowKey, empty }: 
         <caption className="visually-hidden">{caption}</caption>
         <thead>
           <tr>
-            {columns.map(column => <th key={column.header} scope="col">{column.header}</th>)}
+            {columns.map(column => (
+              <th key={column.header} scope="col">
+                {column.header}
+              </th>
+            ))}
           </tr>
         </thead>
         <tbody>
-          {rows.length === 0
-            ? (
-              <tr>
-                <td className="data-table-empty" colSpan={columns.length}>{empty}</td>
-              </tr>
-            )
-            : rows.map(row => (
+          {rows.length === 0 ? (
+            <tr>
+              <td className="data-table-empty" colSpan={columns.length}>
+                {empty}
+              </td>
+            </tr>
+          ) : (
+            rows.map(row => (
               <tr key={rowKey(row)}>
-                {columns.map(column => <td key={column.header}>{column.cell(row)}</td>)}
+                {columns.map(column => (
+                  <td key={column.header}>{column.cell(row)}</td>
+                ))}
               </tr>
-            ))}
+            ))
+          )}
         </tbody>
       </table>
     </div>

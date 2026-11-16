@@ -13,13 +13,13 @@ one endpoint per type, so `getContent(type, contentId)` takes the type from the
 summary and adds it to the result. `StaticPageContent.body` is plain text: render it
 as text in React; do not insert it as raw HTML.
 
-| Method | Endpoint | Request body | Response |
-| --- | --- | --- | --- |
-| GET | `/api/courses/{courseId}/modules/{moduleId}/contents` | — | `ContentSummary[]` |
-| GET | `/api/contents/{contentId}` | — | `StaticPageContent` (without `type`) |
-| GET | `/api/quizzes/{quizId}` | — | `QuizContent` (without `type`) |
-| GET | `/api/assignments/{assignmentId}` | — | `AssignmentContent` (without `type`) |
-| GET | `/api/coding-exercises/{exerciseId}` | — | `CodingExerciseContent` (without `type`) |
+| Method | Endpoint                                              | Request body | Response                                 |
+| ------ | ----------------------------------------------------- | ------------ | ---------------------------------------- |
+| GET    | `/api/courses/{courseId}/modules/{moduleId}/contents` | —            | `ContentSummary[]`                       |
+| GET    | `/api/contents/{contentId}`                           | —            | `StaticPageContent` (without `type`)     |
+| GET    | `/api/quizzes/{quizId}`                               | —            | `QuizContent` (without `type`)           |
+| GET    | `/api/assignments/{assignmentId}`                     | —            | `AssignmentContent` (without `type`)     |
+| GET    | `/api/coding-exercises/{exerciseId}`                  | —            | `CodingExerciseContent` (without `type`) |
 
 ## Content required to complete a module (proposed)
 
@@ -140,7 +140,7 @@ backend checks it when it grades the attempt.
   `QuizDetailResponse`. Null: no pass requirement. Otherwise at least 1 and at most the
   number of questions (400 otherwise).
 - `passed` (Boolean, nullable) on `QuizAttemptResponse`: `correctCount >=
-  requiredCorrectAnswers`, null when the quiz has no requirement. The quiz counts as
+requiredCorrectAnswers`, null when the quiz has no requirement. The quiz counts as
   passed once any attempt passed.
 - A quiz with a requirement is only completed (e.g. for `requiredForCompletion` and
   module prerequisites) once it is passed, not after any attempt. The frontend shows it
@@ -186,12 +186,12 @@ backend should add it to the entity, `CreateAssignmentRequest` and
 
 Proposed (not in the backend yet):
 
-| Method | Endpoint | Request body | Response |
-| --- | --- | --- | --- |
-| PATCH | `/api/content/{contentId}` | Any of the item's fields (see "Editing until published") | `Content` |
-| PUT | `/api/quizzes/{quizId}/questions` | `CreateQuizQuestionRequest[]`: all of an unpublished quiz's questions | the questions |
-| DELETE | `/api/content/{contentId}` | — | `204 No Content` |
-| PATCH | `/api/content/{contentId}/move` | `{ moduleId, position }` | `Content` |
+| Method | Endpoint                          | Request body                                                          | Response         |
+| ------ | --------------------------------- | --------------------------------------------------------------------- | ---------------- |
+| PATCH  | `/api/content/{contentId}`        | Any of the item's fields (see "Editing until published")              | `Content`        |
+| PUT    | `/api/quizzes/{quizId}/questions` | `CreateQuizQuestionRequest[]`: all of an unpublished quiz's questions | the questions    |
+| DELETE | `/api/content/{contentId}`        | —                                                                     | `204 No Content` |
+| PATCH  | `/api/content/{contentId}/move`   | `{ moduleId, position }`                                              | `Content`        |
 
 Content is created with the backend's endpoint for its type
 (`POST /api/courses/{courseId}/modules/{moduleId}/contents/{pages|assignments|coding-exercises|quizzes}`)
@@ -203,20 +203,19 @@ The backend returns module content sorted by position and maintains ordering aft
 creation, deletion, position changes, and moves. Moves are within one course and
 may reorder content in the same module. Moving content preserves its ID.
 
-
 ```tsx
-const items = useModuleContent(courseId, moduleId);
-const content = useContent(summary.type, contentId);
-const all = useCourseContent(courseId, moduleIds); // several modules at once
-const createContent = useCreateContent();
-const updateContent = useUpdateContent();
-const moveContent = useMoveContent();
-const deleteContent = useDeleteContent();
+const items = useModuleContent(courseId, moduleId)
+const content = useContent(summary.type, contentId)
+const all = useCourseContent(courseId, moduleIds) // several modules at once
+const createContent = useCreateContent()
+const updateContent = useUpdateContent()
+const moveContent = useMoveContent()
+const deleteContent = useDeleteContent()
 
-createContent.mutate({ moduleId, type: "STATIC_PAGE", title: "Welcome", position: 0, body: "Hello" });
-updateContent.mutate({ contentId, moduleId, changes: { body: "Updated text" } });
-moveContent.mutate({ contentId, sourceModuleId: moduleId, targetModuleId, position: 0 });
-deleteContent.mutate({ contentId, moduleId });
+createContent.mutate({ moduleId, type: 'STATIC_PAGE', title: 'Welcome', position: 0, body: 'Hello' })
+updateContent.mutate({ contentId, moduleId, changes: { body: 'Updated text' } })
+moveContent.mutate({ contentId, sourceModuleId: moduleId, targetModuleId, position: 0 })
+deleteContent.mutate({ contentId, moduleId })
 ```
 
 Mutation inputs include parent IDs used for cache invalidation even when those

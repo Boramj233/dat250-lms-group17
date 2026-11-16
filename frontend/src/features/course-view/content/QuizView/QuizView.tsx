@@ -19,9 +19,9 @@ type QuizViewProps = {
 type Mode =
   | { kind: 'info' }
   | { kind: 'taking' }
-  | { kind: 'result', score: QuizAttemptScore }
+  | { kind: 'result'; score: QuizAttemptScore }
   /** Looking at an earlier attempt's answers. */
-  | { kind: 'review', attemptId: QuizAttemptScore['id'] }
+  | { kind: 'review'; attemptId: QuizAttemptScore['id'] }
 
 /**
  * A quiz: its explanation with a Start button, and a panel with the deadline, attempts
@@ -39,16 +39,22 @@ export default function QuizView({ content, isTeacher }: QuizViewProps) {
   const deadline = content.deadline ? new Date(content.deadline) : null
   const used = attempts.data?.length ?? 0
   const best = attempts.data?.reduce<QuizAttemptScore | undefined>(
-    (top, attempt) => (!top || attempt.correctCount > top.correctCount ? attempt : top), undefined)
+    (top, attempt) => (!top || attempt.correctCount > top.correctCount ? attempt : top),
+    undefined,
+  )
   const required = content.requiredCorrectAnswers ?? null
   const passed = attempts.data ? quizPassed(attempts.data, required) : null
   const attemptsLeft = Math.max(0, content.maxAttempts - used)
 
   // Why the quiz cannot be started, if it cannot.
-  const blocked = deadline && deadline < now ? 'The deadline has passed.'
-    : attempts.data && used >= content.maxAttempts ? 'You have used all your attempts.'
-    : questions.length === 0 ? 'This quiz has no questions yet.'
-    : null
+  const blocked =
+    deadline && deadline < now
+      ? 'The deadline has passed.'
+      : attempts.data && used >= content.maxAttempts
+        ? 'You have used all your attempts.'
+        : questions.length === 0
+          ? 'This quiz has no questions yet.'
+          : null
 
   const panel = (
     <dl className="submittable-facts">
@@ -72,23 +78,41 @@ export default function QuizView({ content, isTeacher }: QuizViewProps) {
       {!isTeacher && (
         <>
           <dt>Best score</dt>
-          <dd>{best ? <strong>{best.correctCount} / {best.totalQuestions}</strong> : '–'}</dd>
+          <dd>
+            {best ? (
+              <strong>
+                {best.correctCount} / {best.totalQuestions}
+              </strong>
+            ) : (
+              '–'
+            )}
+          </dd>
           {required !== null && (
             <>
               <dt>Result</dt>
               <dd>
-                {attempts.isPending ? '…'
-                  : passed === true ? <PassedBadge passed />
-                  : passed === false
-                    ? attemptsLeft > 0
-                      ? <>
-                          <strong>Not passed yet</strong>
-                          <span className="text-meta">
-                            {' '}· {attemptsLeft} {attemptsLeft === 1 ? 'attempt' : 'attempts'} left
-                          </span>
-                        </>
-                      : <><PassedBadge passed={false} /><span className="text-meta"> · no attempts left</span></>
-                    : 'Not taken yet'}
+                {attempts.isPending ? (
+                  '…'
+                ) : passed === true ? (
+                  <PassedBadge passed />
+                ) : passed === false ? (
+                  attemptsLeft > 0 ? (
+                    <>
+                      <strong>Not passed yet</strong>
+                      <span className="text-meta">
+                        {' '}
+                        · {attemptsLeft} {attemptsLeft === 1 ? 'attempt' : 'attempts'} left
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <PassedBadge passed={false} />
+                      <span className="text-meta"> · no attempts left</span>
+                    </>
+                  )
+                ) : (
+                  'Not taken yet'
+                )}
               </dd>
             </>
           )}
@@ -103,27 +127,33 @@ export default function QuizView({ content, isTeacher }: QuizViewProps) {
         <div className="submittable-text">{content.description || 'No description.'}</div>
         {required !== null && (
           <p className="quiz-pass-rule">
-            To pass, you need at least <strong>{passRequirementText(required, questions.length)}</strong> answers
-            in one attempt. It is checked automatically when you submit.
+            To pass, you need at least <strong>{passRequirementText(required, questions.length)}</strong> answers in one
+            attempt. It is checked automatically when you submit.
           </p>
         )}
         {mode.kind === 'info' && (
           <div className="submittable-actions">
-            {isTeacher
-              ? (
-                <button type="button" className="button-secondary" onClick={() => setMode({ kind: 'taking' })}
-                  disabled={questions.length === 0}>
-                  Preview quiz
-                </button>
-              )
-              : blocked
-                ? <p>{blocked}</p>
-                : (
-                  <button type="button" className="button-primary" onClick={() => setMode({ kind: 'taking' })}
-                    disabled={attempts.isPending}>
-                    {used > 0 ? 'Start new attempt' : 'Start quiz'}
-                  </button>
-                )}
+            {isTeacher ? (
+              <button
+                type="button"
+                className="button-secondary"
+                onClick={() => setMode({ kind: 'taking' })}
+                disabled={questions.length === 0}
+              >
+                Preview quiz
+              </button>
+            ) : blocked ? (
+              <p>{blocked}</p>
+            ) : (
+              <button
+                type="button"
+                className="button-primary"
+                onClick={() => setMode({ kind: 'taking' })}
+                disabled={attempts.isPending}
+              >
+                {used > 0 ? 'Start new attempt' : 'Start quiz'}
+              </button>
+            )}
           </div>
         )}
       </Card>
@@ -160,8 +190,8 @@ export default function QuizView({ content, isTeacher }: QuizViewProps) {
       {mode.kind === 'result' && (
         <Card id="quiz-result-title" title="Your result" className="quiz-result" role="status">
           <p className="quiz-result-score">
-            {mode.score.correctCount} of {mode.score.totalQuestions} correct
-            {' '}<PassedBadge passed={attemptPassed(mode.score, required)} />
+            {mode.score.correctCount} of {mode.score.totalQuestions} correct{' '}
+            <PassedBadge passed={attemptPassed(mode.score, required)} />
           </p>
           {attemptPassed(mode.score, required) === false && (
             <p className="text-meta">
@@ -172,8 +202,11 @@ export default function QuizView({ content, isTeacher }: QuizViewProps) {
             </p>
           )}
           <div className="submittable-actions">
-            <button type="button" className="button-primary"
-              onClick={() => setMode({ kind: 'review', attemptId: mode.score.id })}>
+            <button
+              type="button"
+              className="button-primary"
+              onClick={() => setMode({ kind: 'review', attemptId: mode.score.id })}
+            >
               See your answers
             </button>
             <button type="button" className="button-secondary" onClick={() => setMode({ kind: 'info' })}>

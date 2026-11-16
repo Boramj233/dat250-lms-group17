@@ -13,8 +13,9 @@ export function usePeopleNames(courseId: CourseId) {
   const groups = useCourseGroups(courseId)
 
   function nameOf(userId: UserId): string {
-    const member = members.data?.find(m => String(m.userId) === String(userId))
-      ?? groups.data?.flatMap(g => g.members ?? []).find(m => String(m.userId) === String(userId))
+    const member =
+      members.data?.find(m => String(m.userId) === String(userId)) ??
+      groups.data?.flatMap(g => g.members ?? []).find(m => String(m.userId) === String(userId))
     return member ? `${member.firstName} ${member.lastName}` : `User #${userId}`
   }
 

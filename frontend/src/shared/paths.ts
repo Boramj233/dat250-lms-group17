@@ -4,8 +4,7 @@ const id = (value: CourseId | ModuleId | ContentId) => encodeURIComponent(String
 
 /** The sections of a course's menu after Home, as URL parts: /courses/1/modules. */
 export type CourseSection =
-  | 'modules' | 'assignments' | 'people' | 'groups' | 'quizzes' | 'grades' | 'submissions' | 'files'
-  | 'code-exercises'
+  'modules' | 'assignments' | 'people' | 'groups' | 'quizzes' | 'grades' | 'submissions' | 'files' | 'code-exercises'
 
 /** One per content type, in URLs: /courses/1/modules/2/quizzes/13. */
 export type ContentSection = 'pages' | 'assignments' | 'quizzes' | 'code-exercises'
@@ -33,8 +32,7 @@ export const paths = {
   courseSubmission: (courseId: CourseId, contentId: ContentId, submissionId: string | number) =>
     `/courses/${id(courseId)}/submissions/${id(contentId)}/${encodeURIComponent(String(submissionId))}`,
   // One module in a course, with the module menu: its overview, its sections and its content.
-  courseModule: (courseId: CourseId, moduleId: ModuleId) =>
-    `/courses/${id(courseId)}/modules/${id(moduleId)}`,
+  courseModule: (courseId: CourseId, moduleId: ModuleId) => `/courses/${id(courseId)}/modules/${id(moduleId)}`,
   courseModuleSection: (courseId: CourseId, moduleId: ModuleId, section: ModuleSection) =>
     `/courses/${id(courseId)}/modules/${id(moduleId)}/${section}`,
   /** A content item in its module, with the module menu: /courses/1/modules/2/assignments/101. */
@@ -50,10 +48,10 @@ export const paths = {
   manageCourse: (courseId: CourseId) => `/manage-courses/${id(courseId)}`,
   manageCourseMembers: (courseId: CourseId) => `/manage-courses/${id(courseId)}/members`,
   manageCourseDetails: (courseId: CourseId) => `/manage-courses/${id(courseId)}/details`,
-  manageModule: (courseId: CourseId, moduleId: ModuleId) =>
-    `/manage-courses/${id(courseId)}/modules/${id(moduleId)}`,
-  /** `typeSlug` from CONTENT_TYPES in ui/manage/contentTypes.ts, e.g. "quiz". */
+  manageModule: (courseId: CourseId, moduleId: ModuleId) => `/manage-courses/${id(courseId)}/modules/${id(moduleId)}`,
+  /** `typeSlug` from CONTENT_TYPES in domain/content/contentTypes.ts, e.g. "quiz". */
   manageNewContent: (courseId: CourseId, moduleId: ModuleId, typeSlug: string) =>
     `/manage-courses/${id(courseId)}/modules/${id(moduleId)}/new/${typeSlug}`,
   manageContent: (courseId: CourseId, moduleId: ModuleId, contentId: ContentId) =>
-    `/manage-courses/${id(courseId)}/modules/${id(moduleId)}/content/${id(contentId)}`,} as const
+    `/manage-courses/${id(courseId)}/modules/${id(moduleId)}/content/${id(contentId)}`,
+} as const

@@ -4,13 +4,13 @@ All of these exist in the backend; the frontend matches their DTOs in `types.ts`
 
 ## Students
 
-| Method | Endpoint | Request body | Response |
-| --- | --- | --- | --- |
-| POST | `/api/contents/{contentId}/submissions` | `{ type: "TEXT" \| "GIT_URL", payload, groupId? }` | `SubmissionResponse` (201) |
-| POST | `/api/contents/{contentId}/submissions/file` | multipart: `file` (one PDF, at most 10 MB), `groupId?` | `SubmissionResponse` (201) |
-| GET | `/api/contents/{contentId}/submissions/me` | — | `SubmissionResponse[]` (own and the user's groups') |
-| GET | `/api/submissions/{submissionId}/file` | — | the file (own submission) |
-| GET | `/api/submissions/{submissionId}/grade` | — | `ReleasedGradeResponse`; 404 until released |
+| Method | Endpoint                                     | Request body                                           | Response                                            |
+| ------ | -------------------------------------------- | ------------------------------------------------------ | --------------------------------------------------- |
+| POST   | `/api/contents/{contentId}/submissions`      | `{ type: "TEXT" \| "GIT_URL", payload, groupId? }`     | `SubmissionResponse` (201)                          |
+| POST   | `/api/contents/{contentId}/submissions/file` | multipart: `file` (one PDF, at most 10 MB), `groupId?` | `SubmissionResponse` (201)                          |
+| GET    | `/api/contents/{contentId}/submissions/me`   | —                                                      | `SubmissionResponse[]` (own and the user's groups') |
+| GET    | `/api/submissions/{submissionId}/file`       | —                                                      | the file (own submission)                           |
+| GET    | `/api/submissions/{submissionId}/grade`      | —                                                      | `ReleasedGradeResponse`; 404 until released         |
 
 `SubmissionResponse` (`MySubmission`) is
 `{ id, contentId, type: "TEXT" | "GIT_URL" | "FILE", payload, submittedAt, late, file, groupId, submittedByUserId, members }`.
@@ -23,15 +23,15 @@ anything but a PDF, 413 for a file over the limit, 403 for a group the user is n
 
 ## Teachers of the course
 
-| Method | Endpoint | Request body | Response |
-| --- | --- | --- | --- |
-| GET | `/api/contents/{contentId}/submissions/review?page&size` | — | `Page<SubmissionReviewResponse>`: the latest per student or group |
-| GET | `/api/submissions/{submissionId}/review` | — | `SubmissionReviewResponse` |
-| GET | `/api/submissions/{submissionId}/review/history` | — | `SubmissionReviewResponse[]`: every attempt by the same student or group |
-| GET | `/api/submissions/{submissionId}/review/file` | — | the file |
-| GET | `/api/submissions/{submissionId}/grade/review` | — | `GradeReviewResponse`; 404 when not graded |
-| PUT | `/api/submissions/{submissionId}/grade` | `{ score, feedback, version }` | `GradeReviewResponse` |
-| POST | `/api/submissions/{submissionId}/grade/release` | `{ version }` | `GradeReviewResponse` |
+| Method | Endpoint                                                 | Request body                   | Response                                                                 |
+| ------ | -------------------------------------------------------- | ------------------------------ | ------------------------------------------------------------------------ |
+| GET    | `/api/contents/{contentId}/submissions/review?page&size` | —                              | `Page<SubmissionReviewResponse>`: the latest per student or group        |
+| GET    | `/api/submissions/{submissionId}/review`                 | —                              | `SubmissionReviewResponse`                                               |
+| GET    | `/api/submissions/{submissionId}/review/history`         | —                              | `SubmissionReviewResponse[]`: every attempt by the same student or group |
+| GET    | `/api/submissions/{submissionId}/review/file`            | —                              | the file                                                                 |
+| GET    | `/api/submissions/{submissionId}/grade/review`           | —                              | `GradeReviewResponse`; 404 when not graded                               |
+| PUT    | `/api/submissions/{submissionId}/grade`                  | `{ score, feedback, version }` | `GradeReviewResponse`                                                    |
+| POST   | `/api/submissions/{submissionId}/grade/release`          | `{ version }`                  | `GradeReviewResponse`                                                    |
 
 `SubmissionReviewResponse` (`ReviewSubmission`) is a `SubmissionResponse` plus
 `studentUserId` and `enrollmentId`; names come from the course's members and groups

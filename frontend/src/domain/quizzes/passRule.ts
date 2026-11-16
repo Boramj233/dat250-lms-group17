@@ -1,4 +1,4 @@
-import type { QuizAttemptScore } from "./types";
+import type { QuizAttemptScore } from './types'
 
 /**
  * Whether an attempt passed: the backend's `passed` when it sends it, otherwise
@@ -9,9 +9,9 @@ export function attemptPassed(
   attempt: QuizAttemptScore,
   requiredCorrectAnswers: number | null | undefined,
 ): boolean | null {
-  if (attempt.passed !== undefined) return attempt.passed;
-  if (requiredCorrectAnswers === null || requiredCorrectAnswers === undefined) return null;
-  return attempt.correctCount >= requiredCorrectAnswers;
+  if (attempt.passed !== undefined) return attempt.passed
+  if (requiredCorrectAnswers === null || requiredCorrectAnswers === undefined) return null
+  return attempt.correctCount >= requiredCorrectAnswers
 }
 
 /**
@@ -22,12 +22,12 @@ export function quizPassed(
   attempts: QuizAttemptScore[],
   requiredCorrectAnswers: number | null | undefined,
 ): boolean | null {
-  const results = attempts.map(attempt => attemptPassed(attempt, requiredCorrectAnswers));
-  if (results.includes(true)) return true;
-  return results.includes(false) ? false : null;
+  const results = attempts.map(attempt => attemptPassed(attempt, requiredCorrectAnswers))
+  if (results.includes(true)) return true
+  return results.includes(false) ? false : null
 }
 
 /** "3 of 5 correct". */
 export function passRequirementText(requiredCorrectAnswers: number, totalQuestions: number): string {
-  return `${requiredCorrectAnswers} of ${totalQuestions} correct`;
+  return `${requiredCorrectAnswers} of ${totalQuestions} correct`
 }

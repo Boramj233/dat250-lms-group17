@@ -16,9 +16,13 @@ export function Breadcrumbs({ items }: { items: BreadcrumbItem[] }) {
           const isCurrent = index === items.length - 1
           return (
             <li key={`${item.to ?? 'current'}-${index}`} aria-current={isCurrent ? 'page' : undefined}>
-              {isCurrent || !item.to
-                ? item.label
-                : <Link to={item.to} state={item.state}>{item.label}</Link>}
+              {isCurrent || !item.to ? (
+                item.label
+              ) : (
+                <Link to={item.to} state={item.state}>
+                  {item.label}
+                </Link>
+              )}
             </li>
           )
         })}
@@ -26,7 +30,6 @@ export function Breadcrumbs({ items }: { items: BreadcrumbItem[] }) {
     </nav>
   )
 }
-
 
 type TrailPageProps = {
   /** This page's name in breadcrumbs, e.g. 'Dashboard' or the course title. */

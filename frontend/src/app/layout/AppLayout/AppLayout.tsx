@@ -11,9 +11,8 @@ export default function AppLayout() {
     locationKey: string
     open: boolean
   } | null>(null)
-  const sidebarOpen = sidebarOverride?.locationKey === location.key
-    ? sidebarOverride.open
-    : location.pathname === paths.home
+  const sidebarOpen =
+    sidebarOverride?.locationKey === location.key ? sidebarOverride.open : location.pathname === paths.home
 
   function setSidebarOpen(open: boolean) {
     setSidebarOverride({ locationKey: location.key, open })
@@ -21,10 +20,7 @@ export default function AppLayout() {
 
   return (
     <div className="app-layout">
-      <Topbar
-        sidebarOpen={sidebarOpen}
-        onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
-      />
+      <Topbar sidebarOpen={sidebarOpen} onToggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
 
       <div className="app-body">
         <Sidebar isOpen={sidebarOpen} onNavigate={() => setSidebarOpen(false)} />

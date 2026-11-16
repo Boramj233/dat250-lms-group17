@@ -5,5 +5,9 @@ import '../../styles/forms.css'
  * itself says it is required (required / aria-required), which screen readers announce.
  */
 export default function RequiredMark() {
-  return <span className="form-required" aria-hidden="true">*</span>
+  return (
+    <span className="form-required" aria-hidden="true">
+      *
+    </span>
+  )
 }

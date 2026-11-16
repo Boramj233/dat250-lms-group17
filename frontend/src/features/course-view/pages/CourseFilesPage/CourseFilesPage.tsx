@@ -5,7 +5,7 @@ import { useCourseView } from '../../courseContext'
 import { ModuleViewContext } from '../../module/moduleContext'
 
 /** A file in the course (none yet: the backend has no files). */
-type CourseFile = { id: string, name: string, module: string, added: string }
+type CourseFile = { id: string; name: string; module: string; added: string }
 
 /**
  * The files of the course, or of one module when shown inside ModuleLayout. The backend

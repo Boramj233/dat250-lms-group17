@@ -40,8 +40,17 @@ export default function CoursesPanel({ onClose }: CoursesPanelProps) {
       <header className="courses-panel-header">
         <h2 id="courses-panel-title">Courses</h2>
         <button type="button" className="courses-panel-close" aria-label="Close courses" onClick={onClose}>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-            strokeWidth="2" strokeLinecap="round" aria-hidden="true" focusable="false">
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            aria-hidden="true"
+            focusable="false"
+          >
             <path d="M6 6l12 12M6 18L18 6" />
           </svg>
         </button>
@@ -49,8 +58,18 @@ export default function CoursesPanel({ onClose }: CoursesPanelProps) {
 
       <Link className="courses-panel-all" to={paths.courses} onClick={onClose}>
         All courses
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-          strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
+        <svg
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+          focusable="false"
+        >
           <path d="M9 6l6 6-6 6" />
         </svg>
       </Link>
@@ -58,8 +77,18 @@ export default function CoursesPanel({ onClose }: CoursesPanelProps) {
       <RequireAccess level="COURSE_MANAGER">
         <Link className="courses-panel-all" to={paths.manageCourses} onClick={onClose}>
           Manage courses
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-            strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+            focusable="false"
+          >
             <path d="M9 6l6 6-6 6" />
           </svg>
         </Link>
@@ -69,8 +98,9 @@ export default function CoursesPanel({ onClose }: CoursesPanelProps) {
       {courses.isPending && <p role="status">Loading courses…</p>}
       {courses.error && <p role="alert">Could not load your courses.</p>}
       {courses.data && termCourses.length === 0 && <p>No courses this term.</p>}
-      {termCourses.length > 0 && (isTeacher
-        ? ROLE_ORDER.map(role => {
+      {termCourses.length > 0 &&
+        (isTeacher ? (
+          ROLE_ORDER.map(role => {
             const inRole = termCourses.filter(course => course.role === role)
             if (inRole.length === 0) return null
             return (
@@ -80,12 +110,16 @@ export default function CoursesPanel({ onClose }: CoursesPanelProps) {
               </div>
             )
           })
-        : <CourseList courses={termCourses} onNavigate={onClose} />
-      )}
+        ) : (
+          <CourseList courses={termCourses} onNavigate={onClose} />
+        ))}
 
       <p className="courses-panel-note">
         If you want to view previous courses, go to{' '}
-        <Link to={paths.courses} onClick={onClose}>All courses</Link>.
+        <Link to={paths.courses} onClick={onClose}>
+          All courses
+        </Link>
+        .
       </p>
     </section>
   )

@@ -18,8 +18,7 @@ type CourseItemsOptions = {
 export function useCourseItems({ filter, enabled = true }: CourseItemsOptions = {}) {
   const { course, modules, isTeacher } = useCourseView()
   const content = useCourseContent(course.id, enabled ? modules.map(module => module.id) : [])
-  const items = courseItems(content.byModule, modules,
-    item => isVisibleTo(item, isTeacher) && (filter?.(item) ?? true))
+  const items = courseItems(content.byModule, modules, item => isVisibleTo(item, isTeacher) && (filter?.(item) ?? true))
   return { items, isPending: content.isPending, isError: content.isError }
 }
 

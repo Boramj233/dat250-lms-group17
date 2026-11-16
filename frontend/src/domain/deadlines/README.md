@@ -6,9 +6,9 @@ endpoint that collects them per user yet. Building the list in the frontend woul
 need one request per course, module and content item, so the backend should
 collect it.
 
-| Method | Endpoint | Request body | Response |
-| --- | --- | --- | --- |
-| GET | `/api/users/{userId}/upcoming-deadlines` | — | `UpcomingDeadline[]` |
+| Method | Endpoint                                 | Request body | Response             |
+| ------ | ---------------------------------------- | ------------ | -------------------- |
+| GET    | `/api/users/{userId}/upcoming-deadlines` | —            | `UpcomingDeadline[]` |
 
 The response contains assignments and coding exercises that:
 
@@ -37,7 +37,7 @@ sorted by `deadline`, earliest first.
 (Java `Instant`); the frontend shows it in the user's time zone.
 
 ```tsx
-const deadlines = useUpcomingDeadlines(userId);
+const deadlines = useUpcomingDeadlines(userId)
 ```
 
 ## TODO

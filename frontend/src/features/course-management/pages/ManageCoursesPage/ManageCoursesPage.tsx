@@ -20,11 +20,15 @@ export default function ManageCoursesPage() {
       <div className="manage-courses">
         <header className="manage-courses-header">
           <h1>Manage courses</h1>
-          <TrailLink className="button-primary" to={paths.newCourse}>Create new course</TrailLink>
+          <TrailLink className="button-primary" to={paths.newCourse}>
+            Create new course
+          </TrailLink>
         </header>
 
         <section aria-labelledby="manage-courses-list">
-          <h2 id="manage-courses-list" className="section-title">Your courses</h2>
+          <h2 id="manage-courses-list" className="section-title">
+            Your courses
+          </h2>
           <QueryState
             query={courses}
             loading="Loading courses…"
@@ -34,17 +38,20 @@ export default function ManageCoursesPage() {
           >
             {all => (
               <ul className="manage-courses-list">
-                {all.filter(course => course.role === 'TEACHER').sort(byNewest).map(course => (
-                  <li key={course.id} className="manage-courses-item">
-                    <div className="manage-courses-name">
-                      <span className="manage-courses-title">{course.title}</span>
-                      <span className="manage-courses-term">{formatTerm(course)}</span>
-                    </div>
-                    <TrailLink className="button-secondary" to={paths.manageCourse(course.id)}>
-                      Manage<span className="visually-hidden"> {course.title}</span>
-                    </TrailLink>
-                  </li>
-                ))}
+                {all
+                  .filter(course => course.role === 'TEACHER')
+                  .sort(byNewest)
+                  .map(course => (
+                    <li key={course.id} className="manage-courses-item">
+                      <div className="manage-courses-name">
+                        <span className="manage-courses-title">{course.title}</span>
+                        <span className="manage-courses-term">{formatTerm(course)}</span>
+                      </div>
+                      <TrailLink className="button-secondary" to={paths.manageCourse(course.id)}>
+                        Manage<span className="visually-hidden"> {course.title}</span>
+                      </TrailLink>
+                    </li>
+                  ))}
               </ul>
             )}
           </QueryState>

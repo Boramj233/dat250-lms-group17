@@ -34,7 +34,6 @@
   color: var(--color-text);
 }
 
-
 .breadcrumbs [aria-current='page'] {
   font-weight: var(--font-weight-bold);
 }

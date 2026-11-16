@@ -19,9 +19,12 @@ export function savedAvailability(module: CourseModule): AvailabilityDraft {
 
 /** How many of the fields differ from what is saved (each date, and the prerequisites). */
 export function availabilityChanges(draft: AvailabilityDraft, saved: AvailabilityDraft): number {
-  const prerequisitesChanged = draft.prerequisites.length !== saved.prerequisites.length
-    || draft.prerequisites.some(id => !saved.prerequisites.includes(id))
-  return Number(draft.availableFrom !== saved.availableFrom)
-    + Number(draft.openToAllFrom !== saved.openToAllFrom)
-    + Number(prerequisitesChanged)
+  const prerequisitesChanged =
+    draft.prerequisites.length !== saved.prerequisites.length ||
+    draft.prerequisites.some(id => !saved.prerequisites.includes(id))
+  return (
+    Number(draft.availableFrom !== saved.availableFrom) +
+    Number(draft.openToAllFrom !== saved.openToAllFrom) +
+    Number(prerequisitesChanged)
+  )
 }

@@ -35,13 +35,13 @@ export default function CourseSectionItemPage({ section, label }: CourseSectionI
   return (
     <>
       <Breadcrumbs items={crumbs} />
-      {found
-        ? (
-          <ContentView summary={found.item} isTeacher={isTeacher} module={found.module} />
-        )
-        : content.isPending
-          ? <p role="status">Loading…</p>
-          : <p role="alert">This content does not exist in {course.title}.</p>}
+      {found ? (
+        <ContentView summary={found.item} isTeacher={isTeacher} module={found.module} />
+      ) : content.isPending ? (
+        <p role="status">Loading…</p>
+      ) : (
+        <p role="alert">This content does not exist in {course.title}.</p>
+      )}
     </>
   )
 }

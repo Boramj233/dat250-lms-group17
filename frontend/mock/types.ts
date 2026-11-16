@@ -14,14 +14,14 @@ export type MockResult = {
   status: number
   body?: unknown
   /** Send this file instead of JSON (a download), like the backend's file endpoints. */
-  download?: { name: string, mediaType: string, content: Uint8Array }
+  download?: { name: string; mediaType: string; content: Uint8Array }
 }
 
 /** A file part of a multipart request. */
-export type MockUpload = { field: string, name: string, mediaType: string, content: Uint8Array }
+export type MockUpload = { field: string; name: string; mediaType: string; content: Uint8Array }
 
 /** The body of a multipart/form-data request (e.g. a PDF submission). */
-export type MockMultipart = { fields: Record<string, string>, files: MockUpload[] }
+export type MockMultipart = { fields: Record<string, string>; files: MockUpload[] }
 
 export type MockRequest = {
   /** The logged-in user (from the Bearer token). */

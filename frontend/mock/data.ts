@@ -51,7 +51,7 @@ export const courses: Course[] = [
   },
 ]
 
-export const enrollments: { userId: number, courseId: number, role: CourseRole }[] = [
+export const enrollments: { userId: number; courseId: number; role: CourseRole }[] = [
   { userId: 1, courseId: 1, role: 'STUDENT' },
   { userId: 1, courseId: 2, role: 'STUDENT' },
   { userId: 1, courseId: 3, role: 'STUDENT' },
@@ -77,7 +77,14 @@ export const modules: CourseModule[] = [
   { id: 2, courseId: 1, title: 'Containers', position: 1, prerequisiteModuleIds: [1] },
   { id: 3, courseId: 1, title: 'Messaging', position: 2, prerequisiteModuleIds: [2] },
   // Cloud deployment opens in a week (start date) and is open to all two weeks later.
-  { id: 4, courseId: 1, title: 'Cloud deployment', position: 3, availableFrom: inDays(7, 8, 0), openToAllFrom: inDays(21, 8, 0) },
+  {
+    id: 4,
+    courseId: 1,
+    title: 'Cloud deployment',
+    position: 3,
+    availableFrom: inDays(7, 8, 0),
+    openToAllFrom: inDays(21, 8, 0),
+  },
   { id: 5, courseId: 2, title: 'Agile and Scrum', position: 0 },
   { id: 6, courseId: 2, title: 'Testing', position: 1 },
   { id: 7, courseId: 3, title: 'Haskell', position: 0 },
@@ -88,7 +95,7 @@ export const modules: CourseModule[] = [
  * What each user has completed: assignments and coding exercises they submitted,
  * quizzes they submitted an attempt for. Add rows here to see the "Completed" lists.
  */
-export const completions: { userId: number, contentId: number, completedAt: string }[] = [
+export const completions: { userId: number; contentId: number; completedAt: string }[] = [
   { userId: 1, contentId: 13, completedAt: inDays(-5, 14, 30) },
   { userId: 1, contentId: 104, completedAt: inDays(-4, 20, 0) },
   { userId: 1, contentId: 22, completedAt: inDays(-1, 10, 15) },
@@ -99,10 +106,11 @@ export const completions: { userId: number, contentId: number, completedAt: stri
 
 /** A tiny but valid PDF, for the sample file submission. */
 const SAMPLE_PDF = new TextEncoder().encode(
-  '%PDF-1.4\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n'
-  + '2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj\n'
-  + '3 0 obj<</Type/Page/Parent 2 0 R/MediaBox[0 0 200 100]>>endobj\n'
-  + 'trailer<</Root 1 0 R>>\n%%EOF\n')
+  '%PDF-1.4\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n' +
+    '2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj\n' +
+    '3 0 obj<</Type/Page/Parent 2 0 R/MediaBox[0 0 200 100]>>endobj\n' +
+    'trailer<</Root 1 0 R>>\n%%EOF\n',
+)
 
 /**
  * Submissions to assignments and coding exercises, like the backend's Submission. A
@@ -117,69 +125,133 @@ export const submissions: {
   type: 'TEXT' | 'GIT_URL' | 'FILE'
   /** Null for FILE. */
   payload: string | null
-  file?: { name: string, mediaType: string, content: Uint8Array }
+  file?: { name: string; mediaType: string; content: Uint8Array }
   submittedAt: string
   late: boolean
   groupId?: number
   /** `passed` is proposed: the teacher's passed / not passed; null when not decided. */
   // `visibleFrom` (proposed): the grade becomes visible to the student at that time by itself.
   grade: {
-    score: number, feedback: string | null, passed: boolean | null, visibleFrom?: string | null,
-    gradedAt: string, releasedAt: string | null, version: number,
+    score: number
+    feedback: string | null
+    passed: boolean | null
+    visibleFrom?: string | null
+    gradedAt: string
+    releasedAt: string | null
+    version: number
   } | null
 }[] = [
   {
-    id: 1, userId: 1, contentId: 104, type: 'TEXT', late: false,
-    payload: 'My answer to the old assignment.', submittedAt: inDays(-4, 20, 0),
+    id: 1,
+    userId: 1,
+    contentId: 104,
+    type: 'TEXT',
+    late: false,
+    payload: 'My answer to the old assignment.',
+    submittedAt: inDays(-4, 20, 0),
     grade: {
       score: 90,
       passed: true,
-      feedback: 'Good work! The explanation of the status codes is clear.\n'
-        + 'Remember to test the error cases too.',
-      gradedAt: inDays(-2, 10, 0), releasedAt: inDays(-1, 9, 30), version: 1,
+      feedback: 'Good work! The explanation of the status codes is clear.\n' + 'Remember to test the error cases too.',
+      gradedAt: inDays(-2, 10, 0),
+      releasedAt: inDays(-1, 9, 30),
+      version: 1,
     },
   },
   {
-    id: 2, userId: 1, contentId: 102, type: 'GIT_URL', late: false,
-    payload: 'https://github.com/example/siri-docker-compose', submittedAt: inDays(-1, 18, 45),
+    id: 2,
+    userId: 1,
+    contentId: 102,
+    type: 'GIT_URL',
+    late: false,
+    payload: 'https://github.com/example/siri-docker-compose',
+    submittedAt: inDays(-1, 18, 45),
     grade: null,
   },
   {
-    id: 3, userId: 1, contentId: 201, type: 'TEXT', late: false,
-    payload: 'Our first sprint went well.', submittedAt: inDays(-2, 15, 0),
-    grade: { score: 80, feedback: null, passed: true, gradedAt: inDays(-1, 14, 0), releasedAt: inDays(0, 8, 0), version: 1 },
+    id: 3,
+    userId: 1,
+    contentId: 201,
+    type: 'TEXT',
+    late: false,
+    payload: 'Our first sprint went well.',
+    submittedAt: inDays(-2, 15, 0),
+    grade: {
+      score: 80,
+      feedback: null,
+      passed: true,
+      gradedAt: inDays(-1, 14, 0),
+      releasedAt: inDays(0, 8, 0),
+      version: 1,
+    },
   },
   {
-    id: 4, userId: 5, contentId: 102, type: 'GIT_URL', late: true,
-    payload: 'https://github.com/example/sam-docker-compose', submittedAt: inDays(1, 13, 0),
+    id: 4,
+    userId: 5,
+    contentId: 102,
+    type: 'GIT_URL',
+    late: true,
+    payload: 'https://github.com/example/sam-docker-compose',
+    submittedAt: inDays(1, 13, 0),
     grade: null,
   },
   {
-    id: 5, userId: 5, contentId: 104, type: 'TEXT', late: false,
-    payload: 'Sam answered the old assignment.', submittedAt: inDays(-3, 22, 10),
-    grade: { score: 40, feedback: 'Please explain the HTTP methods.', passed: false, gradedAt: inDays(-1, 11, 0), releasedAt: null, version: 0 },
+    id: 5,
+    userId: 5,
+    contentId: 104,
+    type: 'TEXT',
+    late: false,
+    payload: 'Sam answered the old assignment.',
+    submittedAt: inDays(-3, 22, 10),
+    grade: {
+      score: 40,
+      feedback: 'Please explain the HTTP methods.',
+      passed: false,
+      gradedAt: inDays(-1, 11, 0),
+      releasedAt: null,
+      version: 0,
+    },
   },
   {
     // Group assignment: Sam handed in for the group, so Siri sees it too.
-    id: 6, userId: 5, contentId: 103, groupId: 1, type: 'TEXT', late: false,
+    id: 6,
+    userId: 5,
+    contentId: 103,
+    groupId: 1,
+    type: 'TEXT',
+    late: false,
     payload: 'We send a PollCreated event to a topic exchange and log it in a consumer.',
     submittedAt: inDays(-1, 16, 20),
     grade: {
-      score: 95, feedback: 'Nice and simple. Add a dead letter queue next time.',
+      score: 95,
+      feedback: 'Nice and simple. Add a dead letter queue next time.',
       passed: true,
-      gradedAt: inDays(0, 8, 30), releasedAt: inDays(0, 9, 0), version: 1,
+      gradedAt: inDays(0, 8, 30),
+      releasedAt: inDays(0, 9, 0),
+      version: 1,
     },
   },
   {
-    id: 7, userId: 5, contentId: 101, type: 'TEXT', late: false,
+    id: 7,
+    userId: 5,
+    contentId: 101,
+    type: 'TEXT',
+    late: false,
     payload: 'My REST API has GET, POST and DELETE for polls. The code is in the repository I shared.',
-    submittedAt: inDays(-2, 12, 0), grade: null,
+    submittedAt: inDays(-2, 12, 0),
+    grade: null,
   },
   {
     // Sam handed in again, as a PDF: only this latest one can be graded.
-    id: 8, userId: 5, contentId: 101, type: 'FILE', late: false, payload: null,
+    id: 8,
+    userId: 5,
+    contentId: 101,
+    type: 'FILE',
+    late: false,
+    payload: null,
     file: { name: 'rest-api-report.pdf', mediaType: 'application/pdf', content: SAMPLE_PDF },
-    submittedAt: inDays(-1, 12, 0), grade: null,
+    submittedAt: inDays(-1, 12, 0),
+    grade: null,
   },
 ]
 
@@ -187,7 +259,7 @@ export const submissions: {
  * Groups in a course, like the backend's GroupDTO; `name` is proposed (see src/domain/groups).
  * A student is in at most one group per course.
  */
-export const groups: { id: number, courseId: number, groupNumber: number, name?: string, memberIds: number[] }[] = [
+export const groups: { id: number; courseId: number; groupNumber: number; name?: string; memberIds: number[] }[] = [
   { id: 1, courseId: 1, groupNumber: 7, name: 'Rabbit Runners', memberIds: [1, 5] },
   { id: 2, courseId: 1, groupNumber: 2, memberIds: [] },
   { id: 3, courseId: 1, groupNumber: 3, memberIds: [] },
@@ -203,13 +275,16 @@ export type MockQuizQuestion = {
   /** Proposed; missing means SINGLE_CHOICE. */
   questionType?: 'SINGLE_CHOICE' | 'MULTIPLE_CHOICE' | 'TRUE_FALSE'
   hint: string | null
-  options: { id: number, optionText: string, position: number, correct: boolean }[]
+  options: { id: number; optionText: string; position: number; correct: boolean }[]
 }
 
 /** Questions of the quizzes; new ones are added by POST /api/quizzes/:quizId/questions. */
 export const quizQuestions: MockQuizQuestion[] = [
   {
-    id: 1, quizId: 13, questionText: 'Which HTTP method should create a new resource?', position: 0,
+    id: 1,
+    quizId: 13,
+    questionText: 'Which HTTP method should create a new resource?',
+    position: 0,
     hint: 'It is not idempotent.',
     options: [
       { id: 1, optionText: 'GET', position: 0, correct: false },
@@ -218,7 +293,11 @@ export const quizQuestions: MockQuizQuestion[] = [
     ],
   },
   {
-    id: 2, quizId: 13, questionText: 'Which status codes mean success?', position: 1, hint: null,
+    id: 2,
+    quizId: 13,
+    questionText: 'Which status codes mean success?',
+    position: 1,
+    hint: null,
     questionType: 'MULTIPLE_CHOICE',
     options: [
       { id: 4, optionText: '200 OK', position: 0, correct: true },
@@ -227,7 +306,11 @@ export const quizQuestions: MockQuizQuestion[] = [
     ],
   },
   {
-    id: 3, quizId: 13, questionText: 'A PUT request should be idempotent.', position: 2, hint: null,
+    id: 3,
+    quizId: 13,
+    questionText: 'A PUT request should be idempotent.',
+    position: 2,
+    hint: null,
     questionType: 'TRUE_FALSE',
     options: [
       { id: 7, optionText: 'True', position: 0, correct: true },
@@ -235,7 +318,11 @@ export const quizQuestions: MockQuizQuestion[] = [
     ],
   },
   {
-    id: 4, quizId: 22, questionText: 'Which file describes the services for Docker Compose?', position: 0, hint: null,
+    id: 4,
+    quizId: 22,
+    questionText: 'Which file describes the services for Docker Compose?',
+    position: 0,
+    hint: null,
     options: [
       { id: 9, optionText: 'Dockerfile', position: 0, correct: false },
       { id: 10, optionText: 'compose.yaml', position: 1, correct: true },
@@ -246,13 +333,23 @@ export const quizQuestions: MockQuizQuestion[] = [
 
 /** Quiz attempts, like the backend's QuizAttemptResponse plus who took it. */
 export const quizAttempts: {
-  id: number, quizId: number, userId: number, submittedAt: string, correctCount: number, totalQuestions: number
+  id: number
+  quizId: number
+  userId: number
+  submittedAt: string
+  correctCount: number
+  totalQuestions: number
   /** How each question was answered (the backend's QuizAnswer); read by the proposed attempt endpoint. */
-  answers: { questionId: number, selectedOptionIds: number[], correct: boolean }[]
+  answers: { questionId: number; selectedOptionIds: number[]; correct: boolean }[]
 }[] = [
   // Siri: POST right, only "200 OK" of the two success codes (wrong), PUT idempotent right.
   {
-    id: 1, quizId: 13, userId: 1, submittedAt: inDays(-2, 10, 15), correctCount: 2, totalQuestions: 3,
+    id: 1,
+    quizId: 13,
+    userId: 1,
+    submittedAt: inDays(-2, 10, 15),
+    correctCount: 2,
+    totalQuestions: 3,
     answers: [
       { questionId: 1, selectedOptionIds: [2], correct: true },
       { questionId: 2, selectedOptionIds: [4], correct: false },
@@ -269,83 +366,191 @@ export const quizAttempts: {
 export const contents: (Content & { courseId: number })[] = [
   // DAT250, module 1
   {
-    id: 11, courseId: 1, moduleId: 1, position: 0, type: 'STATIC_PAGE', title: 'Welcome to DAT250',
-    body: 'Welcome!\n\nThis course is about building and running modern web applications.\n'
-      + 'Start with the page about REST, then take the quiz.',
+    id: 11,
+    courseId: 1,
+    moduleId: 1,
+    position: 0,
+    type: 'STATIC_PAGE',
+    title: 'Welcome to DAT250',
+    body:
+      'Welcome!\n\nThis course is about building and running modern web applications.\n' +
+      'Start with the page about REST, then take the quiz.',
   },
   {
     // Proposed visibleFrom: students see it in two days, later than the rest of the module.
-    id: 12, courseId: 1, moduleId: 1, position: 1, type: 'STATIC_PAGE', title: 'What is REST?', visibleFrom: inDays(2, 8, 0),
-    body: 'REST is an architectural style for APIs.\n\nResources are identified by URLs, and the '
-      + 'HTTP methods (GET, POST, PUT, PATCH, DELETE) say what to do with them.',
+    id: 12,
+    courseId: 1,
+    moduleId: 1,
+    position: 1,
+    type: 'STATIC_PAGE',
+    title: 'What is REST?',
+    visibleFrom: inDays(2, 8, 0),
+    body:
+      'REST is an architectural style for APIs.\n\nResources are identified by URLs, and the ' +
+      'HTTP methods (GET, POST, PUT, PATCH, DELETE) say what to do with them.',
   },
-  { id: 13, courseId: 1, moduleId: 1, position: 2, type: 'QUIZ', title: 'REST basics quiz', maxAttempts: 3, requiredCorrectAnswers: 3, requiredForCompletion: true,
-    description: 'Three short questions about HTTP methods and status codes. You get your score right after you submit.',
-    deadline: inDays(5, 23, 59) },
   {
-    id: 101, courseId: 1, moduleId: 1, position: 3, type: 'ASSIGNMENT', title: 'Assignment 1: REST API',
+    id: 13,
+    courseId: 1,
+    moduleId: 1,
+    position: 2,
+    type: 'QUIZ',
+    title: 'REST basics quiz',
+    maxAttempts: 3,
+    requiredCorrectAnswers: 3,
+    requiredForCompletion: true,
+    description:
+      'Three short questions about HTTP methods and status codes. You get your score right after you submit.',
+    deadline: inDays(5, 23, 59),
+  },
+  {
+    id: 101,
+    courseId: 1,
+    moduleId: 1,
+    position: 3,
+    type: 'ASSIGNMENT',
+    title: 'Assignment 1: REST API',
     instructions: 'Build a REST API for polls with Spring Boot.\n\nHand in a link to your repository.',
-    deadline: inDays(0, 23, 59), allowLateSubmission: false, mandatory: true, requiredForCompletion: true,
+    deadline: inDays(0, 23, 59),
+    allowLateSubmission: false,
+    mandatory: true,
+    requiredForCompletion: true,
   },
   {
-    id: 104, courseId: 1, moduleId: 1, position: 4, type: 'ASSIGNMENT', title: 'Old assignment (already passed)',
+    id: 104,
+    courseId: 1,
+    moduleId: 1,
+    position: 4,
+    type: 'ASSIGNMENT',
+    title: 'Old assignment (already passed)',
     instructions: 'This deadline has passed, so it is not on the dashboard.',
-    deadline: inDays(-3), allowLateSubmission: false, mandatory: false, active: false,
+    deadline: inDays(-3),
+    allowLateSubmission: false,
+    mandatory: false,
+    active: false,
   },
   // DAT250, module 2
   {
-    id: 21, courseId: 1, moduleId: 2, position: 0, type: 'STATIC_PAGE', title: 'Docker basics',
+    id: 21,
+    courseId: 1,
+    moduleId: 2,
+    position: 0,
+    type: 'STATIC_PAGE',
+    title: 'Docker basics',
     body: 'Images, containers, volumes and networks.',
   },
   {
-    id: 102, courseId: 1, moduleId: 2, position: 1, type: 'CODING_EXERCISE', title: 'Exercise: Docker Compose',
+    id: 102,
+    courseId: 1,
+    moduleId: 2,
+    position: 1,
+    type: 'CODING_EXERCISE',
+    title: 'Exercise: Docker Compose',
     instructions: 'Run the poll app, a database and RabbitMQ with Docker Compose.',
     starterRepositoryUrl: 'https://github.com/example/docker-compose-starter',
-    starterCode: 'services:\n  app:\n    build: .\n    ports:\n      - "8080:8080"\n  # Add the database and RabbitMQ here.\n',
-    deadline: inDays(1, 12, 0), allowLateSubmission: true,
+    starterCode:
+      'services:\n  app:\n    build: .\n    ports:\n      - "8080:8080"\n  # Add the database and RabbitMQ here.\n',
+    deadline: inDays(1, 12, 0),
+    allowLateSubmission: true,
   },
-  { id: 22, courseId: 1, moduleId: 2, position: 2, type: 'QUIZ', title: 'Containers quiz', maxAttempts: 1,
-    description: 'One question about Docker Compose. You have only one attempt.', deadline: null },
+  {
+    id: 22,
+    courseId: 1,
+    moduleId: 2,
+    position: 2,
+    type: 'QUIZ',
+    title: 'Containers quiz',
+    maxAttempts: 1,
+    description: 'One question about Docker Compose. You have only one attempt.',
+    deadline: null,
+  },
   // DAT250, module 3
   {
-    id: 31, courseId: 1, moduleId: 3, position: 0, type: 'STATIC_PAGE', title: 'Messaging with RabbitMQ',
+    id: 31,
+    courseId: 1,
+    moduleId: 3,
+    position: 0,
+    type: 'STATIC_PAGE',
+    title: 'Messaging with RabbitMQ',
     body: 'Queues, exchanges and bindings.',
   },
   // DAT250, module 4: no visible date of its own, so it is visible when the module is.
   {
-    id: 41, courseId: 1, moduleId: 4, position: 0, type: 'STATIC_PAGE', title: 'Deploying to the cloud',
+    id: 41,
+    courseId: 1,
+    moduleId: 4,
+    position: 0,
+    type: 'STATIC_PAGE',
+    title: 'Deploying to the cloud',
     body: 'Container registries, managed databases and secrets.',
   },
   {
-    id: 103, courseId: 1, moduleId: 3, position: 1, type: 'ASSIGNMENT', title: 'Assignment 2: Messaging',
-    instructions: 'Send poll events through RabbitMQ.', deadline: inDays(9), allowLateSubmission: false,
-    mandatory: true, groupAssignment: true, acceptedFileTypes: ['.pdf', '.zip'],
+    id: 103,
+    courseId: 1,
+    moduleId: 3,
+    position: 1,
+    type: 'ASSIGNMENT',
+    title: 'Assignment 2: Messaging',
+    instructions: 'Send poll events through RabbitMQ.',
+    deadline: inDays(9),
+    allowLateSubmission: false,
+    mandatory: true,
+    groupAssignment: true,
+    acceptedFileTypes: ['.pdf', '.zip'],
   },
   // DAT251
   {
-    id: 51, courseId: 2, moduleId: 5, position: 0, type: 'STATIC_PAGE', title: 'Scrum in practice',
+    id: 51,
+    courseId: 2,
+    moduleId: 5,
+    position: 0,
+    type: 'STATIC_PAGE',
+    title: 'Scrum in practice',
     body: 'Sprints, stand-ups, reviews and retrospectives.',
   },
   {
-    id: 201, courseId: 2, moduleId: 5, position: 1, type: 'ASSIGNMENT', title: 'Sprint report',
-    instructions: 'Write a short report about your first sprint.', deadline: inDays(4), allowLateSubmission: false,
+    id: 201,
+    courseId: 2,
+    moduleId: 5,
+    position: 1,
+    type: 'ASSIGNMENT',
+    title: 'Sprint report',
+    instructions: 'Write a short report about your first sprint.',
+    deadline: inDays(4),
+    allowLateSubmission: false,
     mandatory: false,
   },
   { id: 61, courseId: 2, moduleId: 6, position: 0, type: 'QUIZ', title: 'Testing quiz', maxAttempts: 2 },
   // DAT109
   {
-    id: 71, courseId: 3, moduleId: 7, position: 0, type: 'STATIC_PAGE', title: 'Introduction to Haskell',
+    id: 71,
+    courseId: 3,
+    moduleId: 7,
+    position: 0,
+    type: 'STATIC_PAGE',
+    title: 'Introduction to Haskell',
     body: 'Pure functions, types and pattern matching.',
   },
   {
-    id: 301, courseId: 3, moduleId: 7, position: 1, type: 'CODING_EXERCISE', title: 'Haskell exercises',
-    instructions: 'Solve the exercises in the starter code.', starterRepositoryUrl: null,
-    deadline: inDays(16, 16, 0), allowLateSubmission: true,
+    id: 301,
+    courseId: 3,
+    moduleId: 7,
+    position: 1,
+    type: 'CODING_EXERCISE',
+    title: 'Haskell exercises',
+    instructions: 'Solve the exercises in the starter code.',
+    starterRepositoryUrl: null,
+    deadline: inDays(16, 16, 0),
+    allowLateSubmission: true,
   },
   // DAT100
   {
-    id: 81, courseId: 4, moduleId: 8, position: 0, type: 'STATIC_PAGE', title: 'Hello Java',
+    id: 81,
+    courseId: 4,
+    moduleId: 8,
+    position: 0,
+    type: 'STATIC_PAGE',
+    title: 'Hello Java',
     body: 'Your first Java program.',
   },
 ]
-

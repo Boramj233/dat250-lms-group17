@@ -39,14 +39,20 @@ export default function QuizQuestion({ question, number, total, chosen, onChoose
   const reviewing = result !== undefined
   const resultClass = result === true ? ' is-correct' : result === false ? ' is-wrong' : ''
   return (
-    <fieldset className={`quiz-question is-${type.toLowerCase().replace('_', '-')}${reviewing ? ' is-review' : ''}${resultClass}`}
-      disabled={reviewing}>
+    <fieldset
+      className={`quiz-question is-${type.toLowerCase().replace('_', '-')}${reviewing ? ' is-review' : ''}${resultClass}`}
+      disabled={reviewing}
+    >
       <legend className="quiz-question-legend">
         <span className="quiz-question-header">
-          <span className="quiz-question-number">Question {number} of {total}</span>
-          {reviewing
-            ? <QuestionResult result={result} answered={chosen.length > 0} />
-            : <span className="quiz-question-type">{TYPE_LABEL[type]}</span>}
+          <span className="quiz-question-number">
+            Question {number} of {total}
+          </span>
+          {reviewing ? (
+            <QuestionResult result={result} answered={chosen.length > 0} />
+          ) : (
+            <span className="quiz-question-type">{TYPE_LABEL[type]}</span>
+          )}
         </span>
         <span className="quiz-question-text">{question.questionText}</span>
       </legend>
@@ -79,12 +85,22 @@ function Option({ children }: { children: ReactNode }) {
 }
 
 /** "✓ Correct", "✗ Wrong" (or "✗ Not answered"), or nothing stored for the question. */
-function QuestionResult({ result, answered }: { result: boolean | null | undefined, answered: boolean }) {
+function QuestionResult({ result, answered }: { result: boolean | null | undefined; answered: boolean }) {
   if (result === null || result === undefined) return <span className="quiz-question-result">No answer stored</span>
   return (
     <span className={`quiz-question-result ${result ? 'is-correct' : 'is-wrong'}`}>
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"
-        strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
+      <svg
+        width="14"
+        height="14"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="3"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden="true"
+        focusable="false"
+      >
         {result ? <path d="M5 12.5l4.5 4.5L19 7.5" /> : <path d="M6 6l12 12M18 6L6 18" />}
       </svg>
       {result ? 'Correct' : answered ? 'Wrong' : 'Not answered'}

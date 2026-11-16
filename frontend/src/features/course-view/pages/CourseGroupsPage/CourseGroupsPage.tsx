@@ -6,7 +6,13 @@ import QueryState from '@shared/ui/QueryState'
 import { useCourseEnrollments } from '@domain/courses/hooks'
 import ConfirmDialog, { useConfirm } from '@shared/ui/ConfirmDialog'
 import {
-  groupName, groupOfUser, useCourseGroups, useDeleteGroup, useJoinGroup, useLeaveGroup, useSwitchGroup,
+  groupName,
+  groupOfUser,
+  useCourseGroups,
+  useDeleteGroup,
+  useJoinGroup,
+  useLeaveGroup,
+  useSwitchGroup,
 } from '@domain/groups/hooks'
 import type { CourseGroup } from '@domain/groups/types'
 import { useCourseView } from '../../courseContext'
@@ -16,13 +22,12 @@ import { deleteError, joinError, leaveError, switchError } from './groupErrors'
 import '@shared/styles/forms.css'
 import './CourseGroupsPage.css'
 
-const isMember = (group: CourseGroup, userId: UserId) =>
-  group.memberIds.some(id => String(id) === String(userId))
+const isMember = (group: CourseGroup, userId: UserId) => group.memberIds.some(id => String(id) === String(userId))
 
-type Notice = { kind: 'success' | 'error', text: string }
+type Notice = { kind: 'success' | 'error'; text: string }
 
 /** A student in `from` asked to join `to`: shown in the pop-up until they answer. */
-type PendingSwitch = { from: CourseGroup, to: CourseGroup }
+type PendingSwitch = { from: CourseGroup; to: CourseGroup }
 
 /**
  * The course's groups, each a box that unfolds to show its members.
@@ -58,8 +63,9 @@ export default function CourseGroupsPage() {
   }
 
   function memberName(group: CourseGroup, userId: UserId): string {
-    const member = group.members?.find(m => String(m.userId) === String(userId))
-      ?? enrollments.data?.find(m => String(m.userId) === String(userId))
+    const member =
+      group.members?.find(m => String(m.userId) === String(userId)) ??
+      enrollments.data?.find(m => String(m.userId) === String(userId))
     return member ? `${member.firstName} ${member.lastName}` : `User #${userId}`
   }
 
@@ -70,27 +76,33 @@ export default function CourseGroupsPage() {
       return
     }
     setNotice(null)
-    join.mutate({ groupId: group.id, userId: user.userId }, {
-      onSuccess: () => {
-        setNotice({ kind: 'success', text: `You joined ${groupName(group)}.` })
-        setOpen(previous => new Set(previous).add(String(group.id)))
+    join.mutate(
+      { groupId: group.id, userId: user.userId },
+      {
+        onSuccess: () => {
+          setNotice({ kind: 'success', text: `You joined ${groupName(group)}.` })
+          setOpen(previous => new Set(previous).add(String(group.id)))
+        },
+        onError: error => setNotice({ kind: 'error', text: joinError(error) }),
       },
-      onError: error => setNotice({ kind: 'error', text: joinError(error) }),
-    })
+    )
   }
 
   function confirmSwitch() {
     if (!pendingSwitch) return
     const { from, to } = pendingSwitch
     setNotice(null)
-    switchGroup.mutate({ fromGroupId: from.id, toGroupId: to.id, userId: user.userId }, {
-      onSuccess: () => {
-        setNotice({ kind: 'success', text: `You left ${groupName(from)} and joined ${groupName(to)}.` })
-        setOpen(previous => new Set(previous).add(String(to.id)))
+    switchGroup.mutate(
+      { fromGroupId: from.id, toGroupId: to.id, userId: user.userId },
+      {
+        onSuccess: () => {
+          setNotice({ kind: 'success', text: `You left ${groupName(from)} and joined ${groupName(to)}.` })
+          setOpen(previous => new Set(previous).add(String(to.id)))
+        },
+        onError: error => setNotice({ kind: 'error', text: switchError(error, from, to) }),
+        onSettled: () => setPendingSwitch(null),
       },
-      onError: error => setNotice({ kind: 'error', text: switchError(error, from, to) }),
-      onSettled: () => setPendingSwitch(null),
-    })
+    )
   }
 
   async function leaveGroup(group: CourseGroup) {
@@ -101,10 +113,13 @@ export default function CourseGroupsPage() {
     })
     if (!confirmed) return
     setNotice(null)
-    leave.mutate({ groupId: group.id, userId: user.userId }, {
-      onSuccess: () => setNotice({ kind: 'success', text: `You left ${groupName(group)}.` }),
-      onError: error => setNotice({ kind: 'error', text: leaveError(error) }),
-    })
+    leave.mutate(
+      { groupId: group.id, userId: user.userId },
+      {
+        onSuccess: () => setNotice({ kind: 'success', text: `You left ${groupName(group)}.` }),
+        onError: error => setNotice({ kind: 'error', text: leaveError(error) }),
+      },
+    )
   }
 
   async function deleteGroup(group: CourseGroup) {
@@ -153,61 +168,68 @@ export default function CourseGroupsPage() {
             <>
               {!isTeacher && (
                 <p className="course-groups-status">
-                  {myGroup
-                    ? <>You are in <strong>{groupName(myGroup)}</strong>. To change group, join another one.</>
-                    : 'You are not in a group yet. Join one below; you can be in one group at a time.'}
+                  {myGroup ? (
+                    <>
+                      You are in <strong>{groupName(myGroup)}</strong>. To change group, join another one.
+                    </>
+                  ) : (
+                    'You are not in a group yet. Join one below; you can be in one group at a time.'
+                  )}
                 </p>
               )}
 
               <div aria-live="polite">
-                {notice && (
-                  <p className={notice.kind === 'error' ? 'form-error' : 'form-success'}>{notice.text}</p>
-                )}
+                {notice && <p className={notice.kind === 'error' ? 'form-error' : 'form-success'}>{notice.text}</p>}
               </div>
 
-              {all.length === 0
-                ? <p>This course has no groups yet. Create the first one below.</p>
-                : shown.length === 0
-                  ? <p>You are not in any group in this course.</p>
-                  : (
-                    <ul className="course-groups">
-                      {shown.map(group => (
-                        <GroupBox
-                          key={group.id}
-                          group={group}
-                          userId={user.userId}
-                          isTeacher={isTeacher}
-                          mine={isMember(group, user.userId)}
-                          expanded={open.has(String(group.id))}
-                          onToggle={() => toggle(String(group.id))}
-                          busy={busy}
-                          memberName={userId => memberName(group, userId)}
-                          onJoin={() => joinGroup(group, myGroup)}
-                          onLeave={() => leaveGroup(group)}
-                          onDelete={() => deleteGroup(group)}
-                        />
-                      ))}
-                    </ul>
-                  )}
+              {all.length === 0 ? (
+                <p>This course has no groups yet. Create the first one below.</p>
+              ) : shown.length === 0 ? (
+                <p>You are not in any group in this course.</p>
+              ) : (
+                <ul className="course-groups">
+                  {shown.map(group => (
+                    <GroupBox
+                      key={group.id}
+                      group={group}
+                      userId={user.userId}
+                      isTeacher={isTeacher}
+                      mine={isMember(group, user.userId)}
+                      expanded={open.has(String(group.id))}
+                      onToggle={() => toggle(String(group.id))}
+                      busy={busy}
+                      memberName={userId => memberName(group, userId)}
+                      onJoin={() => joinGroup(group, myGroup)}
+                      onLeave={() => leaveGroup(group)}
+                      onDelete={() => deleteGroup(group)}
+                    />
+                  ))}
+                </ul>
+              )}
 
               {isTeacher && <CreateGroupForm courseId={course.id} groups={all} />}
 
               <ConfirmDialog
                 open={pendingSwitch !== null}
                 title="Change group?"
-                confirmLabel={pendingSwitch
-                  ? `Yes, leave ${groupName(pendingSwitch.from)} and join ${groupName(pendingSwitch.to)}`
-                  : 'Yes'}
+                confirmLabel={
+                  pendingSwitch
+                    ? `Yes, leave ${groupName(pendingSwitch.from)} and join ${groupName(pendingSwitch.to)}`
+                    : 'Yes'
+                }
                 busy={switchGroup.isPending}
                 onConfirm={confirmSwitch}
                 onCancel={() => setPendingSwitch(null)}
               >
                 {pendingSwitch && (
                   <>
-                    <p>You are already a member of <strong>{groupName(pendingSwitch.from)}</strong>.</p>
                     <p>
-                      You can only be in one group in this course, so joining <strong>{groupName(pendingSwitch.to)}</strong> will
-                      remove you from {groupName(pendingSwitch.from)}.
+                      You are already a member of <strong>{groupName(pendingSwitch.from)}</strong>.
+                    </p>
+                    <p>
+                      You can only be in one group in this course, so joining{' '}
+                      <strong>{groupName(pendingSwitch.to)}</strong> will remove you from{' '}
+                      {groupName(pendingSwitch.from)}.
                     </p>
                   </>
                 )}

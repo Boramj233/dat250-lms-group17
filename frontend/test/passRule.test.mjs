@@ -2,8 +2,14 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { attemptPassed, quizPassed } from '../src/domain/quizzes/passRule.ts'
 
-const attempt = (correctCount, passed) =>
-  ({ id: 1, quizId: 1, submittedAt: '', correctCount, totalQuestions: 5, ...(passed === undefined ? {} : { passed }) })
+const attempt = (correctCount, passed) => ({
+  id: 1,
+  quizId: 1,
+  submittedAt: '',
+  correctCount,
+  totalQuestions: 5,
+  ...(passed === undefined ? {} : { passed }),
+})
 
 test('an attempt passes with at least the required number of correct answers', () => {
   assert.equal(attemptPassed(attempt(3), 3), true)

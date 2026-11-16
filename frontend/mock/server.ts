@@ -17,7 +17,7 @@ const SESSION_COOKIE = 'mock_session'
 const TOKEN_PREFIX = 'mock-token-'
 const TOKEN_LIFETIME_MS = 5 * 60_000
 
-type DataModule = { users: MockUser[], latencyMs: number }
+type DataModule = { users: MockUser[]; latencyMs: number }
 type HandlersModule = { handlers: MockHandler[] }
 
 export function mockBackend(): Plugin {
@@ -26,7 +26,9 @@ export function mockBackend(): Plugin {
     configureServer(server) {
       server.config.logger.info('\n  Mock backend on: log in as a test user from mock/data.ts\n')
       server.middlewares.use((req, res, next) => {
-        handle(server, req, res).then(handled => { if (!handled) next() }, next)
+        handle(server, req, res).then(handled => {
+          if (!handled) next()
+        }, next)
       })
     },
   }
@@ -84,9 +86,12 @@ async function handle(server: ViteDevServer, req: IncomingMessage, res: ServerRe
       if (handler.method !== method || !params) continue
       const raw = await readBody(req)
       const contentType = req.headers['content-type'] ?? ''
-      const body = raw.length === 0 ? undefined
-        : contentType.startsWith('multipart/form-data') ? parseMultipart(raw, contentType)
-        : JSON.parse(raw.toString('utf8'))
+      const body =
+        raw.length === 0
+          ? undefined
+          : contentType.startsWith('multipart/form-data')
+            ? parseMultipart(raw, contentType)
+            : JSON.parse(raw.toString('utf8'))
       const result = await handler.handle({ user, params, query: url.searchParams, body })
       return result.download ? sendFile(res, result.download) : sendJson(res, result)
     }
@@ -103,7 +108,8 @@ function load<T>(server: ViteDevServer, path: string): Promise<T> {
 }
 
 async function userFromSession(server: ViteDevServer, req: IncomingMessage): Promise<MockUser | undefined> {
-  const cookie = req.headers.cookie?.split(';')
+  const cookie = req.headers.cookie
+    ?.split(';')
     .map(part => part.trim().split('='))
     .find(([name]) => name === SESSION_COOKIE)
   if (!cookie?.[1]) return undefined
@@ -133,7 +139,9 @@ function matchPath(pattern: string, path: string): Record<string, string> | unde
 function readBody(req: IncomingMessage): Promise<Buffer> {
   return new Promise((resolve, reject) => {
     const chunks: Buffer[] = []
-    req.on('data', (chunk: Buffer) => { chunks.push(chunk) })
+    req.on('data', (chunk: Buffer) => {
+      chunks.push(chunk)
+    })
     req.on('end', () => resolve(Buffer.concat(chunks)))
     req.on('error', reject)
   })
@@ -141,7 +149,10 @@ function readBody(req: IncomingMessage): Promise<Buffer> {
 
 /** Just enough multipart/form-data parsing for the mock: text fields and file parts. */
 function parseMultipart(raw: Buffer, contentType: string): MockMultipart {
-  const boundary = contentType.match(/boundary=(?:"([^"]+)"|([^;]+))/)?.slice(1).find(Boolean)
+  const boundary = contentType
+    .match(/boundary=(?:"([^"]+)"|([^;]+))/)
+    ?.slice(1)
+    .find(Boolean)
   const result: MockMultipart = { fields: {}, files: [] }
   if (!boundary) return result
   // latin1 keeps one character per byte, so offsets map back to the buffer.
@@ -207,11 +218,15 @@ function escapeHtml(text: string): string {
 
 /** Stands in for Keycloak's login page: one button per test user. */
 function loginPage(users: MockUser[]): string {
-  const buttons = users.map(user => `
+  const buttons = users
+    .map(
+      user => `
     <button name="userId" value="${user.userId}">
       <strong>${escapeHtml(user.firstName)} ${escapeHtml(user.lastName)}</strong>
       <span>${escapeHtml(user.email)} · ${user.access}</span>
-    </button>`).join('')
+    </button>`,
+    )
+    .join('')
   return `<!doctype html>
 <html lang="en">
 <head>

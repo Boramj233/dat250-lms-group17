@@ -87,8 +87,12 @@ export default function ActionMenu({ label, items }: ActionMenuProps) {
       {open && (
         <div id={menuId} ref={menuRef} role="menu" aria-label={submenu?.label ?? label} className="action-menu-list">
           {submenu && (
-            <button type="button" role="menuitem" className="action-menu-item action-menu-back"
-              onClick={() => setSubmenu(null)}>
+            <button
+              type="button"
+              role="menuitem"
+              className="action-menu-item action-menu-back"
+              onClick={() => setSubmenu(null)}
+            >
               ← {submenu.label}
             </button>
           )}

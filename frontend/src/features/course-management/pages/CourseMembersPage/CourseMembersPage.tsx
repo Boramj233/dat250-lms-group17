@@ -14,11 +14,12 @@ import './CourseMembersPage.css'
 /** Teachers first, then by last name. */
 function sortMembers(members: CourseEnrollment[]): CourseEnrollment[] {
   return [...members].sort((a, b) =>
-    a.role === b.role ? a.lastName.localeCompare(b.lastName) : a.role === 'TEACHER' ? -1 : 1)
+    a.role === b.role ? a.lastName.localeCompare(b.lastName) : a.role === 'TEACHER' ? -1 : 1,
+  )
 }
 
 /** Unsaved role changes and removals, by user id (as a string). */
-type Draft = { roles: Record<string, CourseRole>, removals: string[] }
+type Draft = { roles: Record<string, CourseRole>; removals: string[] }
 const EMPTY_DRAFT: Draft = { roles: {}, removals: [] }
 
 /**
@@ -76,10 +77,16 @@ export default function CourseMembersPage() {
         message: (
           <>
             <p>
-              Saving also removes {removing.length === 1 ? 'this member' : 'these members'} from {course.title}.
-              They can no longer see the course.
+              Saving also removes {removing.length === 1 ? 'this member' : 'these members'} from {course.title}. They
+              can no longer see the course.
             </p>
-            {removing.length > 1 && <ul>{removing.map(member => <li key={member.userId}>{fullName(member)}</li>)}</ul>}
+            {removing.length > 1 && (
+              <ul>
+                {removing.map(member => (
+                  <li key={member.userId}>{fullName(member)}</li>
+                ))}
+              </ul>
+            )}
           </>
         ),
         confirmLabel: removing.length === 1 ? 'Remove and save' : `Remove ${removing.length} and save`,
@@ -112,7 +119,8 @@ export default function CourseMembersPage() {
 
       <h2 className="section-title">
         In this course
-        {enrollments.data && ` · ${teacherCount} ${teacherCount === 1 ? 'teacher' : 'teachers'}, ${members.length - teacherCount} students`}
+        {enrollments.data &&
+          ` · ${teacherCount} ${teacherCount === 1 ? 'teacher' : 'teachers'}, ${members.length - teacherCount} students`}
       </h2>
       <QueryState query={enrollments} loading="Loading members…" error="Could not load the members of this course.">
         {() => (
@@ -124,12 +132,14 @@ export default function CourseMembersPage() {
               // Keep at least one teacher, so the course can still be managed.
               const lastTeacher = !isRemoved && roleOf(member) === 'TEACHER' && teachersAfter === 1
               const rowClass = ['member-row', isRemoved ? 'is-removed' : roleChanged ? 'is-changed' : '']
-                .filter(Boolean).join(' ')
+                .filter(Boolean)
+                .join(' ')
               return (
                 <li key={member.userId} className={rowClass}>
                   <div className="member-name">
                     <span className="member-full-name">
-                      {fullName(member)}{isMe && ' (you)'}
+                      {fullName(member)}
+                      {isMe && ' (you)'}
                       {isRemoved && <span className="tag tag-danger member-change">Will be removed</span>}
                       {!isRemoved && roleChanged && (
                         <span className="tag member-change">Becomes {ROLE_LABEL[roleOf(member)].toLowerCase()}</span>
@@ -151,19 +161,26 @@ export default function CourseMembersPage() {
                     <option value="STUDENT">{ROLE_LABEL.STUDENT}</option>
                     <option value="TEACHER">{ROLE_LABEL.TEACHER}</option>
                   </select>
-                  {isRemoved
-                    ? (
-                      <button type="button" className="button-secondary" disabled={saving} onClick={() => setRemoved(member, false)}>
-                        Undo<span className="visually-hidden"> removing {fullName(member)}</span>
-                      </button>
-                    )
-                    : (
-                      <button type="button" className="button-secondary" disabled={lastTeacher || saving}
-                        title={lastTeacher ? 'A course needs at least one teacher' : undefined}
-                        onClick={() => setRemoved(member, true)}>
-                        Remove<span className="visually-hidden"> {fullName(member)}</span>
-                      </button>
-                    )}
+                  {isRemoved ? (
+                    <button
+                      type="button"
+                      className="button-secondary"
+                      disabled={saving}
+                      onClick={() => setRemoved(member, false)}
+                    >
+                      Undo<span className="visually-hidden"> removing {fullName(member)}</span>
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      className="button-secondary"
+                      disabled={lastTeacher || saving}
+                      title={lastTeacher ? 'A course needs at least one teacher' : undefined}
+                      onClick={() => setRemoved(member, true)}
+                    >
+                      Remove<span className="visually-hidden"> {fullName(member)}</span>
+                    </button>
+                  )}
                 </li>
               )
             })}

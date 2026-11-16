@@ -46,9 +46,7 @@ export default function ContentSubmissionsPage() {
     { label: 'Submissions', to: paths.courseSection(course.id, 'submissions') },
     { label: item?.title ?? '…' },
   ]
-  const deadline = isSubmittable(details.data)
-    ? details.data.deadline
-    : undefined
+  const deadline = isSubmittable(details.data) ? details.data.deadline : undefined
   const gradeOf = (submission: ReviewSubmission) => grades.bySubmission.get(String(submission.id))
 
   async function publish(submission: ReviewSubmission) {
@@ -62,17 +60,30 @@ export default function ContentSubmissionsPage() {
     })
     if (!confirmed) return
     setPublishError(null)
-    release.mutate({ submissionId: submission.id, contentId, version: grade.version }, {
-      onError: error => setPublishError(errorMessage(error, {
-        409: `The grade for ${name} was changed or published in the meantime. Reload the page and try again.`,
-      }, `Could not publish the grade for ${name}. Try again.`)),
-    })
+    release.mutate(
+      { submissionId: submission.id, contentId, version: grade.version },
+      {
+        onError: error =>
+          setPublishError(
+            errorMessage(
+              error,
+              {
+                409: `The grade for ${name} was changed or published in the meantime. Reload the page and try again.`,
+              },
+              `Could not publish the grade for ${name}. Try again.`,
+            ),
+          ),
+      },
+    )
   }
 
   return (
     <>
       <Breadcrumbs items={crumbs} />
-      <PageHeader title={item?.title ?? '…'} kicker={item ? `Submissions · ${contentTypeLabel(item.type)}` : 'Submissions'}>
+      <PageHeader
+        title={item?.title ?? '…'}
+        kicker={item ? `Submissions · ${contentTypeLabel(item.type)}` : 'Submissions'}
+      >
         {deadline !== undefined && (
           <p className="content-submissions-facts">
             {deadline ? `Deadline ${formatDateTime(new Date(deadline))}` : 'No deadline'}
@@ -87,15 +98,31 @@ export default function ContentSubmissionsPage() {
           return (
             <>
               <p className="content-submissions-facts">
-                <strong>{stats.answered}/{stats.students ?? '…'}</strong> students have answered
-                {' · '}{stats.submissions} {stats.submissions === 1 ? 'submission' : 'submissions'}
-                {' · '}{stats.graded} graded, {stats.released} published
+                <strong>
+                  {stats.answered}/{stats.students ?? '…'}
+                </strong>{' '}
+                students have answered
+                {' · '}
+                {stats.submissions} {stats.submissions === 1 ? 'submission' : 'submissions'}
+                {' · '}
+                {stats.graded} graded, {stats.released} published
               </p>
               <GradePublishing
                 contentId={contentId}
-                unpublished={grades.isPending ? undefined : all.filter(s => { const g = gradeOf(s); return g && !g.releasedAt }).length}
+                unpublished={
+                  grades.isPending
+                    ? undefined
+                    : all.filter(s => {
+                        const g = gradeOf(s)
+                        return g && !g.releasedAt
+                      }).length
+                }
               />
-              {publishError && <p className="form-error" role="alert">{publishError}</p>}
+              {publishError && (
+                <p className="form-error" role="alert">
+                  {publishError}
+                </p>
+              )}
               <DataTable<ReviewSubmission>
                 caption={`Submissions for ${item?.title ?? 'this content'}`}
                 rows={all}
@@ -133,9 +160,11 @@ export default function ContentSubmissionsPage() {
                     cell: submission => {
                       const grade = gradeOf(submission)
                       if (grade === undefined) return '…'
-                      return grade
-                        ? <span className="data-table-strong">{formatScore(grade.score)}</span>
-                        : <span className="text-meta">Not graded</span>
+                      return grade ? (
+                        <span className="data-table-strong">{formatScore(grade.score)}</span>
+                      ) : (
+                        <span className="text-meta">Not graded</span>
+                      )
                     },
                   },
                   {
@@ -143,9 +172,11 @@ export default function ContentSubmissionsPage() {
                     cell: submission => {
                       const grade = gradeOf(submission)
                       if (grade === undefined) return '…'
-                      return grade?.passed != null
-                        ? <PassedBadge passed={grade.passed} />
-                        : <span className="text-meta">–</span>
+                      return grade?.passed != null ? (
+                        <PassedBadge passed={grade.passed} />
+                      ) : (
+                        <span className="text-meta">–</span>
+                      )
                     },
                   },
                   {
@@ -158,16 +189,26 @@ export default function ContentSubmissionsPage() {
                       if (grade.releasedAt) {
                         return formatDateTime(new Date(grade.releasedAt))
                       }
-                      const busy = release.isPending && String(release.variables?.submissionId) === String(submission.id)
+                      const busy =
+                        release.isPending && String(release.variables?.submissionId) === String(submission.id)
                       return (
                         <span className="content-submissions-publish">
                           <span className="text-meta">
-                            {grade.visibleFrom ? `Scheduled ${formatDateTime(new Date(grade.visibleFrom))}` : 'Not published'}
+                            {grade.visibleFrom
+                              ? `Scheduled ${formatDateTime(new Date(grade.visibleFrom))}`
+                              : 'Not published'}
                           </span>
-                          <button type="button" className="button-secondary data-table-button" disabled={release.isPending}
-                            onClick={() => void publish(submission)}>
+                          <button
+                            type="button"
+                            className="button-secondary data-table-button"
+                            disabled={release.isPending}
+                            onClick={() => void publish(submission)}
+                          >
                             {busy ? 'Publishing…' : 'Publish now'}
-                            <span className="visually-hidden"> the grade for {people.nameOf(submission.studentUserId)}</span>
+                            <span className="visually-hidden">
+                              {' '}
+                              the grade for {people.nameOf(submission.studentUserId)}
+                            </span>
                           </button>
                         </span>
                       )
@@ -178,16 +219,20 @@ export default function ContentSubmissionsPage() {
 
               {people.members && (
                 <section className="content-submissions-missing" aria-labelledby="missing-title">
-                  <h2 id="missing-title" className="section-title">Not handed in ({missing.length})</h2>
-                  {missing.length === 0
-                    ? <p>Every student has handed in.</p>
-                    : (
-                      <ul>
-                        {missing.map(student => (
-                          <li key={student.userId}>{student.firstName} {student.lastName}</li>
-                        ))}
-                      </ul>
-                    )}
+                  <h2 id="missing-title" className="section-title">
+                    Not handed in ({missing.length})
+                  </h2>
+                  {missing.length === 0 ? (
+                    <p>Every student has handed in.</p>
+                  ) : (
+                    <ul>
+                      {missing.map(student => (
+                        <li key={student.userId}>
+                          {student.firstName} {student.lastName}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                 </section>
               )}
             </>

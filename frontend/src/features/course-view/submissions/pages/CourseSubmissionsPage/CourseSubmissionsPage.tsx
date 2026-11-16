@@ -55,53 +55,65 @@ export default function CourseSubmissionsPage() {
   return (
     <>
       <PageHeader title="Submissions" kicker={course.title} />
-      {content.isPending
-        ? <p role="status">Loading…</p>
-        : (
-          <DataTable<Row>
-            caption={`Submissions in ${course.title}`}
-            rows={rows}
-            rowKey={({ item }) => String(item.id)}
-            empty="Nothing in this course is handed in: there are no assignments or code exercises yet."
-            columns={[
-              {
-                header: 'Title',
-                cell: ({ item, module }) => (
-                  <>
-                    <TrailLink to={paths.courseSectionContent(course.id, 'submissions', item.id)}>{item.title}</TrailLink>
-                    {item.active === false && <span className="data-table-tag">Hidden from students</span>}
-                    <VisibleFromTag item={item} module={module} className="data-table-tag" />
-                  </>
+      {content.isPending ? (
+        <p role="status">Loading…</p>
+      ) : (
+        <DataTable<Row>
+          caption={`Submissions in ${course.title}`}
+          rows={rows}
+          rowKey={({ item }) => String(item.id)}
+          empty="Nothing in this course is handed in: there are no assignments or code exercises yet."
+          columns={[
+            {
+              header: 'Title',
+              cell: ({ item, module }) => (
+                <>
+                  <TrailLink to={paths.courseSectionContent(course.id, 'submissions', item.id)}>{item.title}</TrailLink>
+                  {item.active === false && <span className="data-table-tag">Hidden from students</span>}
+                  <VisibleFromTag item={item} module={module} className="data-table-tag" />
+                </>
+              ),
+            },
+            {
+              header: 'Module',
+              cell: ({ module }) => <TrailLink to={paths.courseModule(course.id, module.id)}>{module.title}</TrailLink>,
+            },
+            { header: 'Type', cell: ({ item }) => <span className="text-meta">{contentTypeLabel(item.type)}</span> },
+            { header: 'Deadline', cell: ({ details }) => <Deadline content={details} /> },
+            {
+              header: 'Answered',
+              cell: row =>
+                row.stats ? (
+                  <span
+                    className={
+                      row.stats.students && row.stats.answered === row.stats.students ? 'data-table-strong' : undefined
+                    }
+                  >
+                    {row.stats.answered}/{row.stats.students ?? '…'} students
+                  </span>
+                ) : (
+                  noCounts
                 ),
-              },
-              {
-                header: 'Module',
-                cell: ({ module }) => <TrailLink to={paths.courseModule(course.id, module.id)}>{module.title}</TrailLink>,
-              },
-              { header: 'Type', cell: ({ item }) => <span className="text-meta">{contentTypeLabel(item.type)}</span> },
-              { header: 'Deadline', cell: ({ details }) => <Deadline content={details} /> },
-              {
-                header: 'Answered',
-                cell: row => row.stats
-                  ? <span className={row.stats.students && row.stats.answered === row.stats.students ? 'data-table-strong' : undefined}>
-                      {row.stats.answered}/{row.stats.students ?? '…'} students
-                    </span>
-                  : noCounts,
-              },
-              { header: 'Submissions', cell: row => row.stats ? row.stats.submissions : noCounts },
-              {
-                header: 'Graded',
-                cell: row => !row.stats ? noCounts : grades.isPending ? '…' : (
+            },
+            { header: 'Submissions', cell: row => (row.stats ? row.stats.submissions : noCounts) },
+            {
+              header: 'Graded',
+              cell: row =>
+                !row.stats ? (
+                  noCounts
+                ) : grades.isPending ? (
+                  '…'
+                ) : (
                   <span className={row.stats.graded < row.stats.submissions ? 'data-table-strong' : 'text-meta'}>
                     {row.stats.graded}/{row.stats.submissions}
                     {row.stats.graded > 0 && <span className="text-meta"> · {row.stats.released} published</span>}
                   </span>
                 ),
-              },
-              { header: 'Mandatory', cell: ({ details }) => <MandatoryLabel content={details} /> },
-            ]}
-          />
-        )}
+            },
+            { header: 'Mandatory', cell: ({ details }) => <MandatoryLabel content={details} /> },
+          ]}
+        />
+      )}
       <p className="text-meta">
         Submissions counts the latest submission of each student or group; earlier attempts are on each submission.
       </p>
@@ -114,4 +126,3 @@ function Deadline({ content }: { content?: Content }) {
   if (!isSubmittable(content)) return '–'
   return content.deadline ? formatDateTime(new Date(content.deadline)) : 'No deadline'
 }
-

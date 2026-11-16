@@ -1,27 +1,17 @@
-import { apiClient, apiPath, jsonBody } from "@shared/api/apiClient";
-import type { CourseId } from "@shared/types";
-import type { CourseModule, CreateModuleInput, ReorderModulesInput, UpdateModuleInput } from "./types";
+import { apiClient, apiPath, jsonBody } from '@shared/api/apiClient'
+import type { CourseId } from '@shared/types'
+import type { CourseModule, CreateModuleInput, ReorderModulesInput, UpdateModuleInput } from './types'
 
 export function getCourseModules(courseId: CourseId): Promise<CourseModule[]> {
-  return apiClient<CourseModule[]>(apiPath`/api/courses/${courseId}/modules`);
+  return apiClient<CourseModule[]>(apiPath`/api/courses/${courseId}/modules`)
 }
 
-export function createModule({
-  courseId,
-  ...input
-}: CreateModuleInput): Promise<CourseModule> {
-  return apiClient<CourseModule>(apiPath`/api/courses/${courseId}/modules`, jsonBody("POST", input));
+export function createModule({ courseId, ...input }: CreateModuleInput): Promise<CourseModule> {
+  return apiClient<CourseModule>(apiPath`/api/courses/${courseId}/modules`, jsonBody('POST', input))
 }
 
-export function updateModule({
-  courseId,
-  moduleId,
-  changes,
-}: UpdateModuleInput): Promise<CourseModule> {
-  return apiClient<CourseModule>(
-    apiPath`/api/courses/${courseId}/modules/${moduleId}`,
-    jsonBody("PATCH", changes)
-  );
+export function updateModule({ courseId, moduleId, changes }: UpdateModuleInput): Promise<CourseModule> {
+  return apiClient<CourseModule>(apiPath`/api/courses/${courseId}/modules/${moduleId}`, jsonBody('PATCH', changes))
 }
 
 /**
@@ -29,8 +19,5 @@ export function updateModule({
  * half saved. Answers with the modules in their new order.
  */
 export function reorderModules({ courseId, moduleIds }: ReorderModulesInput): Promise<CourseModule[]> {
-  return apiClient<CourseModule[]>(
-    apiPath`/api/courses/${courseId}/modules/order`,
-    jsonBody("PUT", { moduleIds })
-  );
+  return apiClient<CourseModule[]>(apiPath`/api/courses/${courseId}/modules/order`, jsonBody('PUT', { moduleIds }))
 }

@@ -20,7 +20,9 @@ export default function DetailLayout({ panel, panelLabel, children }: DetailLayo
   return (
     <div className="submittable">
       <div className="submittable-main">{children}</div>
-      <aside className="submittable-card submittable-panel" aria-label={panelLabel}>{panel}</aside>
+      <aside className="submittable-card submittable-panel" aria-label={panelLabel}>
+        {panel}
+      </aside>
     </div>
   )
 }
@@ -43,7 +45,11 @@ export function Card({ title, id, className, role, children }: CardProps) {
       aria-labelledby={title !== undefined ? id : undefined}
       role={role}
     >
-      {title !== undefined && <h2 id={id} className="submittable-card-title">{title}</h2>}
+      {title !== undefined && (
+        <h2 id={id} className="submittable-card-title">
+          {title}
+        </h2>
+      )}
       {children}
     </section>
   )
@@ -62,22 +68,25 @@ export function DeadlineFact({ deadline, now, allowLate }: DeadlineFactProps) {
     <>
       <dt>Deadline</dt>
       <dd>
-        {deadline
-          ? <>
-              {formatDateTime(deadline)}
-              <span className="text-meta">
-                {' · '}{deadline < now ? 'passed' : formatTimeLeft(deadline, now)}
-              </span>
-              {allowLate !== undefined && (
-                <>
-                  <br />
-                  <span className="text-meta">
-                    {allowLate ? 'Late submissions are accepted' : 'Late submissions are not accepted'}
-                  </span>
-                </>
-              )}
-            </>
-          : 'No deadline'}
+        {deadline ? (
+          <>
+            {formatDateTime(deadline)}
+            <span className="text-meta">
+              {' · '}
+              {deadline < now ? 'passed' : formatTimeLeft(deadline, now)}
+            </span>
+            {allowLate !== undefined && (
+              <>
+                <br />
+                <span className="text-meta">
+                  {allowLate ? 'Late submissions are accepted' : 'Late submissions are not accepted'}
+                </span>
+              </>
+            )}
+          </>
+        ) : (
+          'No deadline'
+        )}
       </dd>
     </>
   )

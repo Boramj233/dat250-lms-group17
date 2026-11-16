@@ -52,8 +52,14 @@ export default function AppRoutes() {
           <Route element={<CourseMenuLayout />}>
             <Route index element={<CourseHomePage />} />
             <Route path="modules" element={<CourseModulesPage />} />
-            <Route path="assignments" element={<CourseContentTypePage type="ASSIGNMENT" title="Assignments" section="assignments" />} />
-            <Route path="assignments/:contentId" element={<CourseSectionItemPage section="assignments" label="Assignments" />} />
+            <Route
+              path="assignments"
+              element={<CourseContentTypePage type="ASSIGNMENT" title="Assignments" section="assignments" />}
+            />
+            <Route
+              path="assignments/:contentId"
+              element={<CourseSectionItemPage section="assignments" label="Assignments" />}
+            />
             <Route path="people" element={<CoursePeoplePage />} />
             <Route path="groups" element={<CourseGroupsPage />} />
             <Route path="quizzes" element={<CourseContentTypePage type="QUIZ" title="Quizzes" section="quizzes" />} />
@@ -65,8 +71,14 @@ export default function AppRoutes() {
             <Route path="submissions/:contentId" element={<ContentSubmissionsPage />} />
             <Route path="submissions/:contentId/:submissionId" element={<SubmissionGradingPage />} />
             <Route path="files" element={<CourseFilesPage />} />
-            <Route path="code-exercises" element={<CourseContentTypePage type="CODING_EXERCISE" title="Code Exercises" section="code-exercises" />} />
-            <Route path="code-exercises/:contentId" element={<CourseSectionItemPage section="code-exercises" label="Code Exercises" />} />
+            <Route
+              path="code-exercises"
+              element={<CourseContentTypePage type="CODING_EXERCISE" title="Code Exercises" section="code-exercises" />}
+            />
+            <Route
+              path="code-exercises/:contentId"
+              element={<CourseSectionItemPage section="code-exercises" label="Code Exercises" />}
+            />
             <Route path="*" element={<NotFoundPage />} />
           </Route>
 

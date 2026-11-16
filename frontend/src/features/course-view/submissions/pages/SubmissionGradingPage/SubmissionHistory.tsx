@@ -21,11 +21,18 @@ export default function SubmissionHistory({ courseId, contentId, history, curren
       <ol className="grading-history">
         {history.map((entry, i) => (
           <li key={entry.id} className={String(entry.id) === currentId ? 'is-current' : undefined}>
-            {String(entry.id) === currentId
-              ? <strong>{formatDateTime(new Date(entry.submittedAt))}</strong>
-              : <Link to={paths.courseSubmission(courseId, contentId, entry.id)}>{formatDateTime(new Date(entry.submittedAt))}</Link>}
+            {String(entry.id) === currentId ? (
+              <strong>{formatDateTime(new Date(entry.submittedAt))}</strong>
+            ) : (
+              <Link to={paths.courseSubmission(courseId, contentId, entry.id)}>
+                {formatDateTime(new Date(entry.submittedAt))}
+              </Link>
+            )}
             <span className="text-meta">
-              {' · '}{submissionKindLabel(entry)}{entry.late && ' · late'}{i === 0 && ' · latest'}
+              {' · '}
+              {submissionKindLabel(entry)}
+              {entry.late && ' · late'}
+              {i === 0 && ' · latest'}
             </span>
           </li>
         ))}

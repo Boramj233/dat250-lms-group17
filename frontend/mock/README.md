@@ -15,12 +15,12 @@ there is no container to rebuild.
 normally go to the backend, so the frontend code runs unchanged, including the
 login popup:
 
-| Request | Mock behaviour |
-| --- | --- |
-| `GET /oauth2/authorization/keycloak` | Login page with one button per test user (instead of Keycloak). "Cancel" simulates a failed login. |
-| `GET /token` | Token for the logged-in test user, `401` without a session. |
-| `POST /logout` | Ends the session. |
-| `/api/...` | `mock/handlers.ts`. `401` without a valid token, `404` (and a warning in the terminal) for paths without a handler. |
+| Request                              | Mock behaviour                                                                                                      |
+| ------------------------------------ | ------------------------------------------------------------------------------------------------------------------- |
+| `GET /oauth2/authorization/keycloak` | Login page with one button per test user (instead of Keycloak). "Cancel" simulates a failed login.                  |
+| `GET /token`                         | Token for the logged-in test user, `401` without a session.                                                         |
+| `POST /logout`                       | Ends the session.                                                                                                   |
+| `/api/...`                           | `mock/handlers.ts`. `401` without a valid token, `404` (and a warning in the terminal) for paths without a handler. |
 
 ## Files you edit
 

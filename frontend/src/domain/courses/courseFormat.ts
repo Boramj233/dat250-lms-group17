@@ -15,9 +15,7 @@ export function formatTerm(course: Pick<Course, 'term' | 'year'>): string {
 
 /** Sort compare function: newest courses first, then by title. */
 export function byNewest(a: Course, b: Course): number {
-  return b.year - a.year
-    || TERM_ORDER[b.term] - TERM_ORDER[a.term]
-    || a.title.localeCompare(b.title)
+  return b.year - a.year || TERM_ORDER[b.term] - TERM_ORDER[a.term] || a.title.localeCompare(b.title)
 }
 
 export type TermGroup<T extends Course> = {
@@ -62,7 +60,7 @@ function termIndex(course: Pick<Course, 'term' | 'year'>): number {
 export function splitByCurrentTerm<T extends Course>(
   courses: T[],
   now: Date = new Date(),
-): { current: TermGroup<T>[], previous: TermGroup<T>[] } {
+): { current: TermGroup<T>[]; previous: TermGroup<T>[] } {
   const thisTerm = termIndex(termOf(now))
   const groups = groupByTerm(courses)
   return {

@@ -9,7 +9,7 @@ import { courseMenuItems, courseMenuPath } from '../../courseMenu'
 import { useCourseView } from '../../courseContext'
 import { useCourseItems } from '../../useCourseItems'
 
-type SubItem = { key: string, label: string, to: string }
+type SubItem = { key: string; label: string; to: string }
 
 /**
  * The course's pages with the course menu: Manage (teachers), then the sections. The
@@ -30,7 +30,9 @@ export default function CourseMenuLayout() {
     if (section !== current) return []
     if (section === 'modules') {
       return modules.map(module => ({
-        key: String(module.id), label: module.title, to: paths.courseModule(course.id, module.id),
+        key: String(module.id),
+        label: module.title,
+        to: paths.courseModule(course.id, module.id),
       }))
     }
     if (contentSection && section === contentSection.section) {
@@ -80,10 +82,7 @@ export default function CourseMenuLayout() {
               const sub = subItems(item.section)
               return (
                 <li key={item.label}>
-                  <NavLink
-                    to={courseMenuPath(course.id, item.section)}
-                    end={!item.section}
-                  >
+                  <NavLink to={courseMenuPath(course.id, item.section)} end={!item.section}>
                     {item.label}
                   </NavLink>
                   {/* On a section's page: a shortcut to each of its modules or items. */}

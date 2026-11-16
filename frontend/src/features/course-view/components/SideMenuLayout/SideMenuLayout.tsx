@@ -39,8 +39,17 @@ export default function SideMenuLayout({ label, id, open, onToggle, heading, men
             title={action}
             onClick={onToggle}
           >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-              strokeWidth="2" strokeLinecap="round" aria-hidden="true" focusable="false">
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              aria-hidden="true"
+              focusable="false"
+            >
               <path d="M4 6h16M4 12h16M4 18h16" />
             </svg>
           </button>

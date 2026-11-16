@@ -10,7 +10,9 @@ export default function CourseCard({ course }: { course: EnrolledCourse }) {
     <article className="course-card">
       <h3 className="course-card-title">
         {/* Stretched over the card (CSS), so the whole card is one link. */}
-        <TrailLink className="course-card-link" to={paths.course(course.id)}>{course.title}</TrailLink>
+        <TrailLink className="course-card-link" to={paths.course(course.id)}>
+          {course.title}
+        </TrailLink>
       </h3>
       <p className="course-card-term">{formatTerm(course)}</p>
       {course.description && <p className="course-card-description">{course.description}</p>}

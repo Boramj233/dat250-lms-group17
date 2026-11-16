@@ -8,7 +8,10 @@ const task = { id: 3, type: 'ASSIGNMENT', title: 'Task 1', position: 0 }
 const first = { id: 10, title: 'Module 1' }
 const second = { id: 20, title: 'Module 2' }
 const third = { id: 30, title: 'Module 3 (still loading)' }
-const byModule = new Map([['10', [page, quiz]], ['20', [task]]])
+const byModule = new Map([
+  ['10', [page, quiz]],
+  ['20', [task]],
+])
 
 test('courseItems lists the content in module order, each item with its module', () => {
   assert.deepEqual(courseItems(byModule, [first, second, third]), [
@@ -19,12 +22,18 @@ test('courseItems lists the content in module order, each item with its module',
 })
 
 test('courseItems follows the order of the modules it is given', () => {
-  assert.deepEqual(courseItems(byModule, [second, first]).map(({ item }) => item.id), [3, 1, 2])
+  assert.deepEqual(
+    courseItems(byModule, [second, first]).map(({ item }) => item.id),
+    [3, 1, 2],
+  )
 })
 
 test('courseItems keeps only the items the filter accepts', () => {
-  assert.deepEqual(courseItems(byModule, [first, second], item => item.type !== 'STATIC_PAGE'), [
-    { item: quiz, module: first },
-    { item: task, module: second },
-  ])
+  assert.deepEqual(
+    courseItems(byModule, [first, second], item => item.type !== 'STATIC_PAGE'),
+    [
+      { item: quiz, module: first },
+      { item: task, module: second },
+    ],
+  )
 })

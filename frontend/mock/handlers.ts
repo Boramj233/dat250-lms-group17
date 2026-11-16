@@ -11,10 +11,37 @@
 import type { Content, ContentType } from '../src/domain/content/types'
 import type { EnrolledCourse } from '../src/domain/courses/types'
 import type { UpcomingDeadline } from '../src/domain/deadlines/types'
-import { checkContentVisibleFrom, checkModuleStartAgainstContent, isNotYetVisible, isPublished } from '../src/domain/content/visibility'
+import {
+  checkContentVisibleFrom,
+  checkModuleStartAgainstContent,
+  isNotYetVisible,
+  isPublished,
+} from '../src/domain/content/visibility'
 import { canRequire, checkAvailabilityDates, isAccessible } from '../src/domain/modules/prerequisites'
-import { completions, contents, courses, enrollments, groups, modules, quizAttempts, quizQuestions, submissions, users } from './data'
-import { conflict, created, forbidden, noContent, notFound, ok, type MockHandler, type MockMultipart, type MockResult, type MockUser } from './types'
+import {
+  completions,
+  contents,
+  courses,
+  enrollments,
+  groups,
+  modules,
+  quizAttempts,
+  quizQuestions,
+  submissions,
+  users,
+} from './data'
+import {
+  conflict,
+  created,
+  forbidden,
+  noContent,
+  notFound,
+  ok,
+  type MockHandler,
+  type MockMultipart,
+  type MockResult,
+  type MockUser,
+} from './types'
 
 /** Like the backend: you may read your own data; ADMIN may read anyone's. */
 function canReadUser(user: MockUser, userId: string) {
@@ -32,8 +59,9 @@ function coursesOf(userId: number): EnrolledCourse[] {
 
 /** Like the backend should: only teachers of the course may change it. */
 function isTeacher(user: MockUser, courseId: string | number) {
-  return enrollments.some(e =>
-    e.userId === user.userId && String(e.courseId) === String(courseId) && e.role === 'TEACHER')
+  return enrollments.some(
+    e => e.userId === user.userId && String(e.courseId) === String(courseId) && e.role === 'TEACHER',
+  )
 }
 
 const badRequest = (error: string): MockResult => ({ status: 400, body: { error } })
@@ -69,16 +97,26 @@ function submissionResponse(s: MockSubmission, forTeacher = false) {
   const content = contents.find(c => c.id === s.contentId)!
   const group = groups.find(g => g.id === s.groupId)
   const base = {
-    id: s.id, contentId: s.contentId, type: s.type, payload: s.payload, submittedAt: s.submittedAt, late: s.late,
+    id: s.id,
+    contentId: s.contentId,
+    type: s.type,
+    payload: s.payload,
+    submittedAt: s.submittedAt,
+    late: s.late,
     file: s.file
       ? {
-          name: s.file.name, mediaType: s.file.mediaType, sizeBytes: s.file.content.length,
+          name: s.file.name,
+          mediaType: s.file.mediaType,
+          sizeBytes: s.file.content.length,
           downloadPath: `/api/submissions/${s.id}/${forTeacher ? 'review/file' : 'file'}`,
         }
       : null,
     groupId: s.groupId ?? null,
     submittedByUserId: s.userId,
-    members: (group?.memberIds ?? []).map(userId => ({ userId, enrollmentId: enrollmentIdOf(userId, content.courseId) })),
+    members: (group?.memberIds ?? []).map(userId => ({
+      userId,
+      enrollmentId: enrollmentIdOf(userId, content.courseId),
+    })),
   }
   return forTeacher
     ? { ...base, studentUserId: s.userId, enrollmentId: enrollmentIdOf(s.userId, content.courseId) }
@@ -88,8 +126,13 @@ function submissionResponse(s: MockSubmission, forTeacher = false) {
 /** The submissions by the same student (or group) for the same item, newest first. */
 function sequenceOf(s: MockSubmission) {
   return submissions
-    .filter(other => other.contentId === s.contentId
-      && (s.groupId !== undefined ? other.groupId === s.groupId : other.groupId === undefined && other.userId === s.userId))
+    .filter(
+      other =>
+        other.contentId === s.contentId &&
+        (s.groupId !== undefined
+          ? other.groupId === s.groupId
+          : other.groupId === undefined && other.userId === s.userId),
+    )
     .sort((a, b) => Date.parse(b.submittedAt) - Date.parse(a.submittedAt))
 }
 
@@ -106,9 +149,16 @@ function gradeReviewResponse(s: MockSubmission) {
   const teacher = enrollments.find(e => e.courseId === content.courseId && e.role === 'TEACHER')
   const teacherEnrollment = teacher ? enrollmentIdOf(teacher.userId, content.courseId) : 0
   return {
-    submissionId: s.id, score: g.score, feedback: g.feedback, passed: g.passed, visibleFrom: g.visibleFrom ?? null,
-    gradedByEnrollmentId: teacherEnrollment, gradedAt: g.gradedAt,
-    releasedByEnrollmentId: g.releasedAt ? teacherEnrollment : null, releasedAt: g.releasedAt, version: g.version,
+    submissionId: s.id,
+    score: g.score,
+    feedback: g.feedback,
+    passed: g.passed,
+    visibleFrom: g.visibleFrom ?? null,
+    gradedByEnrollmentId: teacherEnrollment,
+    gradedAt: g.gradedAt,
+    releasedByEnrollmentId: g.releasedAt ? teacherEnrollment : null,
+    releasedAt: g.releasedAt,
+    version: g.version,
   }
 }
 
@@ -129,7 +179,8 @@ const isResult = (value: MockSubmission | MockResult): value is MockResult => 's
 function checkSubmit(user: MockUser, contentId: string, groupId: number | undefined) {
   const content = contents.find(c => String(c.id) === contentId)
   if (!content) return { error: notFound() }
-  if (content.type !== 'ASSIGNMENT' && content.type !== 'CODING_EXERCISE') return { error: badRequest('Cannot submit to this content') }
+  if (content.type !== 'ASSIGNMENT' && content.type !== 'CODING_EXERCISE')
+    return { error: badRequest('Cannot submit to this content') }
   if (!canReadCourse(user, content.courseId)) return { error: forbidden() }
   if (groupId !== undefined) {
     const group = groups.find(g => g.id === groupId && g.courseId === content.courseId)
@@ -168,13 +219,14 @@ function latestSubmissions(contentId: number) {
 
 /** Students only see released grades: ReleasedGradeResponse without submissionId. */
 function releasedGrade(s: MockSubmission) {
-  return s.grade?.releasedAt ? { score: s.grade.score, feedback: s.grade.feedback, passed: s.grade.passed, releasedAt: s.grade.releasedAt } : null
+  return s.grade?.releasedAt
+    ? { score: s.grade.score, feedback: s.grade.feedback, passed: s.grade.passed, releasedAt: s.grade.releasedAt }
+    : null
 }
 
 /** Course content is for enrolled users (and ADMIN). */
 function canReadCourse(user: MockUser, courseId: string | number) {
-  return user.access === 'ADMIN'
-    || coursesOf(user.userId).some(course => String(course.id) === String(courseId))
+  return user.access === 'ADMIN' || coursesOf(user.userId).some(course => String(course.id) === String(courseId))
 }
 
 // ContentSummaryResponse sends "Assignment" for assignments (not "ASSIGNMENT").
@@ -202,28 +254,55 @@ function quizQuestionsResponse(quizId: string | number, forTeacher: boolean) {
       ...(forTeacher ? { hint: q.hint } : {}),
       options: [...q.options]
         .sort((a, b) => a.position - b.position)
-        .map(o => ({ id: o.id, optionText: o.optionText, position: o.position, ...(forTeacher ? { correct: o.correct } : {}) })),
+        .map(o => ({
+          id: o.id,
+          optionText: o.optionText,
+          position: o.position,
+          ...(forTeacher ? { correct: o.correct } : {}),
+        })),
     }))
 }
 
 function detailResponse(content: Content & { courseId: number }, forTeacher = false) {
-  const base = { id: content.id, moduleId: content.moduleId, title: content.title, position: content.position,
-    visibleFrom: content.visibleFrom ?? null }
+  const base = {
+    id: content.id,
+    moduleId: content.moduleId,
+    title: content.title,
+    position: content.position,
+    visibleFrom: content.visibleFrom ?? null,
+  }
   switch (content.type) {
     case 'STATIC_PAGE':
       return { ...base, courseId: content.courseId, body: content.body }
     case 'QUIZ':
-      return { ...base, courseId: content.courseId, maxAttempts: content.maxAttempts,
+      return {
+        ...base,
+        courseId: content.courseId,
+        maxAttempts: content.maxAttempts,
         requiredCorrectAnswers: content.requiredCorrectAnswers ?? null,
-        description: content.description ?? null, deadline: content.deadline ?? null,
-        questions: quizQuestionsResponse(content.id, forTeacher) }
+        description: content.description ?? null,
+        deadline: content.deadline ?? null,
+        questions: quizQuestionsResponse(content.id, forTeacher),
+      }
     case 'ASSIGNMENT':
-      return { ...base, instructions: content.instructions, deadline: content.deadline,
-        allowLateSubmission: content.allowLateSubmission, mandatory: content.mandatory,
-        groupAssignment: content.groupAssignment ?? false, acceptedFileTypes: content.acceptedFileTypes ?? [] }
+      return {
+        ...base,
+        instructions: content.instructions,
+        deadline: content.deadline,
+        allowLateSubmission: content.allowLateSubmission,
+        mandatory: content.mandatory,
+        groupAssignment: content.groupAssignment ?? false,
+        acceptedFileTypes: content.acceptedFileTypes ?? [],
+      }
     case 'CODING_EXERCISE':
-      return { ...base, instructions: content.instructions, starterRepositoryUrl: content.starterRepositoryUrl,
-        starterCode: content.starterCode ?? null, deadline: content.deadline, allowLateSubmission: content.allowLateSubmission }
+      return {
+        ...base,
+        instructions: content.instructions,
+        starterRepositoryUrl: content.starterRepositoryUrl,
+        starterCode: content.starterCode ?? null,
+        deadline: content.deadline,
+        allowLateSubmission: content.allowLateSubmission,
+      }
   }
 }
 
@@ -231,13 +310,13 @@ function detailResponse(content: Content & { courseId: number }, forTeacher = fa
  * Students see content that is active and whose visible date (its own, or its module's
  * start date) has passed. Proposed, like the backend should.
  */
-function visibleToStudents(content: { active?: boolean, visibleFrom?: string | null, moduleId: number | string }) {
+function visibleToStudents(content: { active?: boolean; visibleFrom?: string | null; moduleId: number | string }) {
   const module = modules.find(m => String(m.id) === String(content.moduleId))
   return content.active !== false && !(module && isNotYetVisible(content, module, Date.now()))
 }
 
 /** Published: students can see it. After that only active, position and required may change. */
-function publishedContent(content: { active?: boolean, visibleFrom?: string | null, moduleId: number | string }) {
+function publishedContent(content: { active?: boolean; visibleFrom?: string | null; moduleId: number | string }) {
   const module = modules.find(m => String(m.id) === String(content.moduleId))
   return module ? isPublished(content, module, Date.now()) : true
 }
@@ -251,8 +330,10 @@ const EDITABLE_FIELDS: Record<ContentType, string[]> = {
 }
 
 type QuestionRequest = {
-  questionText: string, position: number, hint: string | null,
-  options: { optionText: string, correct: boolean, position: number }[],
+  questionText: string
+  position: number
+  hint: string | null
+  options: { optionText: string; correct: boolean; position: number }[]
 }
 
 /** Stores a CreateQuizQuestionRequest for a quiz, with new ids for it and its options. */
@@ -307,21 +388,26 @@ const routes: MockHandler[] = [
       const now = Date.now()
       const result: UpcomingDeadline[] = contents
         .flatMap(content =>
-          (content.type === 'ASSIGNMENT' || content.type === 'CODING_EXERCISE')
-            && content.deadline && Date.parse(content.deadline) > now
-            && courseIds.has(content.courseId) && visibleToStudents(content)
-            ? [{
-              contentId: content.id,
-              type: content.type,
-              title: content.title,
-              deadline: content.deadline,
-              allowLateSubmission: content.allowLateSubmission,
-              ...(content.type === 'ASSIGNMENT' ? { mandatory: content.mandatory } : {}),
-              courseId: content.courseId,
-              courseTitle: courses.find(c => c.id === content.courseId)?.title ?? '',
-              moduleId: content.moduleId,
-            }]
-            : [])
+          (content.type === 'ASSIGNMENT' || content.type === 'CODING_EXERCISE') &&
+          content.deadline &&
+          Date.parse(content.deadline) > now &&
+          courseIds.has(content.courseId) &&
+          visibleToStudents(content)
+            ? [
+                {
+                  contentId: content.id,
+                  type: content.type,
+                  title: content.title,
+                  deadline: content.deadline,
+                  allowLateSubmission: content.allowLateSubmission,
+                  ...(content.type === 'ASSIGNMENT' ? { mandatory: content.mandatory } : {}),
+                  courseId: content.courseId,
+                  courseTitle: courses.find(c => c.id === content.courseId)?.title ?? '',
+                  moduleId: content.moduleId,
+                },
+              ]
+            : [],
+        )
         .sort((a, b) => Date.parse(a.deadline) - Date.parse(b.deadline))
       return ok(result)
     },
@@ -344,13 +430,20 @@ const routes: MockHandler[] = [
     handle: ({ user, params }) => {
       if (!courses.some(c => String(c.id) === params.courseId)) return notFound()
       if (!canReadCourse(user, params.courseId)) return forbidden()
-      return ok(modules
-        .filter(m => String(m.courseId) === params.courseId)
-        .sort((a, b) => a.position - b.position)
-        .map(({ id, courseId, title, position, prerequisiteModuleIds, availableFrom, openToAllFrom }) => ({
-          id, courseId, title, position, prerequisiteModuleIds: prerequisiteModuleIds ?? [],
-          availableFrom: availableFrom ?? null, openToAllFrom: openToAllFrom ?? null,
-        })))
+      return ok(
+        modules
+          .filter(m => String(m.courseId) === params.courseId)
+          .sort((a, b) => a.position - b.position)
+          .map(({ id, courseId, title, position, prerequisiteModuleIds, availableFrom, openToAllFrom }) => ({
+            id,
+            courseId,
+            title,
+            position,
+            prerequisiteModuleIds: prerequisiteModuleIds ?? [],
+            availableFrom: availableFrom ?? null,
+            openToAllFrom: openToAllFrom ?? null,
+          })),
+      )
     },
   },
   {
@@ -363,12 +456,20 @@ const routes: MockHandler[] = [
       if (!canReadCourse(user, params.courseId)) return forbidden()
       // Students do not see inactive content or content before its visible date; teachers do.
       const teacher = isTeacher(user, params.courseId)
-      return ok(contents
-        .filter(c => c.moduleId === module.id && (teacher || visibleToStudents(c)))
-        .sort((a, b) => a.position - b.position)
-        .map(c => ({ id: c.id, type: BACKEND_TYPE[c.type], title: c.title, position: c.position,
-          requiredForCompletion: c.requiredForCompletion ?? false, active: c.active ?? true,
-          visibleFrom: c.visibleFrom ?? null })))
+      return ok(
+        contents
+          .filter(c => c.moduleId === module.id && (teacher || visibleToStudents(c)))
+          .sort((a, b) => a.position - b.position)
+          .map(c => ({
+            id: c.id,
+            type: BACKEND_TYPE[c.type],
+            title: c.title,
+            position: c.position,
+            requiredForCompletion: c.requiredForCompletion ?? false,
+            active: c.active ?? true,
+            visibleFrom: c.visibleFrom ?? null,
+          })),
+      )
     },
   },
   {
@@ -379,9 +480,11 @@ const routes: MockHandler[] = [
       if (!courses.some(c => String(c.id) === params.courseId)) return notFound()
       if (!canReadCourse(user, params.courseId)) return forbidden()
       const inCourse = new Set(contents.filter(c => String(c.courseId) === params.courseId).map(c => c.id))
-      return ok(completions
-        .filter(row => row.userId === user.userId && inCourse.has(row.contentId))
-        .map(({ contentId, completedAt }) => ({ contentId, completedAt })))
+      return ok(
+        completions
+          .filter(row => row.userId === user.userId && inCourse.has(row.contentId))
+          .map(({ contentId, completedAt }) => ({ contentId, completedAt })),
+      )
     },
   },
   {
@@ -392,9 +495,9 @@ const routes: MockHandler[] = [
       const content = contents.find(c => String(c.id) === params.contentId)
       if (!content) return notFound()
       if (!canReadCourse(user, content.courseId)) return forbidden()
-      return ok(submissions
-        .filter(s => s.contentId === content.id && isOwnSubmission(user, s))
-        .map(s => submissionResponse(s)))
+      return ok(
+        submissions.filter(s => s.contentId === content.id && isOwnSubmission(user, s)).map(s => submissionResponse(s)),
+      )
     },
   },
   {
@@ -402,13 +505,21 @@ const routes: MockHandler[] = [
     method: 'POST',
     path: '/api/contents/:contentId/submissions',
     handle: ({ user, params, body }) => {
-      const { type, payload, groupId } = body as { type?: 'TEXT' | 'GIT_URL', payload?: string, groupId?: number }
-      if ((type !== 'TEXT' && type !== 'GIT_URL') || !payload?.trim()) return badRequest('Type and payload are required')
+      const { type, payload, groupId } = body as { type?: 'TEXT' | 'GIT_URL'; payload?: string; groupId?: number }
+      if ((type !== 'TEXT' && type !== 'GIT_URL') || !payload?.trim())
+        return badRequest('Type and payload are required')
       const check = checkSubmit(user, params.contentId, groupId ?? undefined)
       if (check.error) return check.error
       const submission: MockSubmission = {
-        id: nextId(submissions), userId: user.userId, contentId: Number(check.content.id), groupId: groupId ?? undefined,
-        type, payload: payload.trim(), submittedAt: new Date().toISOString(), late: check.late, grade: null,
+        id: nextId(submissions),
+        userId: user.userId,
+        contentId: Number(check.content.id),
+        groupId: groupId ?? undefined,
+        type,
+        payload: payload.trim(),
+        submittedAt: new Date().toISOString(),
+        late: check.late,
+        grade: null,
       }
       submissions.push(submission)
       return created(submissionResponse(submission))
@@ -425,16 +536,26 @@ const routes: MockHandler[] = [
       const file = files[0]
       const header = new TextDecoder().decode(file.content.slice(0, 5))
       if (!file.name.toLowerCase().endsWith('.pdf') || file.mediaType !== 'application/pdf' || header !== '%PDF-') {
-        return { status: 415, body: { detail: 'Only PDF files with application/pdf content type and a PDF header are accepted' } }
+        return {
+          status: 415,
+          body: { detail: 'Only PDF files with application/pdf content type and a PDF header are accepted' },
+        }
       }
       if (file.content.length > 10 * 1024 * 1024) return { status: 413, body: { detail: 'File too large' } }
       const groupId = form?.fields.groupId ? Number(form.fields.groupId) : undefined
       const check = checkSubmit(user, params.contentId, groupId)
       if (check.error) return check.error
       const submission: MockSubmission = {
-        id: nextId(submissions), userId: user.userId, contentId: Number(check.content.id), groupId,
-        type: 'FILE', payload: null, file: { name: file.name, mediaType: file.mediaType, content: file.content },
-        submittedAt: new Date().toISOString(), late: check.late, grade: null,
+        id: nextId(submissions),
+        userId: user.userId,
+        contentId: Number(check.content.id),
+        groupId,
+        type: 'FILE',
+        payload: null,
+        file: { name: file.name, mediaType: file.mediaType, content: file.content },
+        submittedAt: new Date().toISOString(),
+        late: check.late,
+        grade: null,
       }
       submissions.push(submission)
       return created(submissionResponse(submission))
@@ -474,22 +595,26 @@ const routes: MockHandler[] = [
           latest.set(submission.contentId, submission)
         }
       }
-      return ok([...latest.values()].flatMap(submission => {
-        const content = contents.find(c => c.id === submission.contentId)
-        if (!content || (content.type !== 'ASSIGNMENT' && content.type !== 'CODING_EXERCISE')) return []
-        return [{
-          contentId: content.id,
-          type: content.type,
-          title: content.title,
-          courseId: content.courseId,
-          courseTitle: courses.find(c => c.id === content.courseId)?.title ?? '',
-          moduleId: content.moduleId,
-          submissionId: submission.id,
-          submittedAt: submission.submittedAt,
-          late: submission.late,
-          grade: releasedGrade(submission),
-        }]
-      }))
+      return ok(
+        [...latest.values()].flatMap(submission => {
+          const content = contents.find(c => c.id === submission.contentId)
+          if (!content || (content.type !== 'ASSIGNMENT' && content.type !== 'CODING_EXERCISE')) return []
+          return [
+            {
+              contentId: content.id,
+              type: content.type,
+              title: content.title,
+              courseId: content.courseId,
+              courseTitle: courses.find(c => c.id === content.courseId)?.title ?? '',
+              moduleId: content.moduleId,
+              submissionId: submission.id,
+              submittedAt: submission.submittedAt,
+              late: submission.late,
+              grade: releasedGrade(submission),
+            },
+          ]
+        }),
+      )
     },
   },
   {
@@ -504,20 +629,24 @@ const routes: MockHandler[] = [
       if (!canReadCourse(user, params.courseId)) return forbidden()
       const done = new Set(completions.filter(c => String(c.userId) === params.userId).map(c => c.contentId))
       const courseModules = modules.filter(m => String(m.courseId) === params.courseId)
-      const completedIds = new Set(courseModules
-        .filter(module => {
-          const inModule = contents.filter(c => c.moduleId === module.id && c.active !== false)
-          const required = inModule.filter(c => c.requiredForCompletion)
-          const tasks = required.length > 0 ? required : inModule.filter(c => c.type !== 'STATIC_PAGE')
-          return tasks.length > 0 && tasks.every(task => done.has(Number(task.id)))
-        })
-        .map(module => String(module.id)))
-      return ok(courseModules.map(module => ({
-        moduleId: module.id,
-        completed: completedIds.has(String(module.id)),
-        // From its start date, when its prerequisites are completed or it is open to all.
-        accessible: isAccessible(module, completedIds, new Date()),
-      })))
+      const completedIds = new Set(
+        courseModules
+          .filter(module => {
+            const inModule = contents.filter(c => c.moduleId === module.id && c.active !== false)
+            const required = inModule.filter(c => c.requiredForCompletion)
+            const tasks = required.length > 0 ? required : inModule.filter(c => c.type !== 'STATIC_PAGE')
+            return tasks.length > 0 && tasks.every(task => done.has(Number(task.id)))
+          })
+          .map(module => String(module.id)),
+      )
+      return ok(
+        courseModules.map(module => ({
+          moduleId: module.id,
+          completed: completedIds.has(String(module.id)),
+          // From its start date, when its prerequisites are completed or it is open to all.
+          accessible: isAccessible(module, completedIds, new Date()),
+        })),
+      )
     },
   },
   // ---------- Teacher and course manager endpoints ----------
@@ -528,9 +657,15 @@ const routes: MockHandler[] = [
     path: '/api/courses',
     handle: ({ user, body }) => {
       if (user.access === 'STANDARD') return forbidden()
-      const input = body as { title: string, description: string, term: 'SPRING' | 'AUTUMN', year: number }
+      const input = body as { title: string; description: string; term: 'SPRING' | 'AUTUMN'; year: number }
       if (!input?.title?.trim() || !input.description?.trim()) return badRequest('Title and description are required')
-      const course = { id: nextId(courses), title: input.title, description: input.description, term: input.term, year: input.year }
+      const course = {
+        id: nextId(courses),
+        title: input.title,
+        description: input.description,
+        term: input.term,
+        year: input.year,
+      }
       courses.push(course)
       enrollments.push({ userId: user.userId, courseId: course.id, role: 'TEACHER' })
       return created(course)
@@ -545,7 +680,7 @@ const routes: MockHandler[] = [
       const course = courses.find(c => String(c.id) === params.courseId)
       if (!course) return notFound()
       if (!isTeacher(user, course.id)) return forbidden()
-      const changes = body as Partial<{ title: string, description: string, term: 'SPRING' | 'AUTUMN', year: number }>
+      const changes = body as Partial<{ title: string; description: string; term: 'SPRING' | 'AUTUMN'; year: number }>
       if (changes.title !== undefined && !changes.title.trim()) return badRequest('Title is required')
       if (changes.description !== undefined && !changes.description.trim()) return badRequest('Description is required')
       Object.assign(course, changes)
@@ -571,14 +706,24 @@ const routes: MockHandler[] = [
     handle: ({ user, params }) => {
       // Every member of the course may see who else is in it (the People page).
       if (!canReadCourse(user, params.courseId)) return forbidden()
-      return ok(enrollments
-        .filter(e => String(e.courseId) === params.courseId)
-        .flatMap(e => {
-          const member = users.find(u => u.userId === e.userId)
-          return member
-            ? [{ userId: e.userId, role: e.role, firstName: member.firstName, lastName: member.lastName, email: member.email }]
-            : []
-        }))
+      return ok(
+        enrollments
+          .filter(e => String(e.courseId) === params.courseId)
+          .flatMap(e => {
+            const member = users.find(u => u.userId === e.userId)
+            return member
+              ? [
+                  {
+                    userId: e.userId,
+                    role: e.role,
+                    firstName: member.firstName,
+                    lastName: member.lastName,
+                    email: member.email,
+                  },
+                ]
+              : []
+          }),
+      )
     },
   },
   {
@@ -587,12 +732,17 @@ const routes: MockHandler[] = [
     path: '/api/courses/:courseId/groups',
     handle: ({ user, params }) => {
       if (!canReadCourse(user, params.courseId)) return forbidden()
-      return ok(groups
-        .filter(g => String(g.courseId) === params.courseId)
-        .map(group => ({
-          id: group.id, groupNumber: group.groupNumber, memberIds: group.memberIds,
-          name: group.name ?? null, members: groupMembers(group),
-        })))
+      return ok(
+        groups
+          .filter(g => String(g.courseId) === params.courseId)
+          .map(group => ({
+            id: group.id,
+            groupNumber: group.groupNumber,
+            memberIds: group.memberIds,
+            name: group.name ?? null,
+            members: groupMembers(group),
+          })),
+      )
     },
   },
   {
@@ -602,7 +752,8 @@ const routes: MockHandler[] = [
     handle: ({ user, params, body }) => {
       if (!isTeacher(user, params.courseId)) return forbidden()
       const groupNumber = Number((body as { groupNumber?: number } | undefined)?.groupNumber)
-      if (!Number.isInteger(groupNumber) || groupNumber < 1) return badRequest('Group number must be a positive integer')
+      if (!Number.isInteger(groupNumber) || groupNumber < 1)
+        return badRequest('Group number must be a positive integer')
       if (groups.some(g => String(g.courseId) === params.courseId && g.groupNumber === groupNumber)) {
         return conflict('Group number already exists in this course')
       }
@@ -634,7 +785,9 @@ const routes: MockHandler[] = [
       if (!isTeacher(user, params.courseId) && userId !== user.userId) return forbidden()
       const group = groups.find(g => String(g.id) === params.groupId && String(g.courseId) === params.courseId)
       if (!group) return notFound()
-      if (!enrollments.some(e => e.userId === userId && String(e.courseId) === params.courseId && e.role === 'STUDENT')) {
+      if (
+        !enrollments.some(e => e.userId === userId && String(e.courseId) === params.courseId && e.role === 'STUDENT')
+      ) {
         return forbidden()
       }
       if (group.memberIds.includes(userId)) return conflict('User is already a member of this group')
@@ -642,8 +795,13 @@ const routes: MockHandler[] = [
         return conflict('User already belongs to another group in this course')
       }
       group.memberIds.push(userId)
-      return ok({ id: group.id, groupNumber: group.groupNumber, memberIds: group.memberIds,
-        name: group.name ?? null, members: groupMembers(group) })
+      return ok({
+        id: group.id,
+        groupNumber: group.groupNumber,
+        memberIds: group.memberIds,
+        name: group.name ?? null,
+        members: groupMembers(group),
+      })
     },
   },
   {
@@ -665,7 +823,7 @@ const routes: MockHandler[] = [
     path: '/api/courses/:courseId/enrollments',
     handle: ({ user, params, body }) => {
       if (!isTeacher(user, params.courseId)) return forbidden()
-      const { userId, role = 'STUDENT' } = body as { userId: number, role?: 'STUDENT' | 'TEACHER' }
+      const { userId, role = 'STUDENT' } = body as { userId: number; role?: 'STUDENT' | 'TEACHER' }
       if (!users.some(u => u.userId === Number(userId))) return notFound()
       if (enrollments.some(e => e.userId === Number(userId) && String(e.courseId) === params.courseId)) {
         return { status: 409, body: { error: 'Already enrolled' } }
@@ -679,7 +837,9 @@ const routes: MockHandler[] = [
     path: '/api/courses/:courseId/enrollments/:userId',
     handle: ({ user, params, body }) => {
       if (!isTeacher(user, params.courseId)) return forbidden()
-      const enrollment = enrollments.find(e => String(e.userId) === params.userId && String(e.courseId) === params.courseId)
+      const enrollment = enrollments.find(
+        e => String(e.userId) === params.userId && String(e.courseId) === params.courseId,
+      )
       if (!enrollment) return notFound()
       enrollment.role = (body as { role: 'STUDENT' | 'TEACHER' }).role
       return noContent()
@@ -690,7 +850,9 @@ const routes: MockHandler[] = [
     path: '/api/courses/:courseId/enrollments/:userId',
     handle: ({ user, params }) => {
       if (!isTeacher(user, params.courseId)) return forbidden()
-      const index = enrollments.findIndex(e => String(e.userId) === params.userId && String(e.courseId) === params.courseId)
+      const index = enrollments.findIndex(
+        e => String(e.userId) === params.userId && String(e.courseId) === params.courseId,
+      )
       if (index < 0) return notFound()
       enrollments.splice(index, 1)
       return noContent()
@@ -702,9 +864,15 @@ const routes: MockHandler[] = [
     path: '/api/courses/:courseId/modules',
     handle: ({ user, params, body }) => {
       if (!isTeacher(user, params.courseId)) return forbidden()
-      const { title, position } = body as { title: string, position: number }
+      const { title, position } = body as { title: string; position: number }
       if (!title?.trim()) return badRequest('Title is required')
-      const module = { id: nextId(modules), courseId: Number(params.courseId), title, position, prerequisiteModuleIds: [] }
+      const module = {
+        id: nextId(modules),
+        courseId: Number(params.courseId),
+        title,
+        position,
+        prerequisiteModuleIds: [],
+      }
       modules.push(module)
       return created(module)
     },
@@ -718,16 +886,27 @@ const routes: MockHandler[] = [
       if (!isTeacher(user, params.courseId)) return forbidden()
       const ids = ((body as { moduleIds?: (number | string)[] } | undefined)?.moduleIds ?? []).map(Number)
       const courseModules = modules.filter(m => String(m.courseId) === params.courseId)
-      const sameSet = ids.length === courseModules.length && new Set(ids).size === ids.length
-        && courseModules.every(m => ids.includes(Number(m.id)))
+      const sameSet =
+        ids.length === courseModules.length &&
+        new Set(ids).size === ids.length &&
+        courseModules.every(m => ids.includes(Number(m.id)))
       if (!sameSet) return badRequest('moduleIds must list every module of the course exactly once')
-      ids.forEach((id, position) => { courseModules.find(m => Number(m.id) === id)!.position = position })
-      return ok([...courseModules]
-        .sort((a, b) => a.position - b.position)
-        .map(({ id, courseId, title, position, prerequisiteModuleIds, availableFrom, openToAllFrom }) => ({
-          id, courseId, title, position, prerequisiteModuleIds: prerequisiteModuleIds ?? [],
-          availableFrom: availableFrom ?? null, openToAllFrom: openToAllFrom ?? null,
-        })))
+      ids.forEach((id, position) => {
+        courseModules.find(m => Number(m.id) === id)!.position = position
+      })
+      return ok(
+        [...courseModules]
+          .sort((a, b) => a.position - b.position)
+          .map(({ id, courseId, title, position, prerequisiteModuleIds, availableFrom, openToAllFrom }) => ({
+            id,
+            courseId,
+            title,
+            position,
+            prerequisiteModuleIds: prerequisiteModuleIds ?? [],
+            availableFrom: availableFrom ?? null,
+            openToAllFrom: openToAllFrom ?? null,
+          })),
+      )
     },
   },
   {
@@ -740,36 +919,51 @@ const routes: MockHandler[] = [
       if (!module) return notFound()
       if (!isTeacher(user, params.courseId)) return forbidden()
       const changes = body as Partial<{
-        title: string, position: number, prerequisiteModuleIds: (string | number)[],
-        availableFrom: string | null, openToAllFrom: string | null,
+        title: string
+        position: number
+        prerequisiteModuleIds: (string | number)[]
+        availableFrom: string | null
+        openToAllFrom: string | null
       }>
       if (changes.title !== undefined && !changes.title.trim()) return badRequest('Title is required')
-      const availableFrom = changes.availableFrom !== undefined ? changes.availableFrom : module.availableFrom ?? null
-      const openToAllFrom = changes.openToAllFrom !== undefined ? changes.openToAllFrom : module.openToAllFrom ?? null
-      const dateProblem = checkAvailabilityDates(availableFrom, openToAllFrom)
-        ?? checkModuleStartAgainstContent(availableFrom, contents.filter(c => c.moduleId === module.id))
+      const availableFrom = changes.availableFrom !== undefined ? changes.availableFrom : (module.availableFrom ?? null)
+      const openToAllFrom = changes.openToAllFrom !== undefined ? changes.openToAllFrom : (module.openToAllFrom ?? null)
+      const dateProblem =
+        checkAvailabilityDates(availableFrom, openToAllFrom) ??
+        checkModuleStartAgainstContent(
+          availableFrom,
+          contents.filter(c => c.moduleId === module.id),
+        )
       if (dateProblem) return badRequest(dateProblem)
       module.availableFrom = availableFrom
       module.openToAllFrom = openToAllFrom
       if (changes.prerequisiteModuleIds !== undefined) {
         const courseModules = modules.filter(m => m.courseId === module.courseId)
         const ids = changes.prerequisiteModuleIds.map(Number)
-        if (!ids.every(id => courseModules.some(m => m.id === id))) return badRequest('Prerequisites must be in the same course')
-        if (!ids.every(id => canRequire(courseModules, module.id, id))) return badRequest('Prerequisites cannot form a cycle')
+        if (!ids.every(id => courseModules.some(m => m.id === id)))
+          return badRequest('Prerequisites must be in the same course')
+        if (!ids.every(id => canRequire(courseModules, module.id, id)))
+          return badRequest('Prerequisites cannot form a cycle')
         module.prerequisiteModuleIds = ids
       }
       if (changes.title !== undefined) module.title = changes.title
       if (changes.position !== undefined) module.position = changes.position
-      return ok({ ...module, prerequisiteModuleIds: module.prerequisiteModuleIds ?? [],
-        availableFrom: module.availableFrom ?? null, openToAllFrom: module.openToAllFrom ?? null })
+      return ok({
+        ...module,
+        prerequisiteModuleIds: module.prerequisiteModuleIds ?? [],
+        availableFrom: module.availableFrom ?? null,
+        openToAllFrom: module.openToAllFrom ?? null,
+      })
     },
   },
-  ...([
-    ['pages', 'STATIC_PAGE'],
-    ['assignments', 'ASSIGNMENT'],
-    ['coding-exercises', 'CODING_EXERCISE'],
-    ['quizzes', 'QUIZ'],
-  ] as const).map(([slug, type]): MockHandler => ({
+  ...(
+    [
+      ['pages', 'STATIC_PAGE'],
+      ['assignments', 'ASSIGNMENT'],
+      ['coding-exercises', 'CODING_EXERCISE'],
+      ['quizzes', 'QUIZ'],
+    ] as const
+  ).map(([slug, type]): MockHandler => ({
     // Backend (exists): one create endpoint per type; answers like its GET endpoint.
     method: 'POST',
     path: `/api/courses/:courseId/modules/:moduleId/contents/${slug}`,
@@ -780,13 +974,20 @@ const routes: MockHandler[] = [
       const fields = body as Record<string, unknown>
       if (!String(fields.title ?? '').trim()) return badRequest('Title is required')
       // Proposed: visibleFrom (or null to inherit the module's start date), never before it.
-      const visibleProblem = checkContentVisibleFrom((fields.visibleFrom as string | null | undefined) ?? null, module.availableFrom)
+      const visibleProblem = checkContentVisibleFrom(
+        (fields.visibleFrom as string | null | undefined) ?? null,
+        module.availableFrom,
+      )
       if (visibleProblem) return badRequest(visibleProblem)
       // Proposed: correct answers to pass, null for none. The questions are added after the
       // quiz is created, so it cannot be checked against their number here.
       const required = fields.requiredCorrectAnswers
-      if (type === 'QUIZ' && required !== undefined && required !== null
-        && (!Number.isInteger(required) || (required as number) < 1)) {
+      if (
+        type === 'QUIZ' &&
+        required !== undefined &&
+        required !== null &&
+        (!Number.isInteger(required) || (required as number) < 1)
+      ) {
         return badRequest('requiredCorrectAnswers must be a positive integer or null')
       }
       const content = {
@@ -811,7 +1012,7 @@ const routes: MockHandler[] = [
       const content = contents.find(c => String(c.id) === params.contentId)
       if (!content) return notFound()
       if (!isTeacher(user, content.courseId)) return forbidden()
-      const { moduleId, position } = body as { moduleId: string | number, position: number }
+      const { moduleId, position } = body as { moduleId: string | number; position: number }
       const target = modules.find(m => String(m.id) === String(moduleId) && m.courseId === content.courseId)
       if (!target) return badRequest('The module is not in this course')
       content.moduleId = target.id
@@ -830,10 +1031,17 @@ const routes: MockHandler[] = [
       if (!content) return notFound()
       if (!isTeacher(user, content.courseId)) return forbidden()
       const changes = body as Partial<{
-        title: string, position: number, body: string, requiredForCompletion: boolean, active: boolean,
-        visibleFrom: string | null,
-      }> & Record<string, unknown>
-      const contentChanges = Object.keys(changes).filter(key => !['active', 'position', 'requiredForCompletion'].includes(key))
+        title: string
+        position: number
+        body: string
+        requiredForCompletion: boolean
+        active: boolean
+        visibleFrom: string | null
+      }> &
+        Record<string, unknown>
+      const contentChanges = Object.keys(changes).filter(
+        key => !['active', 'position', 'requiredForCompletion'].includes(key),
+      )
       if (contentChanges.length > 0 && publishedContent(content)) return conflict('Published content cannot be changed')
       if (changes.title !== undefined && !changes.title.trim()) return badRequest('Title is required')
       const typeFields = EDITABLE_FIELDS[content.type].filter(key => key in changes && key !== 'body')
@@ -876,7 +1084,7 @@ const routes: MockHandler[] = [
       if (quiz.deadline && Date.now() > Date.parse(quiz.deadline)) return badRequest('The deadline has passed')
       const used = quizAttempts.filter(a => a.quizId === Number(quiz.id) && a.userId === user.userId).length
       if (used >= quiz.maxAttempts) return { status: 409, body: { error: 'No attempts left' } }
-      const { answers } = body as { answers?: { questionId: number, selectedOptionIds: number[] }[] }
+      const { answers } = body as { answers?: { questionId: number; selectedOptionIds: number[] }[] }
       if (!Array.isArray(answers) || answers.length === 0) return badRequest('Answers are required')
       const questions = quizQuestions.filter(q => q.quizId === Number(quiz.id))
       // Graded per question and stored, like the backend's QuizAnswer.
@@ -889,8 +1097,13 @@ const routes: MockHandler[] = [
       })
       const correctCount = graded.filter(answer => answer.correct).length
       const attempt = {
-        id: nextId(quizAttempts), quizId: Number(quiz.id), userId: user.userId,
-        submittedAt: new Date().toISOString(), correctCount, totalQuestions: questions.length, answers: graded,
+        id: nextId(quizAttempts),
+        quizId: Number(quiz.id),
+        userId: user.userId,
+        submittedAt: new Date().toISOString(),
+        correctCount,
+        totalQuestions: questions.length,
+        answers: graded,
       }
       quizAttempts.push(attempt)
       const { userId: _userId, answers: _answers, ...response } = attempt
@@ -905,9 +1118,14 @@ const routes: MockHandler[] = [
       const quiz = contents.find(c => String(c.id) === params.quizId && c.type === 'QUIZ')
       if (!quiz || quiz.type !== 'QUIZ') return notFound()
       if (!canReadCourse(user, quiz.courseId)) return forbidden()
-      return ok(quizAttempts
-        .filter(a => a.quizId === Number(quiz.id) && a.userId === user.userId)
-        .map(({ userId: _userId, answers: _answers, ...attempt }) => ({ ...attempt, passed: attemptPassedMock(quiz, attempt.correctCount) })))
+      return ok(
+        quizAttempts
+          .filter(a => a.quizId === Number(quiz.id) && a.userId === user.userId)
+          .map(({ userId: _userId, answers: _answers, ...attempt }) => ({
+            ...attempt,
+            passed: attemptPassedMock(quiz, attempt.correctCount),
+          })),
+      )
     },
   },
   {
@@ -935,8 +1153,13 @@ const routes: MockHandler[] = [
       // Questions are added right after the quiz is created, so this is not locked.
       const stored = storeQuestion(Number(quiz.id), body as QuestionRequest)
       // QuizQuestionResponse: no options, like the backend.
-      return created({ id: stored.id, quizId: stored.quizId, questionText: stored.questionText,
-        position: stored.position, hint: stored.hint })
+      return created({
+        id: stored.id,
+        quizId: stored.quizId,
+        questionText: stored.questionText,
+        position: stored.position,
+        hint: stored.hint,
+      })
     },
   },
   {
@@ -949,7 +1172,10 @@ const routes: MockHandler[] = [
       if (!isTeacher(user, quiz.courseId)) return forbidden()
       if (publishedContent(quiz)) return conflict('Published content cannot be changed')
       const questions = body as QuestionRequest[]
-      if (!Array.isArray(questions) || questions.some(q => !q.questionText?.trim() || !q.options?.some(o => o.correct))) {
+      if (
+        !Array.isArray(questions) ||
+        questions.some(q => !q.questionText?.trim() || !q.options?.some(o => o.correct))
+      ) {
         return badRequest('Every question needs a text and at least one correct answer')
       }
       for (let i = quizQuestions.length - 1; i >= 0; i--) {
@@ -981,8 +1207,14 @@ const routes: MockHandler[] = [
       const totalPages = Math.ceil(all.length / size)
       return ok({
         content: pageItems.map(s => submissionResponse(s, true)),
-        totalElements: all.length, totalPages, number: page, size,
-        first: page === 0, last: page >= totalPages - 1, numberOfElements: pageItems.length, empty: pageItems.length === 0,
+        totalElements: all.length,
+        totalPages,
+        number: page,
+        size,
+        first: page === 0,
+        last: page >= totalPages - 1,
+        numberOfElements: pageItems.length,
+        empty: pageItems.length === 0,
       })
     },
   },
@@ -1029,23 +1261,56 @@ const routes: MockHandler[] = [
     handle: ({ user, params, body }) => {
       const submission = teacherSubmission(user, params.submissionId)
       if (isResult(submission)) return submission
-      const { score, feedback, passed = null, visibleFrom = null, version } = body as {
-        score?: number, feedback?: string | null, passed?: boolean | null, visibleFrom?: string | null, version?: number | null
+      const {
+        score,
+        feedback,
+        passed = null,
+        visibleFrom = null,
+        version,
+      } = body as {
+        score?: number
+        feedback?: string | null
+        passed?: boolean | null
+        visibleFrom?: string | null
+        version?: number | null
       }
-      if (typeof score !== 'number' || score < 0 || score > 100 || Math.round(score * 100) !== score * 100
-        || (feedback?.length ?? 0) > 10000 || (passed !== null && typeof passed !== 'boolean')
-        || (visibleFrom !== null && !(Date.parse(visibleFrom) > Date.now()))) {
+      if (
+        typeof score !== 'number' ||
+        score < 0 ||
+        score > 100 ||
+        Math.round(score * 100) !== score * 100 ||
+        (feedback?.length ?? 0) > 10000 ||
+        (passed !== null && typeof passed !== 'boolean') ||
+        (visibleFrom !== null && !(Date.parse(visibleFrom) > Date.now()))
+      ) {
         return badRequest('Invalid grade request')
       }
-      if (sequenceOf(submission)[0].id !== submission.id) return conflict('A newer submission exists; review the latest version')
+      if (sequenceOf(submission)[0].id !== submission.id)
+        return conflict('A newer submission exists; review the latest version')
       const now = new Date().toISOString()
       if (!submission.grade) {
         if (version !== null && version !== undefined) return conflict('Grade does not exist; refresh before creating')
-        submission.grade = { score, feedback: feedback || null, passed, visibleFrom, gradedAt: now, releasedAt: null, version: 0 }
+        submission.grade = {
+          score,
+          feedback: feedback || null,
+          passed,
+          visibleFrom,
+          gradedAt: now,
+          releasedAt: null,
+          version: 0,
+        }
       } else {
         if (submission.grade.releasedAt) return conflict('Released grades cannot be edited')
         if (version !== submission.grade.version) return conflict('Grade changed; refresh before updating')
-        submission.grade = { ...submission.grade, score, feedback: feedback || null, passed, visibleFrom, gradedAt: now, version: version + 1 }
+        submission.grade = {
+          ...submission.grade,
+          score,
+          feedback: feedback || null,
+          passed,
+          visibleFrom,
+          gradedAt: now,
+          version: version + 1,
+        }
       }
       return ok(gradeReviewResponse(submission))
     },

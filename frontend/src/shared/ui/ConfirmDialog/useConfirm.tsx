@@ -22,8 +22,10 @@ type Request = ConfirmOptions & { resolve: (confirmed: boolean) => void }
 export function useConfirm(): [(options: ConfirmOptions) => Promise<boolean>, ReactNode] {
   const [request, setRequest] = useState<Request | null>(null)
 
-  const confirm = useCallback((options: ConfirmOptions) =>
-    new Promise<boolean>(resolve => setRequest({ ...options, resolve })), [])
+  const confirm = useCallback(
+    (options: ConfirmOptions) => new Promise<boolean>(resolve => setRequest({ ...options, resolve })),
+    [],
+  )
 
   function answer(confirmed: boolean) {
     request?.resolve(confirmed)

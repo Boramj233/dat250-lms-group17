@@ -77,9 +77,19 @@ export default function ModuleLayout() {
               aria-controls="module-course-menu"
               onClick={() => setCourseMenuOpen(!courseMenuOpen)}
             >
-              <svg className="disclosure-chevron" width="16" height="16" viewBox="0 0 24 24"
-                fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-                aria-hidden="true" focusable="false">
+              <svg
+                className="disclosure-chevron"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+                focusable="false"
+              >
                 <path d="M9 6l6 6-6 6" />
               </svg>
               Course menu
@@ -93,15 +103,27 @@ export default function ModuleLayout() {
               <ul className="side-menu-list">
                 {courseMenuItems(isTeacher).map(item => (
                   <li key={item.label}>
-                    <NavLink to={courseMenuPath(course.id, item.section)} end>{item.label}</NavLink>
+                    <NavLink to={courseMenuPath(course.id, item.section)} end>
+                      {item.label}
+                    </NavLink>
                   </li>
                 ))}
               </ul>
             </div>
           </div>
           <Link className="side-menu-back" to={paths.courseSection(course.id, 'modules')}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-              strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+              focusable="false"
+            >
               <path d="M15 6l-6 6 6 6" />
             </svg>
             All modules
@@ -115,9 +137,7 @@ export default function ModuleLayout() {
             </li>
             {CONTENT_SECTIONS.map(({ type, section, label }) => (
               <li key={section}>
-                <NavLink
-                  to={paths.courseModuleSection(course.id, module.id, section)}
-                >
+                <NavLink to={paths.courseModuleSection(course.id, module.id, section)}>
                   {label}
                   {items && <span className="side-menu-count">{items.filter(item => item.type === type).length}</span>}
                 </NavLink>

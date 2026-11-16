@@ -59,12 +59,19 @@ function Task({ content }: { content: Submittable }) {
     <Card id="task-title" title="Description">
       <div className="submittable-text">{content.instructions || 'No description.'}</div>
       {repository && (
-        <p>Starter repository: <a href={repository} target="_blank" rel="noreferrer">{repository}</a></p>
+        <p>
+          Starter repository:{' '}
+          <a href={repository} target="_blank" rel="noreferrer">
+            {repository}
+          </a>
+        </p>
       )}
       {content.type === 'CODING_EXERCISE' && content.starterCode && (
         <div className="submittable-starter">
           <p className="submittable-label">Starter code</p>
-          <pre className="submittable-code"><code>{content.starterCode}</code></pre>
+          <pre className="submittable-code">
+            <code>{content.starterCode}</code>
+          </pre>
         </div>
       )}
     </Card>
@@ -106,12 +113,14 @@ function StudentSubmission({ content, deadline, now }: StudentSubmissionProps) {
           <dl className="submittable-facts">
             <dt>Submitted</dt>
             <dd>
-              {latest
-                ? <>
-                    {formatDateTime(new Date(latest.submittedAt))}
-                    {latest.late && <span className="submittable-late"> (late)</span>}
-                  </>
-                : 'Not submitted yet'}
+              {latest ? (
+                <>
+                  {formatDateTime(new Date(latest.submittedAt))}
+                  {latest.late && <span className="submittable-late"> (late)</span>}
+                </>
+              ) : (
+                'Not submitted yet'
+              )}
               {history.data && history.data.length > 1 && (
                 <span className="text-meta"> · {history.data.length} submissions</span>
               )}
@@ -119,14 +128,22 @@ function StudentSubmission({ content, deadline, now }: StudentSubmissionProps) {
             {latest && latest.groupId !== null && (
               <>
                 <dt>Submitted by group</dt>
-                <dd><GroupFact submission={latest} people={people} userId={user.userId} /></dd>
+                <dd>
+                  <GroupFact submission={latest} people={people} userId={user.userId} />
+                </dd>
               </>
             )}
             <dt>Score</dt>
             <dd>
-              {grade.data
-                ? <><strong>{formatScore(grade.data.score)}</strong> <PassedBadge passed={grade.data.passed} /></>
-                : latest ? 'Not graded yet' : '–'}
+              {grade.data ? (
+                <>
+                  <strong>{formatScore(grade.data.score)}</strong> <PassedBadge passed={grade.data.passed} />
+                </>
+              ) : latest ? (
+                'Not graded yet'
+              ) : (
+                '–'
+              )}
             </dd>
             {grade.data?.feedback && (
               <>
@@ -142,39 +159,46 @@ function StudentSubmission({ content, deadline, now }: StudentSubmissionProps) {
       <Card id="submission-title" title="Your submission">
         {isGroupAssignment && (
           <p className="text-meta submittable-note">
-            {myGroup
-              ? <>Group assignment: you hand in for <strong>{people.groupLabel(myGroup.id)}</strong>, and it counts for everyone in it.</>
-              : 'Group assignment: you are not in a group in this course, so you hand in for yourself.'}
+            {myGroup ? (
+              <>
+                Group assignment: you hand in for <strong>{people.groupLabel(myGroup.id)}</strong>, and it counts for
+                everyone in it.
+              </>
+            ) : (
+              'Group assignment: you are not in a group in this course, so you hand in for yourself.'
+            )}
           </p>
         )}
         {history.isPending && <p role="status">Loading your submissions…</p>}
         {history.error && <p role="alert">Could not load your submissions.</p>}
 
-        {writing
-          ? (
-            <SubmissionForm
-              content={content}
-              groupId={myGroup?.id}
-              onDone={() => setWriting(false)}
-              onCancel={() => setWriting(false)}
-            />
-          )
-          : history.data && (
+        {writing ? (
+          <SubmissionForm
+            content={content}
+            groupId={myGroup?.id}
+            onDone={() => setWriting(false)}
+            onCancel={() => setWriting(false)}
+          />
+        ) : (
+          history.data && (
             <>
-              {latest
-                ? <SubmissionAnswer submission={latest} />
-                : <p className="submittable-empty">Nothing handed in yet.</p>}
+              {latest ? (
+                <SubmissionAnswer submission={latest} />
+              ) : (
+                <p className="submittable-empty">Nothing handed in yet.</p>
+              )}
               <div className="submittable-actions">
-                {closed
-                  ? <p>The deadline has passed. Late submissions are not accepted.</p>
-                  : (
-                    <button type="button" className="button-primary" onClick={() => setWriting(true)}>
-                      {latest ? 'Submit again' : 'Start submission'}
-                    </button>
-                  )}
+                {closed ? (
+                  <p>The deadline has passed. Late submissions are not accepted.</p>
+                ) : (
+                  <button type="button" className="button-primary" onClick={() => setWriting(true)}>
+                    {latest ? 'Submit again' : 'Start submission'}
+                  </button>
+                )}
               </div>
             </>
-          )}
+          )
+        )}
       </Card>
     </DetailLayout>
   )
@@ -190,17 +214,19 @@ function MandatoryFact({ content }: { content: Submittable }) {
     <dl className="submittable-facts">
       <dt>Requirement</dt>
       <dd>
-        {content.mandatory
-          ? <>
-              <span className="tag tag-primary">Mandatory</span>
-              <br />
-              <span className="text-meta">Must be approved to complete the course</span>
-            </>
-          : <>
-              <strong>Optional</strong>
-              <br />
-              <span className="text-meta">Not required to complete the course</span>
-            </>}
+        {content.mandatory ? (
+          <>
+            <span className="tag tag-primary">Mandatory</span>
+            <br />
+            <span className="text-meta">Must be approved to complete the course</span>
+          </>
+        ) : (
+          <>
+            <strong>Optional</strong>
+            <br />
+            <span className="text-meta">Not required to complete the course</span>
+          </>
+        )}
       </dd>
     </dl>
   )

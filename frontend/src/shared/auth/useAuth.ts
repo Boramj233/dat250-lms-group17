@@ -13,7 +13,7 @@ import {
   type CurrentUser,
 } from './auth'
 
-export const currentUserQueryKey = ['currentUser'] as const
+const currentUserQueryKey = ['currentUser'] as const
 
 /** The logged-in user from GET /api/users/me. */
 export function useCurrentUser() {

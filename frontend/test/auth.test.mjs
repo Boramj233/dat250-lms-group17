@@ -5,11 +5,12 @@ import { apiClient, AuthenticationRequiredError } from '../src/shared/api/apiCli
 
 const originalFetch = globalThis.fetch
 const originalWindow = globalThis.window
-const token = (value = 'application-token') => Response.json({
-  accessToken: value,
-  tokenType: 'Bearer',
-  expiresAt: new Date(Date.now() + 900_000).toISOString(),
-})
+const token = (value = 'application-token') =>
+  Response.json({
+    accessToken: value,
+    tokenType: 'Bearer',
+    expiresAt: new Date(Date.now() + 900_000).toISOString(),
+  })
 
 afterEach(() => {
   clearToken()
@@ -37,7 +38,12 @@ test('logout forgets the token and submits a form POST to /logout instead of usi
   const submitted = []
   const originalDocument = globalThis.document
   globalThis.document = {
-    createElement: tag => ({ tag, submit() { submitted.push({ tag, method: this.method, action: this.action }) } }),
+    createElement: tag => ({
+      tag,
+      submit() {
+        submitted.push({ tag, method: this.method, action: this.action })
+      },
+    }),
     body: { appendChild() {} },
   }
   try {
@@ -117,11 +123,16 @@ test('a second API 401 stops retrying and requires login', async () => {
 test('a forbidden operation is an ordinary error, not a login prompt', async () => {
   let tokenRequests = 0
   globalThis.fetch = async url => {
-    if (url === '/token') { tokenRequests++; return token() }
+    if (url === '/token') {
+      tokenRequests++
+      return token()
+    }
     return new Response(null, { status: 403 })
   }
-  await assert.rejects(apiClient('/api/admin/users'), error =>
-    !(error instanceof AuthenticationRequiredError) && /403/.test(error.message))
+  await assert.rejects(
+    apiClient('/api/admin/users'),
+    error => !(error instanceof AuthenticationRequiredError) && /403/.test(error.message),
+  )
   assert.equal(tokenRequests, 1)
   assert.equal(isLoginRequired(), false)
 })

@@ -21,7 +21,15 @@ type CourseFormProps = {
 }
 
 /** The fields of a course: title, description, term and year. Used to create and edit courses. */
-export default function CourseForm({ initial, onSubmit, submitLabel, saving = false, error, actions, onChange }: CourseFormProps) {
+export default function CourseForm({
+  initial,
+  onSubmit,
+  submitLabel,
+  saving = false,
+  error,
+  actions,
+  onChange,
+}: CourseFormProps) {
   const [title, setTitle] = useState(initial.title)
   const [description, setDescription] = useState(initial.description)
   const [term, setTerm] = useState<Term>(initial.term)
@@ -39,32 +47,83 @@ export default function CourseForm({ initial, onSubmit, submitLabel, saving = fa
 
   return (
     <form className="form" onSubmit={submit}>
-      <p className="form-hint">Fields marked <span className="form-required">*</span> are required.</p>
+      <p className="form-hint">
+        Fields marked <span className="form-required">*</span> are required.
+      </p>
       <div className="form-field">
-        <label htmlFor="course-title">Title<RequiredMark /></label>
-        <input id="course-title" required maxLength={255} value={title}
-          onChange={event => { setTitle(event.target.value); report({ title: event.target.value }) }} placeholder="DAT250 Advanced Software Technologies" />
+        <label htmlFor="course-title">
+          Title
+          <RequiredMark />
+        </label>
+        <input
+          id="course-title"
+          required
+          maxLength={255}
+          value={title}
+          onChange={event => {
+            setTitle(event.target.value)
+            report({ title: event.target.value })
+          }}
+          placeholder="DAT250 Advanced Software Technologies"
+        />
       </div>
       <div className="form-field">
-        <label htmlFor="course-description">Description<RequiredMark /></label>
-        <textarea id="course-description" required value={description}
-          onChange={event => { setDescription(event.target.value); report({ description: event.target.value }) }} />
+        <label htmlFor="course-description">
+          Description
+          <RequiredMark />
+        </label>
+        <textarea
+          id="course-description"
+          required
+          value={description}
+          onChange={event => {
+            setDescription(event.target.value)
+            report({ description: event.target.value })
+          }}
+        />
       </div>
       <div className="form-row">
         <div className="form-field">
-          <label htmlFor="course-term">Term<RequiredMark /></label>
-          <select id="course-term" required value={term} onChange={event => { setTerm(event.target.value as Term); report({ term: event.target.value as Term }) }}>
+          <label htmlFor="course-term">
+            Term
+            <RequiredMark />
+          </label>
+          <select
+            id="course-term"
+            required
+            value={term}
+            onChange={event => {
+              setTerm(event.target.value as Term)
+              report({ term: event.target.value as Term })
+            }}
+          >
             <option value="SPRING">Spring</option>
             <option value="AUTUMN">Autumn</option>
           </select>
         </div>
         <div className="form-field">
-          <label htmlFor="course-year">Year<RequiredMark /></label>
-          <input id="course-year" type="number" required min={1} value={year}
-            onChange={event => { setYear(Number(event.target.value)); report({ year: Number(event.target.value) }) }} />
+          <label htmlFor="course-year">
+            Year
+            <RequiredMark />
+          </label>
+          <input
+            id="course-year"
+            type="number"
+            required
+            min={1}
+            value={year}
+            onChange={event => {
+              setYear(Number(event.target.value))
+              report({ year: Number(event.target.value) })
+            }}
+          />
         </div>
       </div>
-      {error && <p className="form-error" role="alert">{error}</p>}
+      {error && (
+        <p className="form-error" role="alert">
+          {error}
+        </p>
+      )}
       <div className="form-actions">
         <button type="submit" className="button-primary" disabled={saving}>
           {saving ? 'Saving…' : submitLabel}

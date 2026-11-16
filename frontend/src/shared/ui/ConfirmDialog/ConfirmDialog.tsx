@@ -24,9 +24,17 @@ type ConfirmDialogProps = {
  * inside it and Esc closes it. Cancel has the focus at first, so Enter does not confirm
  * by accident.
  */
-export default function ConfirmDialog(
-  { open, title, children, confirmLabel, cancelLabel = 'Cancel', busy = false, danger = false, onConfirm, onCancel }: ConfirmDialogProps,
-) {
+export default function ConfirmDialog({
+  open,
+  title,
+  children,
+  confirmLabel,
+  cancelLabel = 'Cancel',
+  busy = false,
+  danger = false,
+  onConfirm,
+  onCancel,
+}: ConfirmDialogProps) {
   const ref = useRef<HTMLDialogElement>(null)
   const titleId = useId()
 
@@ -43,18 +51,30 @@ export default function ConfirmDialog(
       className="confirm-dialog"
       aria-labelledby={titleId}
       // Esc: let React state close it.
-      onCancel={event => { event.preventDefault(); if (!busy) onCancel() }}
+      onCancel={event => {
+        event.preventDefault()
+        if (!busy) onCancel()
+      }}
       // A click on the backdrop (the dialog element itself, outside the box).
-      onClick={event => { if (event.target === event.currentTarget && !busy) onCancel() }}
+      onClick={event => {
+        if (event.target === event.currentTarget && !busy) onCancel()
+      }}
     >
       <div className="confirm-dialog-box">
-        <h2 id={titleId} className="confirm-dialog-title">{title}</h2>
+        <h2 id={titleId} className="confirm-dialog-title">
+          {title}
+        </h2>
         <div className="confirm-dialog-body">{children}</div>
         <div className="confirm-dialog-actions">
           <button type="button" className="button-secondary" autoFocus disabled={busy} onClick={onCancel}>
             {cancelLabel}
           </button>
-          <button type="button" className={danger ? 'button-danger' : 'button-primary'} disabled={busy} onClick={onConfirm}>
+          <button
+            type="button"
+            className={danger ? 'button-danger' : 'button-primary'}
+            disabled={busy}
+            onClick={onConfirm}
+          >
             {confirmLabel}
           </button>
         </div>

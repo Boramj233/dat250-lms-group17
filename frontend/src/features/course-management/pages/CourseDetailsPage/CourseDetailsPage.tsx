@@ -22,7 +22,9 @@ export default function CourseDetailsPage() {
 
   function changed(values: CreateCourseInput) {
     setSaved(false)
-    setDirty(values.title !== title || values.description !== description || values.term !== term || values.year !== year)
+    setDirty(
+      values.title !== title || values.description !== description || values.term !== term || values.year !== year,
+    )
   }
 
   function cancel() {
@@ -42,7 +44,12 @@ export default function CourseDetailsPage() {
         onChange={changed}
         actions={
           <>
-            <button type="button" className="button-secondary" disabled={!dirty || updateCourse.isPending} onClick={cancel}>
+            <button
+              type="button"
+              className="button-secondary"
+              disabled={!dirty || updateCourse.isPending}
+              onClick={cancel}
+            >
               Cancel
             </button>
             {dirty && !updateCourse.isPending && <span className="form-hint">Unsaved changes</span>}
@@ -50,12 +57,22 @@ export default function CourseDetailsPage() {
         }
         onSubmit={changes => {
           setSaved(false)
-          updateCourse.mutate({ courseId: course.id, changes }, {
-            onSuccess: () => { setSaved(true); setDirty(false) },
-          })
+          updateCourse.mutate(
+            { courseId: course.id, changes },
+            {
+              onSuccess: () => {
+                setSaved(true)
+                setDirty(false)
+              },
+            },
+          )
         }}
       />
-      {saved && <p className="form-success" role="status">The course was saved.</p>}
+      {saved && (
+        <p className="form-success" role="status">
+          The course was saved.
+        </p>
+      )}
       {leaveDialog}
     </>
   )

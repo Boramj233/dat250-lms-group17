@@ -2,7 +2,7 @@ import type { ModuleId } from '@shared/types'
 import type { ContentSummary } from './types'
 
 /** One content item of a course, with the module it is in. */
-export type CourseItem<M> = { item: ContentSummary, module: M }
+export type CourseItem<M> = { item: ContentSummary; module: M }
 
 /**
  * The content of a course's modules as one list, in module order (and by position within
@@ -15,5 +15,6 @@ export function courseItems<M extends { id: ModuleId }>(
   include: (item: ContentSummary) => boolean = () => true,
 ): CourseItem<M>[] {
   return modules.flatMap(module =>
-    (byModule.get(String(module.id)) ?? []).filter(include).map(item => ({ item, module })))
+    (byModule.get(String(module.id)) ?? []).filter(include).map(item => ({ item, module })),
+  )
 }

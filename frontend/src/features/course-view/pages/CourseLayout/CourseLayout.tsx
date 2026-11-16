@@ -31,13 +31,15 @@ export default function CourseLayout() {
   const sortedModules = [...modules.data].sort((a, b) => a.position - b.position)
 
   return (
-    <CourseViewContext value={{
-      course: course.data,
-      modules: sortedModules,
-      isTeacher: role.role === 'TEACHER',
-      menuOpen,
-      toggleMenu: () => setMenuOpen(open => !open),
-    }}>
+    <CourseViewContext
+      value={{
+        course: course.data,
+        modules: sortedModules,
+        isTeacher: role.role === 'TEACHER',
+        menuOpen,
+        toggleMenu: () => setMenuOpen(open => !open),
+      }}
+    >
       <TrailPage label={course.data.title} hideBreadcrumbs={ownBreadcrumbs}>
         <Outlet />
       </TrailPage>

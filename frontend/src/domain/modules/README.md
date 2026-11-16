@@ -5,19 +5,18 @@ the backend. Modules organize content within a course. Content API functions and
 hooks belong to `../content`, including module content lists and moving content.
 Shared identifiers are defined in `../shared/types.ts`.
 
-| Method | Endpoint | Request body | Response |
-| --- | --- | --- | --- |
-| GET | `/api/courses/{courseId}/modules` | — | `CourseModule[]` |
-| POST | `/api/courses/{courseId}/modules` | `{ title, position, prerequisiteModuleIds? }` | `CourseModule` |
-| PATCH | `/api/courses/{courseId}/modules/{moduleId}` | Updated `title`, `position`, `prerequisiteModuleIds`, `availableFrom` and/or `openToAllFrom` | `CourseModule` |
-| PUT | `/api/courses/{courseId}/modules/order` | `{ moduleIds }`: every module of the course once, first to last (proposed) | `CourseModule[]` in the new order |
+| Method | Endpoint                                     | Request body                                                                                 | Response                          |
+| ------ | -------------------------------------------- | -------------------------------------------------------------------------------------------- | --------------------------------- |
+| GET    | `/api/courses/{courseId}/modules`            | —                                                                                            | `CourseModule[]`                  |
+| POST   | `/api/courses/{courseId}/modules`            | `{ title, position, prerequisiteModuleIds? }`                                                | `CourseModule`                    |
+| PATCH  | `/api/courses/{courseId}/modules/{moduleId}` | Updated `title`, `position`, `prerequisiteModuleIds`, `availableFrom` and/or `openToAllFrom` | `CourseModule`                    |
+| PUT    | `/api/courses/{courseId}/modules/order`      | `{ moduleIds }`: every module of the course once, first to last (proposed)                   | `CourseModule[]` in the new order |
 
 A `CourseModule` has `id`, `courseId`, `title`, zero-based `position`, and
 `prerequisiteModuleIds` (an empty array for modules without prerequisites).
 GET returns modules sorted by position. The backend maintains a consistent order
 when modules are inserted, reordered, or deleted. Updating position reorders a
 module within its current course; moving modules between courses is not supported.
-
 
 ## Module access (rules for the backend)
 
@@ -46,15 +45,14 @@ when returning content and accepting completion requests. Client-supplied IDs or
 completion flags do not establish authorization. A direct API call must not bypass
 a locked module. These backend rules are not implemented by the frontend hooks.
 
-
 ```tsx
-const modules = useCourseModules(courseId);
-const createModule = useCreateModule();
-const updateModule = useUpdateModule();
+const modules = useCourseModules(courseId)
+const createModule = useCreateModule()
+const updateModule = useUpdateModule()
 
-createModule.mutate({ courseId, title: "Introduction", position: 0 });
-updateModule.mutate({ courseId, moduleId, changes: { title: "Getting started" } });
-updateModule.mutate({ courseId, moduleId, changes: { prerequisiteModuleIds: [introModuleId] } });
+createModule.mutate({ courseId, title: 'Introduction', position: 0 })
+updateModule.mutate({ courseId, moduleId, changes: { title: 'Getting started' } })
+updateModule.mutate({ courseId, moduleId, changes: { prerequisiteModuleIds: [introModuleId] } })
 ```
 
 The backend must authenticate the actor and check teacher access to the course

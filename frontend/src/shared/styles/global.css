@@ -119,7 +119,7 @@ img {
   transition: transform 0.15s ease;
 }
 
-[aria-expanded="true"] > .disclosure-chevron {
+[aria-expanded='true'] > .disclosure-chevron {
   transform: rotate(90deg);
 }
 

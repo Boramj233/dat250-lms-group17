@@ -2,7 +2,7 @@ import { paths, type CourseSection } from '@shared/paths'
 import type { CourseId } from '@shared/types'
 
 /** The course menu, in this order; Home has no section. */
-export const COURSE_MENU_ITEMS: { label: string, section?: CourseSection, teacherOnly?: boolean }[] = [
+const COURSE_MENU_ITEMS: { label: string; section?: CourseSection; teacherOnly?: boolean }[] = [
   { label: 'Home' },
   { label: 'Modules', section: 'modules' },
   { label: 'Assignments', section: 'assignments' },

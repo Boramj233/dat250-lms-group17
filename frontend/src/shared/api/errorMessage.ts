@@ -7,10 +7,6 @@ import { ApiError } from './apiClient.ts'
  *   errorMessage(error, { 409: 'Group 3 already exists.', 403: 'Only teachers can create groups.' },
  *     'The group could not be created. Try again.')
  */
-export function errorMessage(
-  error: unknown,
-  byStatus: Partial<Record<number, string>>,
-  fallback: string,
-): string {
+export function errorMessage(error: unknown, byStatus: Partial<Record<number, string>>, fallback: string): string {
   return (error instanceof ApiError ? byStatus[error.status] : undefined) ?? fallback
 }

@@ -14,13 +14,37 @@ export type ContentTypeInfo = {
 
 /** The content types a teacher can create, in the order they are offered. */
 export const CONTENT_TYPES: ContentTypeInfo[] = [
-  { type: 'ASSIGNMENT', slug: 'assignment', section: 'assignments', label: 'Assignment', description: 'Students hand in files, alone or as a group, with a deadline.' },
-  { type: 'QUIZ', slug: 'quiz', section: 'quizzes', label: 'Quiz', description: 'Questions with answers to choose from.' },
-  { type: 'CODING_EXERCISE', slug: 'coding-exercise', section: 'code-exercises', label: 'Coding exercise', description: 'Students start from a repository and hand in their code.' },
-  { type: 'STATIC_PAGE', slug: 'page', section: 'pages', label: 'Page', description: 'Text to read, e.g. notes or a reading list.' },
+  {
+    type: 'ASSIGNMENT',
+    slug: 'assignment',
+    section: 'assignments',
+    label: 'Assignment',
+    description: 'Students hand in files, alone or as a group, with a deadline.',
+  },
+  {
+    type: 'QUIZ',
+    slug: 'quiz',
+    section: 'quizzes',
+    label: 'Quiz',
+    description: 'Questions with answers to choose from.',
+  },
+  {
+    type: 'CODING_EXERCISE',
+    slug: 'coding-exercise',
+    section: 'code-exercises',
+    label: 'Coding exercise',
+    description: 'Students start from a repository and hand in their code.',
+  },
+  {
+    type: 'STATIC_PAGE',
+    slug: 'page',
+    section: 'pages',
+    label: 'Page',
+    description: 'Text to read, e.g. notes or a reading list.',
+  },
 ]
 
-export function contentTypeInfo(type: ContentType): ContentTypeInfo {
+function contentTypeInfo(type: ContentType): ContentTypeInfo {
   return CONTENT_TYPES.find(info => info.type === type)!
 }
 
@@ -44,7 +68,9 @@ export function isSubmittableType(type: ContentType | undefined): type is Submit
  * Whether students hand in the item. Also narrows a `Content` to an assignment or coding
  * exercise, so `content.deadline` can be read after the check.
  */
-export function isSubmittable<T extends { type: ContentType }>(item: T | undefined): item is T & { type: SubmittableType } {
+export function isSubmittable<T extends { type: ContentType }>(
+  item: T | undefined,
+): item is T & { type: SubmittableType } {
   return isSubmittableType(item?.type)
 }
 

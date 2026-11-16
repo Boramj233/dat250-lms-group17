@@ -23,7 +23,9 @@ export function AttemptList({ attempts, required, onView }: AttemptListProps) {
           <li key={attempt.id} className="quiz-attempt">
             <span className="quiz-attempt-name">Attempt {attempts.length - index}</span>
             <span className="text-meta">{formatDateTime(new Date(attempt.submittedAt))}</span>
-            <span className="quiz-attempt-score">{attempt.correctCount} of {attempt.totalQuestions} correct</span>
+            <span className="quiz-attempt-score">
+              {attempt.correctCount} of {attempt.totalQuestions} correct
+            </span>
             <PassedBadge passed={attemptPassed(attempt, required)} />
             <button type="button" className="button-secondary quiz-attempt-view" onClick={() => onView(attempt.id)}>
               View answers<span className="visually-hidden"> for attempt {attempts.length - index}</span>
@@ -58,7 +60,9 @@ export function AttemptReview({ quizId, questions, attempts, attemptId, required
 
   const back = (
     <div className="submittable-actions">
-      <button type="button" className="button-secondary" onClick={onBack}>Back to the quiz</button>
+      <button type="button" className="button-secondary" onClick={onBack}>
+        Back to the quiz
+      </button>
     </div>
   )
 
@@ -81,13 +85,13 @@ export function AttemptReview({ quizId, questions, attempts, attemptId, required
     <>
       <Card id="quiz-review-title" title={<>Your answers{number !== undefined && ` · attempt ${number}`}</>}>
         <p className="quiz-result-score">
-          {attempt.correctCount} of {attempt.totalQuestions} correct
-          {' '}<PassedBadge passed={attemptPassed(attempt, required)} />
+          {attempt.correctCount} of {attempt.totalQuestions} correct{' '}
+          <PassedBadge passed={attemptPassed(attempt, required)} />
         </p>
         <p className="text-meta">
           Handed in {formatDateTime(new Date(attempt.submittedAt))}
-          {' · '}{attempt.correctCount} correct, {wrong} wrong.
-          {' '}Your answers are marked; the correct answers are not shown.
+          {' · '}
+          {attempt.correctCount} correct, {wrong} wrong. Your answers are marked; the correct answers are not shown.
         </p>
         {back}
       </Card>

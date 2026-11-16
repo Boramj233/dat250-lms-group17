@@ -20,14 +20,16 @@ export default function CourseGradesPage() {
   return (
     <>
       <PageHeader title="Grades" kicker={course.title} />
-      {isTeacher
-        ? <p>Grading is not available in the course view yet.</p>
-        : <MyGrades courseId={String(course.id)} courseTitle={course.title} />}
+      {isTeacher ? (
+        <p>Grading is not available in the course view yet.</p>
+      ) : (
+        <MyGrades courseId={String(course.id)} courseTitle={course.title} />
+      )}
     </>
   )
 }
 
-function MyGrades({ courseId, courseTitle }: { courseId: string, courseTitle: string }) {
+function MyGrades({ courseId, courseTitle }: { courseId: string; courseTitle: string }) {
   const { modules } = useCourseView()
   const grades = useMyGrades()
   return (
@@ -53,9 +55,11 @@ function MyGrades({ courseId, courseTitle }: { courseId: string, courseTitle: st
               header: 'Module',
               cell: entry => {
                 const module = modules.find(m => String(m.id) === String(entry.moduleId))
-                return module
-                  ? <TrailLink to={paths.courseModule(entry.courseId, module.id)}>{module.title}</TrailLink>
-                  : <span className="text-meta">–</span>
+                return module ? (
+                  <TrailLink to={paths.courseModule(entry.courseId, module.id)}>{module.title}</TrailLink>
+                ) : (
+                  <span className="text-meta">–</span>
+                )
               },
             },
             { header: 'Type', cell: entry => <span className="text-meta">{contentTypeLabel(entry.type)}</span> },
@@ -70,21 +74,30 @@ function MyGrades({ courseId, courseTitle }: { courseId: string, courseTitle: st
             },
             {
               header: 'Score',
-              cell: entry => entry.grade
-                ? <span className="data-table-strong">{formatScore(entry.grade.score)}</span>
-                : <span className="text-meta">Awaiting grade</span>,
+              cell: entry =>
+                entry.grade ? (
+                  <span className="data-table-strong">{formatScore(entry.grade.score)}</span>
+                ) : (
+                  <span className="text-meta">Awaiting grade</span>
+                ),
             },
             {
               header: 'Passed',
-              cell: entry => entry.grade?.passed != null
-                ? <PassedBadge passed={entry.grade.passed} />
-                : <span className="text-meta">–</span>,
+              cell: entry =>
+                entry.grade?.passed != null ? (
+                  <PassedBadge passed={entry.grade.passed} />
+                ) : (
+                  <span className="text-meta">–</span>
+                ),
             },
             {
               header: 'Feedback',
-              cell: entry => entry.grade?.feedback
-                ? <span className="data-table-text">{entry.grade.feedback}</span>
-                : <span className="text-meta">–</span>,
+              cell: entry =>
+                entry.grade?.feedback ? (
+                  <span className="data-table-text">{entry.grade.feedback}</span>
+                ) : (
+                  <span className="text-meta">–</span>
+                ),
             },
           ]}
         />

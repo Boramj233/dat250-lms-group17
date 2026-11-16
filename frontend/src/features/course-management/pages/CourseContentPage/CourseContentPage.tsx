@@ -20,7 +20,10 @@ import './CourseContentPage.css'
 export default function CourseContentPage() {
   const { course, modules } = useManageCourse()
   // All modules' content at once, for the counts; the same cache as the module pages.
-  const content = useCourseContent(course.id, modules.map(m => m.id))
+  const content = useCourseContent(
+    course.id,
+    modules.map(m => m.id),
+  )
   const reorder = useReorderModules()
   // The unsaved order as module ids (strings); null: the saved order.
   const [order, setOrder] = useState<string[] | null>(null)
@@ -73,19 +76,23 @@ export default function CourseContentPage() {
     if (dragId !== null) {
       const ids = shown.map(m => String(m.id))
       const module = shown.find(m => String(m.id) === dragId)
-      if (module) setAnnouncement(`${module.title} moved to place ${ids.indexOf(dragId) + 1} of ${ids.length}. Not saved yet.`)
+      if (module)
+        setAnnouncement(`${module.title} moved to place ${ids.indexOf(dragId) + 1} of ${ids.length}. Not saved yet.`)
     }
     setDragId(null)
   }
 
   function save() {
     if (!order) return
-    reorder.mutate({ courseId: course.id, moduleIds: order }, {
-      onSuccess: () => {
-        setOrder(null)
-        setSaved('The new order is saved. Students see the modules in this order.')
+    reorder.mutate(
+      { courseId: course.id, moduleIds: order },
+      {
+        onSuccess: () => {
+          setOrder(null)
+          setSaved('The new order is saved. Students see the modules in this order.')
+        },
       },
-    })
+    )
   }
 
   /**
@@ -109,83 +116,104 @@ export default function CourseContentPage() {
 
   return (
     <>
-      {modules.length === 0
-        ? <p>This course has no modules yet. Add the first one below.</p>
-        : (
-          <>
-            <p className="form-hint manage-module-help">
-              The order here is the order students see the modules in. Drag a module by
-              its handle, or use ↑ and ↓, then save.
-            </p>
-            <ol className="manage-module-list">
-              {shown.map((module, index) => {
-                const id = String(module.id)
-                const items = content.byModule.get(id)
-                const savedIndex = savedIds.indexOf(id)
-                const moved = order !== null && savedIndex !== index
-                const rowClass = ['manage-module-row', moved ? 'is-moved' : '', dragId === id ? 'is-dragging' : '']
-                  .filter(Boolean).join(' ')
-                return (
-                  <li
-                    key={module.id}
-                    className={rowClass}
-                    draggable={!reorder.isPending}
-                    onDragStart={event => dragStart(event, id)}
-                    onDragOver={event => dragOver(event, id)}
-                    onDrop={event => event.preventDefault()}
-                    onDragEnd={dragEnd}
-                  >
-                    <span className="manage-module-handle" aria-hidden="true" title="Drag to change the order">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" focusable="false">
-                        <circle cx="9" cy="6" r="1.6" /><circle cx="15" cy="6" r="1.6" />
-                        <circle cx="9" cy="12" r="1.6" /><circle cx="15" cy="12" r="1.6" />
-                        <circle cx="9" cy="18" r="1.6" /><circle cx="15" cy="18" r="1.6" />
-                      </svg>
+      {modules.length === 0 ? (
+        <p>This course has no modules yet. Add the first one below.</p>
+      ) : (
+        <>
+          <p className="form-hint manage-module-help">
+            The order here is the order students see the modules in. Drag a module by its handle, or use ↑ and ↓, then
+            save.
+          </p>
+          <ol className="manage-module-list">
+            {shown.map((module, index) => {
+              const id = String(module.id)
+              const items = content.byModule.get(id)
+              const savedIndex = savedIds.indexOf(id)
+              const moved = order !== null && savedIndex !== index
+              const rowClass = ['manage-module-row', moved ? 'is-moved' : '', dragId === id ? 'is-dragging' : '']
+                .filter(Boolean)
+                .join(' ')
+              return (
+                <li
+                  key={module.id}
+                  className={rowClass}
+                  draggable={!reorder.isPending}
+                  onDragStart={event => dragStart(event, id)}
+                  onDragOver={event => dragOver(event, id)}
+                  onDrop={event => event.preventDefault()}
+                  onDragEnd={dragEnd}
+                >
+                  <span className="manage-module-handle" aria-hidden="true" title="Drag to change the order">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" focusable="false">
+                      <circle cx="9" cy="6" r="1.6" />
+                      <circle cx="15" cy="6" r="1.6" />
+                      <circle cx="9" cy="12" r="1.6" />
+                      <circle cx="15" cy="12" r="1.6" />
+                      <circle cx="9" cy="18" r="1.6" />
+                      <circle cx="15" cy="18" r="1.6" />
+                    </svg>
+                  </span>
+                  <span className="manage-module-rank" aria-hidden="true">
+                    {index + 1}
+                  </span>
+                  <div className="manage-module-name">
+                    <span className="manage-module-number">
+                      Module {index + 1}
+                      {moved && <span className="tag tag-strong manage-module-moved">Was {savedIndex + 1}</span>}
                     </span>
-                    <span className="manage-module-rank" aria-hidden="true">{index + 1}</span>
-                    <div className="manage-module-name">
-                      <span className="manage-module-number">
-                        Module {index + 1}
-                        {moved && <span className="tag tag-strong manage-module-moved">Was {savedIndex + 1}</span>}
-                      </span>
-                      <span className="manage-module-title">{module.title}</span>
-                      <span className="manage-module-count">
-                        {items === undefined ? '…' : `${items.length} ${items.length === 1 ? 'item' : 'items'}`}
-                        {' · '}
-                        {availabilityText(module)}
-                      </span>
-                    </div>
-                    <div className="manage-module-actions">
-                      <button type="button" className="button-secondary manage-module-move"
-                        disabled={index === 0 || reorder.isPending} onClick={() => move(module, -1)}
-                        aria-label={`Move ${module.title} up`} title="Move up">
-                        ↑
-                      </button>
-                      <button type="button" className="button-secondary manage-module-move"
-                        disabled={index === shown.length - 1 || reorder.isPending} onClick={() => move(module, 1)}
-                        aria-label={`Move ${module.title} down`} title="Move down">
-                        ↓
-                      </button>
-                      <Link className="button-secondary" to={paths.manageModule(course.id, module.id)} draggable={false}>
-                        Manage<span className="visually-hidden"> {module.title}</span>
-                      </Link>
-                    </div>
-                  </li>
-                )
-              })}
-            </ol>
-            <p className="visually-hidden" aria-live="polite">{announcement}</p>
-            <SaveBar
-              changes={changes}
-              saving={reorder.isPending}
-              error={reorder.error ? 'Could not save the new order. Try again.' : null}
-              saved={saved}
-              saveLabel="Save order"
-              onSave={save}
-              onCancel={() => { setOrder(null); setAnnouncement('The order is back to the saved one.') }}
-            />
-          </>
-        )}
+                    <span className="manage-module-title">{module.title}</span>
+                    <span className="manage-module-count">
+                      {items === undefined ? '…' : `${items.length} ${items.length === 1 ? 'item' : 'items'}`}
+                      {' · '}
+                      {availabilityText(module)}
+                    </span>
+                  </div>
+                  <div className="manage-module-actions">
+                    <button
+                      type="button"
+                      className="button-secondary manage-module-move"
+                      disabled={index === 0 || reorder.isPending}
+                      onClick={() => move(module, -1)}
+                      aria-label={`Move ${module.title} up`}
+                      title="Move up"
+                    >
+                      ↑
+                    </button>
+                    <button
+                      type="button"
+                      className="button-secondary manage-module-move"
+                      disabled={index === shown.length - 1 || reorder.isPending}
+                      onClick={() => move(module, 1)}
+                      aria-label={`Move ${module.title} down`}
+                      title="Move down"
+                    >
+                      ↓
+                    </button>
+                    <Link className="button-secondary" to={paths.manageModule(course.id, module.id)} draggable={false}>
+                      Manage<span className="visually-hidden"> {module.title}</span>
+                    </Link>
+                  </div>
+                </li>
+              )
+            })}
+          </ol>
+          <p className="visually-hidden" aria-live="polite">
+            {announcement}
+          </p>
+          <SaveBar
+            changes={changes}
+            saving={reorder.isPending}
+            error={reorder.error ? 'Could not save the new order. Try again.' : null}
+            saved={saved}
+            saveLabel="Save order"
+            onSave={save}
+            onCancel={() => {
+              setOrder(null)
+              setAnnouncement('The order is back to the saved one.')
+            }}
+          />
+        </>
+      )}
       <AddModuleForm courseId={course.id} position={modules.length} />
     </>
   )

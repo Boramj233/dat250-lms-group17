@@ -31,7 +31,10 @@ test('a module is unlocked when all its prerequisites are completed', () => {
 })
 
 test('a cycle in the data does not make dependsOn loop forever', () => {
-  const cyclic = [{ id: 1, prerequisiteModuleIds: [2] }, { id: 2, prerequisiteModuleIds: [1] }]
+  const cyclic = [
+    { id: 1, prerequisiteModuleIds: [2] },
+    { id: 2, prerequisiteModuleIds: [1] },
+  ]
   assert.equal(dependsOn(cyclic, 1, 3), false)
 })
 

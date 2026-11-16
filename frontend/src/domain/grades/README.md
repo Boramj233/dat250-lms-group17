@@ -5,9 +5,9 @@ list every assignment and coding exercise the user has submitted, split into
 **Graded** and **Awaiting grade**. The backend has no grades yet, so this endpoint
 is a proposal:
 
-| Method | Endpoint | Request body | Response |
-| --- | --- | --- | --- |
-| GET | `/api/users/me/grades` | — | `GradeEntry[]` |
+| Method | Endpoint               | Request body | Response       |
+| ------ | ---------------------- | ------------ | -------------- |
+| GET    | `/api/users/me/grades` | —            | `GradeEntry[]` |
 
 One entry per assignment / coding exercise with at least one submission by the user
 (or their group), in courses the user is enrolled in. It describes the latest
@@ -35,5 +35,5 @@ Unreleased grades must not be sent to students. Without this endpoint the fronte
 would need one request per submission.
 
 ```tsx
-const grades = useMyGrades();
+const grades = useMyGrades()
 ```
