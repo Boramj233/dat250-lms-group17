@@ -187,11 +187,23 @@ export interface CreateCodingExerciseInput extends CreateContentBase {
   allowLateSubmission: boolean
 }
 
-// Matches the backend's CreateQuizQuestionRequest (without position; set from the order).
+/**
+ * A question as the teacher writes it; `questionRequest` (api.ts) turns it into the
+ * backend's CreateQuizQuestionRequest. Only the fields of its type are sent.
+ */
 export interface NewQuizQuestion {
+  /** Missing means MULTIPLE_CHOICE. */
+  type?: QuizQuestionType
   questionText: string
   hint?: string
+  /** MULTIPLE_CHOICE (at least two, one or more correct) and TRUE_FALSE (two, one correct). */
   options: { optionText: string; correct: boolean }[]
+  /** FILL_IN_BLANK: the answers that count as correct (compared without case). */
+  acceptedAnswers?: string[]
+  /** ORDERING: the items, in the correct order (students get them shuffled). */
+  orderingItems?: string[]
+  /** MATCHING: the correct pairs (students get the right side shuffled). */
+  matchingPairs?: { left: string; right: string }[]
 }
 
 export interface CreateQuizInput extends CreateContentBase {

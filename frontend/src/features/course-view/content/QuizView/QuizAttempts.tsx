@@ -6,6 +6,7 @@ import type { QuizAttemptScore } from '@domain/quizzes/types'
 import { Card } from '../../components/DetailLayout'
 import PassedBadge from '../../components/PassedBadge'
 import QuizQuestion from './QuizQuestion'
+import { fromAttemptAnswer } from './quizAnswers'
 
 type AttemptListProps = {
   /** Newest first. */
@@ -107,7 +108,7 @@ export function AttemptReview({ quizId, questions, attempts, attemptId, required
               question={question}
               number={i + 1}
               total={questions.length}
-              chosen={(answer?.selectedOptionIds ?? []).map(String)}
+              answer={fromAttemptAnswer(question, answer)}
               result={answer ? answer.correct : null}
             />
           )

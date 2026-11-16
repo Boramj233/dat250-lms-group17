@@ -21,6 +21,43 @@
   height: 1.125rem;
 }
 
+/* Up/Down and Remove keep their size; the text field takes the rest of the row. */
+.quiz-option-editor > button {
+  flex-shrink: 0;
+}
+
+/* An ordering item's place in the correct order. */
+.quiz-key-position {
+  flex-shrink: 0;
+  min-width: 1.5rem;
+  font-family: var(--font-ui);
+  font-weight: var(--font-weight-bold);
+  text-align: center;
+}
+
+/* Matching: left ↔ right on one row; below each other on narrow screens. */
+@media (max-width: 30rem) {
+  .quiz-pair-editor {
+    flex-wrap: wrap;
+  }
+}
+
+/* True or false: the two choices without a fieldset frame. */
+.quiz-key-choice {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-5);
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.quiz-key-choice legend {
+  width: 100%;
+  margin-bottom: var(--space-2);
+  padding: 0;
+}
+
 /* Starter code: monospace, wide enough for code, keeps indentation. */
 .code-input {
   min-height: 10rem;

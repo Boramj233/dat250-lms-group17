@@ -25,6 +25,114 @@
   --quiz-type-color: var(--hvl-yellow);
 }
 
+.quiz-question.is-fill-in-blank {
+  --quiz-type-color: var(--hvl-teal);
+}
+
+.quiz-question.is-ordering {
+  --quiz-type-color: var(--hvl-green);
+}
+
+.quiz-question.is-matching {
+  --quiz-type-color: var(--hvl-coral);
+}
+
+/* The text field of a fill-in question and the menus of a matching question. */
+.quiz-text-answer input,
+.quiz-matching select {
+  width: 100%;
+  min-height: var(--size-control-md);
+  padding: var(--space-3);
+  border: var(--border-width-sm) solid var(--color-border);
+  border-radius: var(--radius-control);
+  color: var(--color-text);
+  background: var(--color-background);
+  font: inherit;
+}
+
+.quiz-text-answer input:focus-visible,
+.quiz-matching select:focus-visible {
+  outline: var(--focus-ring-width) solid var(--color-primary);
+  outline-offset: 0;
+}
+
+.quiz-text-answer input:not(:placeholder-shown),
+.quiz-matching select:not(.is-empty) {
+  border-color: var(--color-primary);
+  background: color-mix(in srgb, var(--quiz-type-color) 10%, var(--color-background));
+}
+
+/* Ordering: a numbered list; each row has the item and its Up/Down buttons. */
+.quiz-ordering,
+.quiz-matching {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.quiz-ordering-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border: var(--border-width-sm) solid var(--color-border);
+  border-radius: var(--radius-control);
+  background: var(--color-background);
+}
+
+.quiz-ordering-position {
+  display: inline-grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--quiz-type-color) 25%, transparent);
+  font-family: var(--font-ui);
+  font-weight: var(--font-weight-bold);
+}
+
+.quiz-ordering-text {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.quiz-ordering-buttons {
+  display: flex;
+  flex-shrink: 0;
+  gap: var(--space-2);
+}
+
+.quiz-ordering-buttons button {
+  min-width: 2.25rem;
+  min-height: 2.25rem;
+  padding: var(--space-2);
+}
+
+/* Matching: the left item, then its menu; below each other on narrow screens. */
+.quiz-matching-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.quiz-matching-left {
+  font-weight: var(--font-weight-bold);
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 30rem) {
+  .quiz-matching-row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-2);
+  }
+}
+
 /* The legend holds the header row and the question; float makes it a normal block. */
 .quiz-question-legend {
   float: left;
@@ -165,6 +273,20 @@
   font-size: var(--text-small);
 }
 
+/* Hints after an attempt: the backend sends them for the questions answered wrong. */
+.quiz-hints {
+  margin-top: var(--space-5);
+  padding: var(--space-3) var(--space-5);
+  border-left: 4px solid var(--hvl-yellow);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+.quiz-hints ul {
+  margin: var(--space-2) 0 0;
+  padding-left: var(--space-5);
+}
+
 .quiz-result-score .passed-badge {
   vertical-align: middle;
 }
@@ -225,8 +347,15 @@
 }
 
 /* A disabled fieldset greys its inputs; keep the chosen answers easy to read. */
-.quiz-question.is-review input:disabled {
+.quiz-question.is-review input:disabled,
+.quiz-question.is-review select:disabled {
   opacity: 1;
+  color: var(--color-text);
+}
+
+/* A stored order is shown without the Up/Down buttons. */
+.quiz-question.is-review .quiz-ordering-buttons {
+  display: none;
 }
 
 /* "✓ Correct" / "✗ Wrong" in the question's header. */

@@ -275,7 +275,16 @@ export type MockQuizQuestion = {
   /** The backend's QuestionType; missing means MULTIPLE_CHOICE (its default). */
   type?: 'MULTIPLE_CHOICE' | 'TRUE_FALSE' | 'FILL_IN_BLANK' | 'ORDERING' | 'MATCHING'
   hint: string | null
+  /** MULTIPLE_CHOICE and TRUE_FALSE; empty for the other types. */
   options: { id: number; optionText: string; position: number; correct: boolean }[]
+  /** FILL_IN_BLANK: the answers that count as correct (compared without case). */
+  acceptedAnswers?: string[]
+  /** ORDERING and MATCHING: the items (UUIDs like the backend's QuizItem). */
+  items?: { id: string; text: string; kind: 'ORDERING' | 'MATCHING_LEFT' | 'MATCHING_RIGHT' }[]
+  /** ORDERING: the item ids in the correct order. */
+  correctOrder?: string[]
+  /** MATCHING: the correct pairs. */
+  correctMatches?: { leftItemId: string; rightItemId: string }[]
 }
 
 /** Questions of the quizzes; new ones are added by POST /api/quizzes/:quizId/questions. */
@@ -329,6 +338,58 @@ export const quizQuestions: MockQuizQuestion[] = [
       { id: 11, optionText: 'package.json', position: 2, correct: false },
     ],
   },
+  // DAT251 "Testing quiz": one question of each of the newer types.
+  {
+    id: 5,
+    quizId: 61,
+    questionText: 'A test that checks one class on its own is a ___ test.',
+    position: 0,
+    hint: 'The smallest kind of test.',
+    type: 'FILL_IN_BLANK',
+    options: [],
+    acceptedAnswers: ['unit'],
+  },
+  {
+    id: 6,
+    quizId: 61,
+    questionText: 'Put the steps of test-driven development in order.',
+    position: 1,
+    hint: 'Red, green, …',
+    type: 'ORDERING',
+    options: [],
+    items: [
+      { id: '6a1e0c52-0000-4000-8000-000000000001', text: 'Write a failing test', kind: 'ORDERING' },
+      { id: '1f9b7d33-0000-4000-8000-000000000002', text: 'Make the test pass', kind: 'ORDERING' },
+      { id: '9c4d2a18-0000-4000-8000-000000000003', text: 'Refactor', kind: 'ORDERING' },
+    ],
+    correctOrder: [
+      '6a1e0c52-0000-4000-8000-000000000001',
+      '1f9b7d33-0000-4000-8000-000000000002',
+      '9c4d2a18-0000-4000-8000-000000000003',
+    ],
+  },
+  {
+    id: 7,
+    quizId: 61,
+    questionText: 'Match each kind of test with what it checks.',
+    position: 2,
+    hint: null,
+    type: 'MATCHING',
+    options: [],
+    items: [
+      { id: '30000000-0000-4000-8000-00000000000a', text: 'Unit test', kind: 'MATCHING_LEFT' },
+      { id: '30000000-0000-4000-8000-00000000000b', text: 'Integration test', kind: 'MATCHING_LEFT' },
+      { id: '30000000-0000-4000-8000-00000000000c', text: 'End-to-end test', kind: 'MATCHING_LEFT' },
+      { id: 'e0000000-0000-4000-8000-00000000000d', text: 'One class on its own', kind: 'MATCHING_RIGHT' },
+      { id: '70000000-0000-4000-8000-00000000000e', text: 'Several parts together', kind: 'MATCHING_RIGHT' },
+      { id: 'a0000000-0000-4000-8000-00000000000f', text: 'The whole app, as a user', kind: 'MATCHING_RIGHT' },
+    ],
+    correctMatches: [
+      { leftItemId: '30000000-0000-4000-8000-00000000000a', rightItemId: 'e0000000-0000-4000-8000-00000000000d' },
+      { leftItemId: '30000000-0000-4000-8000-00000000000b', rightItemId: '70000000-0000-4000-8000-00000000000e' },
+      { leftItemId: '30000000-0000-4000-8000-00000000000c', rightItemId: 'a0000000-0000-4000-8000-00000000000f' },
+    ],
+  },
 ]
 
 /** Quiz attempts, like the backend's QuizAttemptResponse plus who took it. */
@@ -340,7 +401,14 @@ export const quizAttempts: {
   correctCount: number
   totalQuestions: number
   /** How each question was answered (the backend's QuizAnswer); read by the proposed attempt endpoint. */
-  answers: { questionId: number; selectedOptionIds: number[]; correct: boolean }[]
+  answers: {
+    questionId: number
+    selectedOptionIds: number[]
+    textAnswer?: string | null
+    orderedItemIds?: string[] | null
+    matches?: { leftItemId: string; rightItemId: string }[] | null
+    correct: boolean
+  }[]
 }[] = [
   // Siri: POST right, only "200 OK" of the two success codes (wrong), PUT idempotent right.
   {

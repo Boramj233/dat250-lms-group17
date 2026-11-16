@@ -186,6 +186,22 @@ export default function QuizView({ content, isTeacher }: QuizViewProps) {
                 : ' You have no attempts left.'}
             </p>
           )}
+          {mode.score.hints && mode.score.hints.length > 0 && (
+            <div className="quiz-hints">
+              <p className="form-label">Hints for the questions you got wrong</p>
+              <ul>
+                {mode.score.hints.map(hint => {
+                  const index = questions.findIndex(q => String(q.id) === String(hint.questionId))
+                  return (
+                    <li key={hint.questionId}>
+                      {index >= 0 && <strong>Question {index + 1}: </strong>}
+                      {hint.hint}
+                    </li>
+                  )
+                })}
+              </ul>
+            </div>
+          )}
           <div className="submittable-actions">
             <button
               type="button"

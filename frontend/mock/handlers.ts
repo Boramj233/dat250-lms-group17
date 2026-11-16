@@ -8,6 +8,7 @@
 //
 // The responses copy the backend's DTOs (field names, and which fields each one has),
 // so the frontend sees the same shapes as with the real backend.
+import type { CreateQuizQuestionRequest } from '../src/domain/content/questionRequest'
 import type { Content, ContentType } from '../src/domain/content/types'
 import type { EnrolledCourse } from '../src/domain/courses/types'
 import type { UpcomingDeadline } from '../src/domain/deadlines/types'
@@ -30,6 +31,13 @@ import {
   submissions,
   users,
 } from './data'
+import {
+  gradeAnswer,
+  questionRequestProblem,
+  questionResponse,
+  storedQuestion,
+  type AnswerRequest,
+} from './quizQuestions'
 import {
   conflict,
   created,
@@ -240,21 +248,7 @@ function quizQuestionsResponse(quizId: string | number, forTeacher: boolean) {
   return quizQuestions
     .filter(q => String(q.quizId) === String(quizId))
     .sort((a, b) => a.position - b.position)
-    .map(q => ({
-      id: q.id,
-      questionText: q.questionText,
-      position: q.position,
-      type: q.type ?? 'MULTIPLE_CHOICE',
-      ...(forTeacher ? { hint: q.hint } : {}),
-      options: [...q.options]
-        .sort((a, b) => a.position - b.position)
-        .map(o => ({
-          id: o.id,
-          optionText: o.optionText,
-          position: o.position,
-          ...(forTeacher ? { correct: o.correct } : {}),
-        })),
-    }))
+    .map(q => questionResponse(q, forTeacher))
 }
 
 function detailResponse(content: Content & { courseId: number }, forTeacher = false) {
@@ -330,25 +324,14 @@ const EDITABLE_FIELDS: Record<ContentType, string[]> = {
   QUIZ: ['maxAttempts', 'passingPercentage', 'description', 'deadline'],
 }
 
-type QuestionRequest = {
-  questionText: string
-  position: number
-  hint: string | null
-  options: { optionText: string; correct: boolean; position: number }[]
-}
-
-/** Stores a CreateQuizQuestionRequest for a quiz, with new ids for it and its options. */
-function storeQuestion(quizId: number, question: QuestionRequest) {
+/** Stores a valid CreateQuizQuestionRequest for a quiz, with new ids for it, its options and items. */
+function storeQuestion(quizId: number, question: CreateQuizQuestionRequest) {
   const optionIds = quizQuestions.flatMap(q => q.options.map(o => o.id))
-  const firstOptionId = Math.max(0, ...optionIds) + 1
-  const stored = {
-    id: nextId(quizQuestions),
+  const stored = storedQuestion(question, {
+    questionId: nextId(quizQuestions),
     quizId,
-    questionText: question.questionText,
-    position: question.position,
-    hint: question.hint,
-    options: question.options.map((option, index) => ({ ...option, id: firstOptionId + index })),
-  }
+    firstOptionId: Math.max(0, ...optionIds) + 1,
+  })
   quizQuestions.push(stored)
   return stored
 }
@@ -1100,17 +1083,25 @@ const routes: MockHandler[] = [
       if (quiz.deadline && Date.now() > Date.parse(quiz.deadline)) return badRequest('The deadline has passed')
       const used = quizAttempts.filter(a => a.quizId === Number(quiz.id) && a.userId === user.userId).length
       if (used >= quiz.maxAttempts) return { status: 409, body: { error: 'No attempts left' } }
-      const { answers } = body as { answers?: { questionId: number; selectedOptionIds: number[] }[] }
+      const { answers } = body as { answers?: AnswerRequest[] }
       if (!Array.isArray(answers) || answers.length === 0) return badRequest('Answers are required')
       const questions = quizQuestions.filter(q => q.quizId === Number(quiz.id))
-      // Graded per question and stored, like the backend's QuizAnswer.
-      const graded = questions.map(question => {
-        const selected = (answers.find(a => Number(a.questionId) === question.id)?.selectedOptionIds ?? []).map(Number)
-        const chosen = new Set(selected)
-        const correctIds = question.options.filter(o => o.correct).map(o => o.id)
-        const correct = chosen.size === correctIds.length && correctIds.every(id => chosen.has(id))
-        return { questionId: question.id, selectedOptionIds: selected, correct }
-      })
+      // Graded per question and stored, like the backend's QuizAnswer. An incomplete
+      // fill-in, ordering or matching answer refuses the whole attempt, like QuizGrader.
+      const graded = []
+      for (const question of questions) {
+        const answer = answers.find(a => Number(a.questionId) === question.id)
+        const correct = gradeAnswer(question, answer)
+        if (typeof correct === 'string') return badRequest(correct)
+        graded.push({
+          questionId: question.id,
+          selectedOptionIds: (answer?.selectedOptionIds ?? []).map(Number),
+          textAnswer: answer?.textAnswer ?? null,
+          orderedItemIds: answer?.orderedItemIds ?? null,
+          matches: answer?.matches ?? null,
+          correct,
+        })
+      }
       const correctCount = graded.filter(answer => answer.correct).length
       const attempt = {
         id: nextId(quizAttempts),
@@ -1169,7 +1160,10 @@ const routes: MockHandler[] = [
       if (!quiz) return notFound()
       if (!isTeacher(user, quiz.courseId)) return forbidden()
       // Questions are added right after the quiz is created, so this is not locked.
-      const stored = storeQuestion(Number(quiz.id), body as QuestionRequest)
+      const request = body as CreateQuizQuestionRequest
+      const problem = questionRequestProblem(request)
+      if (problem) return badRequest(problem)
+      const stored = storeQuestion(Number(quiz.id), request)
       // QuizQuestionResponse: no options, like the backend.
       return created({
         id: stored.id,
@@ -1177,6 +1171,7 @@ const routes: MockHandler[] = [
         questionText: stored.questionText,
         position: stored.position,
         hint: stored.hint,
+        type: stored.type,
       })
     },
   },
@@ -1189,13 +1184,10 @@ const routes: MockHandler[] = [
       if (!quiz) return notFound()
       if (!isTeacher(user, quiz.courseId)) return forbidden()
       if (publishedContent(quiz)) return conflict('Published content cannot be changed')
-      const questions = body as QuestionRequest[]
-      if (
-        !Array.isArray(questions) ||
-        questions.some(q => !q.questionText?.trim() || !q.options?.some(o => o.correct))
-      ) {
-        return badRequest('Every question needs a text and at least one correct answer')
-      }
+      const questions = body as CreateQuizQuestionRequest[]
+      if (!Array.isArray(questions)) return badRequest('A list of questions is required')
+      const problem = questions.map(questionRequestProblem).find(Boolean)
+      if (problem) return badRequest(problem)
       for (let i = quizQuestions.length - 1; i >= 0; i--) {
         if (quizQuestions[i].quizId === Number(quiz.id)) quizQuestions.splice(i, 1)
       }

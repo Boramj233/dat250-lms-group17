@@ -55,10 +55,16 @@ export interface QuizAttemptDetail extends QuizAttemptScore {
   answers: QuizAttemptAnswer[]
 }
 
-/** How the user answered one question in an attempt, and whether it was right. */
+/**
+ * How the user answered one question in an attempt, and whether it was right. The
+ * backend stores all of these in QuizAnswer; which are set depends on the question's type.
+ */
 export interface QuizAttemptAnswer {
   questionId: string | number
-  /** Empty when the question was not answered. */
+  /** Choice questions; empty when the question was not answered. */
   selectedOptionIds: (string | number)[]
+  textAnswer?: string | null
+  orderedItemIds?: string[] | null
+  matches?: { leftItemId: string; rightItemId: string }[] | null
   correct: boolean
 }

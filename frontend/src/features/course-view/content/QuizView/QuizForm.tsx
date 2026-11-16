@@ -2,9 +2,9 @@ import { useState, type FormEvent } from 'react'
 import type { QuizContent, QuizContentQuestion } from '@domain/content/types'
 import { useSubmitQuizAnswers } from '@domain/quizzes/hooks'
 import type { QuizAttemptScore } from '@domain/quizzes/types'
-import { canAnswer, typeOf } from './questionType'
 import { FormError, SubmitButton } from '@shared/ui/Form'
 import QuizQuestion from './QuizQuestion'
+import { emptyAnswer, isAnswered, isSendable, toAnswerInput, type AnswerDraft } from './quizAnswers'
 
 type QuizFormProps = {
   quizId: QuizContent['id']
@@ -18,37 +18,23 @@ type QuizFormProps = {
 /** One box per question; all answers are handed in together. */
 export default function QuizForm({ quizId, questions, preview, onSubmitted, onCancel }: QuizFormProps) {
   const submit = useSubmitQuizAnswers()
-  // Chosen option ids per question id (as strings).
-  const [chosen, setChosen] = useState<Record<string, string[]>>({})
-  const answered = questions.filter(q => (chosen[String(q.id)] ?? []).length > 0).length
-  // The backend rejects an attempt with an unanswered fill-in, ordering or matching
-  // question, and this form cannot answer those yet.
-  const unsupported = questions.some(q => !canAnswer(q))
+  // The answer per question id (as a string); a question without one has its empty answer.
+  const [answers, setAnswers] = useState<Record<string, AnswerDraft>>({})
+  const answerOf = (question: QuizContentQuestion) => answers[String(question.id)] ?? emptyAnswer(question)
 
-  function choose(question: QuizContentQuestion, optionId: string, checked: boolean) {
-    const key = String(question.id)
-    setChosen(previous => {
-      const current = previous[key] ?? []
-      const next =
-        typeOf(question) === 'MULTIPLE_CHOICE'
-          ? checked
-            ? [...current, optionId]
-            : current.filter(id => id !== optionId)
-          : [optionId]
-      return { ...previous, [key]: next }
-    })
-  }
+  const answered = questions.filter(q => isAnswered(q, answerOf(q))).length
+  // Matching questions must be complete, or the backend refuses the whole attempt.
+  const incomplete = questions.flatMap((q, index) => (isSendable(q, answerOf(q)) ? [] : [index + 1]))
+  const [triedToSubmit, setTriedToSubmit] = useState(false)
 
   function handleSubmit(event: FormEvent) {
     event.preventDefault()
-    if (preview || unsupported) return
-    submit.mutate(
-      {
-        quizId,
-        answers: questions.map(q => ({ questionId: q.id, selectedOptionIds: chosen[String(q.id)] ?? [] })),
-      },
-      { onSuccess: onSubmitted },
-    )
+    if (preview) return
+    if (incomplete.length > 0) {
+      setTriedToSubmit(true)
+      return
+    }
+    submit.mutate({ quizId, answers: questions.map(q => toAnswerInput(q, answerOf(q))) }, { onSuccess: onSubmitted })
   }
 
   return (
@@ -62,8 +48,8 @@ export default function QuizForm({ quizId, questions, preview, onSubmitted, onCa
           question={question}
           number={index + 1}
           total={questions.length}
-          chosen={chosen[String(question.id)] ?? []}
-          onChoose={(optionId, checked) => choose(question, optionId, checked)}
+          answer={answerOf(question)}
+          onChange={answer => setAnswers(previous => ({ ...previous, [String(question.id)]: answer }))}
         />
       ))}
 
@@ -73,13 +59,13 @@ export default function QuizForm({ quizId, questions, preview, onSubmitted, onCa
           {!preview && answered < questions.length && ' · unanswered questions count as wrong'}
         </p>
         <FormError>
-          {!preview && unsupported
-            ? 'This quiz has question types that cannot be answered here yet, so it cannot be submitted.'
+          {triedToSubmit && incomplete.length > 0
+            ? `Match every item in ${incomplete.length === 1 ? 'question' : 'questions'} ${incomplete.join(', ')} before you submit.`
             : submit.error && 'Could not submit the quiz. Try again.'}
         </FormError>
         <div className="quiz-form-actions">
           {!preview && (
-            <SubmitButton pending={submit.isPending} pendingLabel="Submitting…" disabled={unsupported}>
+            <SubmitButton pending={submit.isPending} pendingLabel="Submitting…">
               Submit quiz
             </SubmitButton>
           )}

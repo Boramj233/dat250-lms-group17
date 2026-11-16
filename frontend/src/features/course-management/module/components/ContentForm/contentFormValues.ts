@@ -58,7 +58,7 @@ export function initialValues(content: Content | undefined): ContentFormValues {
 /** Why the form cannot be sent yet, or null when it can. The browser checks required fields itself. */
 export function formProblem(type: ContentType, values: ContentFormValues, module: CourseModule): string | null {
   const invalid = type === 'QUIZ' ? firstInvalidQuestion(values.questions) : undefined
-  if (invalid) return `Question ${invalid} needs a text, text in every answer and at least one correct answer.`
+  if (invalid) return invalid
   const percentage = values.passingPercentage
   if (type === 'QUIZ' && (!Number.isInteger(percentage) || percentage < 1 || percentage > 100)) {
     return 'The passing percentage must be a whole number from 1 to 100.'

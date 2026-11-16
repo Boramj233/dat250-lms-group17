@@ -1,5 +1,6 @@
 import { apiClient, apiPath, jsonBody } from '@shared/api/apiClient'
 import type { ContentId, CourseId, ModuleId } from '@shared/types'
+import { questionRequest } from './questionRequest'
 import type {
   AssignmentContent,
   CodingExerciseContent,
@@ -11,7 +12,6 @@ import type {
   DeleteContentInput,
   EditContentInput,
   MoveContentInput,
-  NewQuizQuestion,
   QuizContent,
   StaticPageContent,
   UpdateContentInput,
@@ -87,16 +87,6 @@ export async function createContent(input: CreateContentInput): Promise<{ id: Co
     await post(apiPath`/api/quizzes/${quiz.id}/questions`, questionRequest(question, position))
   }
   return quiz
-}
-
-/** CreateQuizQuestionRequest for a question at `position`. */
-function questionRequest(question: NewQuizQuestion, position: number) {
-  return {
-    questionText: question.questionText,
-    position,
-    hint: question.hint || null,
-    options: question.options.map((option, index) => ({ ...option, position: index })),
-  }
 }
 
 /**
