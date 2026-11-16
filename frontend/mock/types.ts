@@ -13,7 +13,15 @@ export type MockUser = {
 export type MockResult = {
   status: number
   body?: unknown
+  /** Send this file instead of JSON (a download), like the backend's file endpoints. */
+  download?: { name: string, mediaType: string, content: Uint8Array }
 }
+
+/** A file part of a multipart request. */
+export type MockUpload = { field: string, name: string, mediaType: string, content: Uint8Array }
+
+/** The body of a multipart/form-data request (e.g. a PDF submission). */
+export type MockMultipart = { fields: Record<string, string>, files: MockUpload[] }
 
 export type MockRequest = {
   /** The logged-in user (from the Bearer token). */
@@ -21,7 +29,7 @@ export type MockRequest = {
   /** Values from `:name` parts of the path. */
   params: Record<string, string>
   query: URLSearchParams
-  /** Parsed JSON body, if any. */
+  /** Parsed JSON body, or MockMultipart for multipart/form-data; undefined without a body. */
   body: unknown
 }
 
@@ -37,3 +45,4 @@ export const created = (body: unknown): MockResult => ({ status: 201, body })
 export const noContent = (): MockResult => ({ status: 204 })
 export const forbidden = (): MockResult => ({ status: 403, body: { error: 'Forbidden' } })
 export const notFound = (): MockResult => ({ status: 404, body: { error: 'Not found' } })
+export const conflict = (detail: string): MockResult => ({ status: 409, body: { detail } })

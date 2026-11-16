@@ -2,55 +2,34 @@
   width: 100%;
 }
 
-.grading-choices {
+/* The score input with "/ 100" after it. */
+.grading-score-input {
   display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-  min-width: 0;
-  margin: 0;
-  padding: 0;
-  border: none;
-}
-
-/* Passed / Not passed as two toggle buttons side by side. */
-.grading-quick {
-  display: flex;
-  flex-wrap: wrap;
+  align-items: center;
   gap: var(--space-3);
 }
 
-.grading-choice {
-  min-height: var(--size-control-md);
-  padding: var(--space-3) var(--space-7);
-  border: var(--border-width-sm) solid var(--color-border);
-  border-radius: var(--radius-control);
-  color: var(--color-text);
-  background: var(--color-background);
-  font: inherit;
+.grading-score-input input {
+  max-width: 8rem;
+}
+
+/* A released score, shown large. */
+.grading-score {
+  font-size: var(--font-size-lg);
   font-weight: var(--font-weight-bold);
-  cursor: pointer;
 }
 
-.grading-choice:hover {
-  background: var(--color-surface);
-}
-
-.grading-choice.is-selected {
-  border-color: var(--color-primary);
-  color: var(--color-on-primary);
-  background: var(--color-primary);
-}
-
-.grading-choice:focus-visible {
-  outline: var(--focus-ring-width) solid var(--color-primary);
-  outline-offset: var(--space-2);
-}
-
-.grading-other {
+/* Earlier attempts, newest first; the shown one in bold. */
+.grading-history {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
-  max-width: 20rem;
+  margin: 0;
+  padding-left: var(--space-7);
+}
+
+.grading-history a {
+  color: var(--color-text);
 }
 
 /* Previous, All submissions, Next. */

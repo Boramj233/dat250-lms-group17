@@ -28,10 +28,63 @@ export function jsonBody(method: 'POST' | 'PUT' | 'PATCH', body: unknown): Reque
   };
 }
 
+/** The API answered with an error status (not 401, which means "log in again"). */
+export class ApiError extends Error {
+  readonly status: number;
+
+  constructor(status: number) {
+    super(`HTTP error! Status: ${status}`);
+    this.status = status;
+  }
+}
+
+/** JSON from the API, or undefined for 204 No Content. */
 export async function apiClient<T>(
   endpoint: string,
   options?: RequestInit
 ): Promise<T> {
+  const response = await apiFetch(endpoint, options);
+  if (response.status === 204) {
+    return undefined as T;
+  }
+  return response.json() as Promise<T>;
+}
+
+/**
+ * Like apiClient, but null when the API answers 404: for things that may not exist
+ * yet, e.g. a grade that is not released.
+ */
+export async function apiClientOrNull<T>(endpoint: string, options?: RequestInit): Promise<T | null> {
+  try {
+    return await apiClient<T>(endpoint, options);
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 404) return null;
+    throw error;
+  }
+}
+
+/**
+ * Downloads a file from the API (which needs the token, so a plain link cannot) and
+ * lets the browser save it, named as the API says or `fallbackName`.
+ */
+export async function apiDownload(endpoint: string, fallbackName: string): Promise<void> {
+  const response = await apiFetch(endpoint);
+  const blob = await response.blob();
+  const disposition = response.headers.get('Content-Disposition') ?? '';
+  const encoded = disposition.match(/filename\*=UTF-8''([^;]+)/i)?.[1];
+  const plain = disposition.match(/filename="?([^";]+)"?/i)?.[1];
+  const name = encoded ? decodeURIComponent(encoded) : plain ?? fallbackName;
+
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = name;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
+/** Sends the request with the token; tries once more with a fresh token on 401. */
+async function apiFetch(endpoint: string, options?: RequestInit): Promise<Response> {
   const send = (token: string) => {
     const headers = new Headers(options?.headers);
     headers.set('Authorization', `Bearer ${token}`);
@@ -56,14 +109,7 @@ export async function apiClient<T>(
   }
 
   if (!response.ok) {
-    throw new Error(
-      `HTTP error! Status: ${response.status}`
-    );
+    throw new ApiError(response.status);
   }
-
-  if (response.status === 204) {
-    return undefined as T;
-  }
-
-  return response.json() as Promise<T>;
+  return response;
 }

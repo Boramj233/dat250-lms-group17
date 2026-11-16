@@ -1,42 +1,78 @@
-import { apiClient, apiPath, jsonBody } from "../../shared/api/apiClient";
+import { apiClient, apiClientOrNull, apiPath, jsonBody } from "../../shared/api/apiClient";
 import type { ContentId } from "../../shared/types";
-import type { ContentSubmission, GradeSubmissionInput, MySubmission, PublishGradeInput, SubmissionId, SubmissionResult, SubmitMySubmissionInput } from "./types";
+import type { GradeReview, MySubmission, Page, ReleasedGrade, ReleaseGradeInput, ReviewSubmission, SaveGradeInput, SubmissionId, SubmitFileInput, SubmitMySubmissionInput } from "./types";
 
-/** The logged-in user's submissions for an assignment or coding exercise (backend). */
+// --- Students (SubmissionController, SubmissionFileController) ----------------------
+
+/** The logged-in user's submissions (and their groups') for an assignment or exercise. */
 export function getMySubmissionHistory(contentId: ContentId): Promise<MySubmission[]> {
   return apiClient<MySubmission[]>(apiPath`/api/contents/${contentId}/submissions/me`);
 }
 
-// The backend filters unpublished grades and hidden test details for the authenticated viewer.
-export function getSubmissionResult(submissionId: SubmissionId): Promise<SubmissionResult> {
-  return apiClient<SubmissionResult>(apiPath`/api/submissions/${submissionId}/result`);
-}
-
-/** Hands in the logged-in user's answer (backend): a text or a repository URL. */
-export function submitMySubmission({ contentId, type, payload }: SubmitMySubmissionInput): Promise<MySubmission> {
+/** Hands in a text or a repository URL, for yourself or a group you are in. */
+export function submitMySubmission({ contentId, type, payload, groupId }: SubmitMySubmissionInput): Promise<MySubmission> {
   return apiClient<MySubmission>(
     apiPath`/api/contents/${contentId}/submissions`,
-    jsonBody("POST", { type, payload })
+    jsonBody("POST", { type, payload, groupId })
   );
 }
 
-/** Teachers: every submission for an assignment or coding exercise (proposed). */
-export function getContentSubmissions(contentId: ContentId): Promise<ContentSubmission[]> {
-  return apiClient<ContentSubmission[]>(apiPath`/api/contents/${contentId}/submissions`);
+/** Hands in one PDF file (multipart, part "file"), for yourself or a group you are in. */
+export function submitFile({ contentId, file, groupId }: SubmitFileInput): Promise<MySubmission> {
+  const body = new FormData();
+  body.append("file", file);
+  if (groupId !== undefined) body.append("groupId", String(groupId));
+  // Let fetch set the multipart Content-Type with its boundary.
+  return apiClient<MySubmission>(apiPath`/api/contents/${contentId}/submissions/file`, { method: "POST", body });
 }
 
-/** Teachers: saves a grade and feedback; the student sees it once published (proposed). */
-export function gradeSubmission({ submissionId, grade, feedback }: GradeSubmissionInput): Promise<ContentSubmission> {
-  return apiClient<ContentSubmission>(
+/** The released grade of one of your submissions; null until the teacher releases it. */
+export function getMyReleasedGrade(submissionId: SubmissionId): Promise<ReleasedGrade | null> {
+  return apiClientOrNull<ReleasedGrade>(apiPath`/api/submissions/${submissionId}/grade`);
+}
+
+// --- Teachers (SubmissionReviewController, GradeController) -------------------------
+
+/** The latest submission per student or group for a content item, all pages. */
+export async function getReviewSubmissions(contentId: ContentId): Promise<ReviewSubmission[]> {
+  const all: ReviewSubmission[] = [];
+  for (let page = 0; ; page++) {
+    const query = new URLSearchParams({ page: String(page), size: "100" });
+    const result = await apiClient<Page<ReviewSubmission>>(
+      `${apiPath`/api/contents/${contentId}/submissions/review`}?${query}`
+    );
+    all.push(...result.content);
+    if (result.last || result.content.length === 0) return all;
+  }
+}
+
+/** One submission, as a teacher of the course sees it. */
+export function getReviewSubmission(submissionId: SubmissionId): Promise<ReviewSubmission> {
+  return apiClient<ReviewSubmission>(apiPath`/api/submissions/${submissionId}/review`);
+}
+
+/** Every submission by the same student (or group) for the same item, newest first. */
+export function getReviewHistory(submissionId: SubmissionId): Promise<ReviewSubmission[]> {
+  return apiClient<ReviewSubmission[]>(apiPath`/api/submissions/${submissionId}/review/history`);
+}
+
+/** The grade of a submission, released or not; null when it is not graded yet. */
+export function getGradeReview(submissionId: SubmissionId): Promise<GradeReview | null> {
+  return apiClientOrNull<GradeReview>(apiPath`/api/submissions/${submissionId}/grade/review`);
+}
+
+/** Creates (version null) or changes the grade; the student sees it once released. */
+export function saveGrade({ submissionId, score, feedback, version }: SaveGradeInput): Promise<GradeReview> {
+  return apiClient<GradeReview>(
     apiPath`/api/submissions/${submissionId}/grade`,
-    jsonBody("PUT", { grade, feedback })
+    jsonBody("PUT", { score, feedback, version })
   );
 }
 
-/** Teachers: shows the saved grade and feedback to the student (proposed). */
-export function publishSubmissionGrade({ submissionId }: PublishGradeInput): Promise<ContentSubmission> {
-  return apiClient<ContentSubmission>(
-    apiPath`/api/submissions/${submissionId}/grade/publish`,
-    { method: "POST" }
+/** Shows the grade to the student. After this it cannot be changed. */
+export function releaseGrade({ submissionId, version }: ReleaseGradeInput): Promise<GradeReview> {
+  return apiClient<GradeReview>(
+    apiPath`/api/submissions/${submissionId}/grade/release`,
+    jsonBody("POST", { version })
   );
 }

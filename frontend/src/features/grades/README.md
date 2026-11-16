@@ -24,13 +24,15 @@ submission:
   "submissionId": 1,
   "submittedAt": "2026-11-07T19:00:00Z",
   "late": false,
-  "grade": { "value": "Passed", "feedback": "Good work!", "publishedAt": "2026-11-10T08:30:00Z" }
+  "grade": { "score": 85, "feedback": "Good work!", "releasedAt": "2026-11-10T08:30:00Z" }
 }
 ```
 
-`grade` is the published grade (`SubmissionGrade` in `../submission/types.ts`), or
-`null` while it is not graded or not published yet. Unpublished grades must not be
-sent to students.
+`grade` is the released grade, the same as the backend's `ReleasedGradeResponse`
+(`GET /api/submissions/{id}/grade`) without `submissionId`: a score from 0 to 100.
+It is `null` while the submission is not graded or the grade is not released.
+Unreleased grades must not be sent to students. Without this endpoint the frontend
+would need one request per submission.
 
 ```tsx
 const grades = useMyGrades();

@@ -1,26 +1,28 @@
 import { useState, type FormEvent } from 'react'
 import { Link, useParams } from 'react-router'
+import { ApiError } from '../../../../shared/api/apiClient'
 import { formatDateTime } from '../../../../shared/lib/dateFormat'
-import { safeHttpUrl } from '../../../../shared/lib/safeUrl'
 import { Breadcrumbs } from '../../../../shared/navigation/Trail'
 import { paths } from '../../../../shared/paths'
+import type { ContentId, CourseId } from '../../../../shared/types'
 import PageHeader from '../../../../shared/ui/PageHeader'
 import QueryState from '../../../../shared/ui/QueryState'
-import { useContentSubmissions, useGradeSubmission, usePublishSubmissionGrade } from '../../../assignments/hooks'
-import type { ContentSubmission } from '../../../assignments/types'
+import { useGradeReview, useReleaseGrade, useReviewHistory, useReviewSubmission, useReviewSubmissions, useSaveGrade } from '../../../assignments/hooks'
+import { formatScore, MAX_SCORE } from '../../../assignments/scoreFormat'
+import type { GradeReview, ReviewSubmission } from '../../../assignments/types'
 import { useContent, useCourseContent } from '../../../content/hooks'
-import type { ContentId } from '../../../../shared/types'
+import SubmissionAnswer from '../../components/SubmissionAnswer'
 import { useCourseView } from '../../courseContext'
+import { submissionKindLabel } from '../../submissionStats'
+import { usePeopleNames } from '../../usePeopleNames'
 import '../../../../shared/styles/forms.css'
 import '../ContentView/SubmittableContent.css'
 import './SubmissionGradingPage.css'
 
-/** Quick choices for an approve/not approve grade; any other grade can be typed. */
-const QUICK_GRADES = ['Passed', 'Not passed']
-
 /**
- * Teachers: one student's submission with a form to grade it and give feedback.
- * Saving keeps the grade from the student; publishing shows it to them.
+ * Teachers: one submission with its earlier attempts and a form to grade it (a score
+ * from 0 to 100 and feedback). Saving keeps the grade from the student; releasing shows
+ * it to them, after which it cannot be changed. Only the latest submission can be graded.
  */
 export default function SubmissionGradingPage() {
   const { contentId = '', submissionId = '' } = useParams()
@@ -29,152 +31,206 @@ export default function SubmissionGradingPage() {
   const item = modules.flatMap(module => content.byModule.get(String(module.id)) ?? [])
     .find(entry => String(entry.id) === contentId)
   const details = useContent(item?.type, contentId)
-  const submissions = useContentSubmissions(contentId)
+  const submission = useReviewSubmission(submissionId)
+  const history = useReviewHistory(submissionId)
+  const grade = useGradeReview(submissionId)
+  // The latest submissions of the item, for Previous / Next.
+  const latest = useReviewSubmissions(contentId)
+  const people = usePeopleNames(course.id)
 
   if (!isTeacher) return <p role="alert">Only teachers of {course.title} can grade its submissions.</p>
 
-  const all = submissions.data ?? []
-  const index = all.findIndex(s => String(s.id) === submissionId)
-  const submission = index >= 0 ? all[index] : undefined
-  const deadline = details.data && (details.data.type === 'ASSIGNMENT' || details.data.type === 'CODING_EXERCISE')
-    ? details.data.deadline
-    : undefined
-
+  const studentName = submission.data ? people.nameOf(submission.data.studentUserId) : '…'
   const crumbs = [
     { label: course.title, to: paths.course(course.id) },
     { label: 'Submissions', to: paths.courseSection(course.id, 'submissions') },
     { label: item?.title ?? '…', to: paths.courseSectionContent(course.id, 'submissions', contentId) },
-    { label: submission ? `${submission.student.firstName} ${submission.student.lastName}` : '…' },
+    { label: studentName },
   ]
+  const deadline = details.data && (details.data.type === 'ASSIGNMENT' || details.data.type === 'CODING_EXERCISE')
+    ? details.data.deadline
+    : undefined
+  // The newest submission in the history is the one that can be graded.
+  const newest = history.data?.[0]
+  const isLatest = newest ? String(newest.id) === submissionId : undefined
+  const list = latest.data ?? []
+  const index = list.findIndex(s => String(s.id) === submissionId)
 
   return (
     <>
       <Breadcrumbs items={crumbs} />
-      <QueryState query={submissions} loading="Loading the submission…" error="Could not load the submission.">
-        {() => !submission
-          ? <p role="alert">This submission does not exist.</p>
-          : (
-            <>
-              <PageHeader
-                title={`${submission.student.firstName} ${submission.student.lastName}`}
-                kicker={item?.title ?? 'Submission'}
-              />
-              <div className="submittable">
-                <div className="submittable-main">
-                  <Answer submission={submission} />
-                  <GradeForm key={submission.id} submission={submission} contentId={contentId} />
-                  <nav className="grading-nav" aria-label="Other submissions">
-                    {index > 0
-                      ? <Link to={paths.courseSubmission(course.id, contentId, all[index - 1].id)}>‹ Previous</Link>
-                      : <span />}
-                    <Link to={paths.courseSectionContent(course.id, 'submissions', contentId)}>All submissions</Link>
-                    {index < all.length - 1
-                      ? <Link to={paths.courseSubmission(course.id, contentId, all[index + 1].id)}>Next ›</Link>
-                      : <span />}
-                  </nav>
-                </div>
-                <aside className="submittable-card submittable-panel" aria-label="Submission details">
-                  <Facts submission={submission} deadline={deadline} attempts={all.filter(s =>
-                    String(s.student.userId) === String(submission.student.userId)).length} />
-                </aside>
+      <QueryState query={submission} loading="Loading the submission…" error="Could not load the submission.">
+        {data => (
+          <>
+            <PageHeader title={studentName} kicker={item?.title ?? 'Submission'} />
+            <div className="submittable">
+              <div className="submittable-main">
+                <section className="submittable-card" aria-labelledby="answer-title">
+                  <h2 id="answer-title" className="submittable-card-title">Submission</h2>
+                  <SubmissionAnswer submission={data} />
+                </section>
+
+                {grade.isPending || isLatest === undefined
+                  ? <p role="status">Loading the grade…</p>
+                  : grade.error
+                    ? <p role="alert">Could not load the grade.</p>
+                    : (
+                      <GradeCard
+                        key={data.id}
+                        submission={data}
+                        contentId={contentId}
+                        courseId={course.id}
+                        grade={grade.data ?? null}
+                        isLatest={isLatest}
+                        newestId={newest?.id}
+                      />
+                    )}
+
+                {history.data && history.data.length > 1 && (
+                  <History courseId={course.id} contentId={contentId} history={history.data} currentId={submissionId} />
+                )}
+
+                <nav className="grading-nav" aria-label="Other submissions">
+                  {index > 0
+                    ? <Link to={paths.courseSubmission(course.id, contentId, list[index - 1].id)}>‹ Previous</Link>
+                    : <span />}
+                  <Link to={paths.courseSectionContent(course.id, 'submissions', contentId)}>All submissions</Link>
+                  {index >= 0 && index < list.length - 1
+                    ? <Link to={paths.courseSubmission(course.id, contentId, list[index + 1].id)}>Next ›</Link>
+                    : <span />}
+                </nav>
               </div>
-            </>
-          )}
+
+              <aside className="submittable-card submittable-panel" aria-label="Submission details">
+                <dl className="submittable-facts">
+                  <dt>Student</dt>
+                  <dd>
+                    {studentName}
+                    {people.members?.find(m => String(m.userId) === String(data.studentUserId))?.email && (
+                      <>
+                        <br />
+                        <span className="submittable-muted">
+                          {people.members.find(m => String(m.userId) === String(data.studentUserId))!.email}
+                        </span>
+                      </>
+                    )}
+                  </dd>
+                  {data.groupId !== null && (
+                    <>
+                      <dt>Handed in for group</dt>
+                      <dd>
+                        <strong>{people.groupLabel(data.groupId)}</strong>
+                        <ul className="submittable-members">
+                          {data.members.map(member => <li key={member.userId}>{people.nameOf(member.userId)}</li>)}
+                        </ul>
+                      </dd>
+                    </>
+                  )}
+                  <dt>Submitted</dt>
+                  <dd>
+                    {formatDateTime(new Date(data.submittedAt))}
+                    {data.late && <span className="submittable-late"> (late)</span>}
+                    {history.data && history.data.length > 1 && (
+                      <span className="submittable-muted"> · {history.data.length} submissions in all</span>
+                    )}
+                  </dd>
+                  <dt>Deadline</dt>
+                  <dd>{deadline === undefined ? '…' : deadline ? formatDateTime(new Date(deadline)) : 'No deadline'}</dd>
+                  <dt>Score</dt>
+                  <dd>
+                    {grade.data ? <strong>{formatScore(grade.data.score)}</strong> : 'Not graded yet'}
+                    {grade.data && (
+                      <span className="submittable-muted">
+                        <br />
+                        {grade.data.releasedAt
+                          ? `Released ${formatDateTime(new Date(grade.data.releasedAt))}`
+                          : 'Saved, not released to the student'}
+                      </span>
+                    )}
+                  </dd>
+                </dl>
+              </aside>
+            </div>
+          </>
+        )}
       </QueryState>
     </>
   )
 }
 
-/** What the student handed in: the text, or the repository as a link. */
-function Answer({ submission }: { submission: ContentSubmission }) {
-  const url = submission.type === 'GIT_URL' ? safeHttpUrl(submission.payload) : undefined
-  return (
-    <section className="submittable-card" aria-labelledby="answer-title">
-      <h2 id="answer-title" className="submittable-card-title">Submission</h2>
-      <div className="submittable-answer">
-        <p className="submittable-label">
-          {submission.type === 'GIT_URL' ? 'Repository' : 'Answer'}
-          <span className="submittable-muted"> · {formatDateTime(new Date(submission.submittedAt))}</span>
+/** A message for a failed save or release, from the backend's status code. */
+function gradeError(error: unknown): string {
+  if (error instanceof ApiError) {
+    if (error.status === 409) return 'The grade was changed in the meantime, it is already released, or a newer submission exists. Reload the page and try again.'
+    if (error.status === 400) return `The score must be a number from 0 to ${MAX_SCORE}, with at most two decimals.`
+    if (error.status === 403) return 'Only active teachers of the course can grade.'
+  }
+  return 'Could not save the grade. Try again.'
+}
+
+type GradeCardProps = {
+  submission: ReviewSubmission
+  contentId: ContentId
+  courseId: CourseId
+  /** The current grade; null when not graded yet. */
+  grade: GradeReview | null
+  /** Only the latest submission of the student or group can be graded. */
+  isLatest: boolean
+  newestId?: ReviewSubmission['id']
+}
+
+/**
+ * The grade: a form while it can be changed, otherwise what was given. A released
+ * grade cannot be changed, and an earlier submission cannot be graded.
+ */
+function GradeCard({ submission, contentId, courseId, grade, isLatest, newestId }: GradeCardProps) {
+  const save = useSaveGrade()
+  const release = useReleaseGrade()
+  const [score, setScore] = useState(grade ? String(grade.score) : '')
+  const [feedback, setFeedback] = useState(grade?.feedback ?? '')
+  const [done, setDone] = useState<'saved' | 'released' | null>(null)
+  const busy = save.isPending || release.isPending
+  const failed = save.error ?? release.error
+
+  const number = Number(score.replace(',', '.'))
+  const scoreValid = score.trim() !== '' && Number.isFinite(number) && number >= 0 && number <= MAX_SCORE
+    && Math.round(number * 100) === number * 100
+
+  if (grade?.releasedAt) {
+    return (
+      <section className="submittable-card" aria-labelledby="grade-title">
+        <h2 id="grade-title" className="submittable-card-title">Grade and feedback</h2>
+        <p className="grading-score">{formatScore(grade.score)}</p>
+        <div className="submittable-text">{grade.feedback || <span className="submittable-muted">No feedback.</span>}</div>
+        <p className="submittable-note">Released to the student {formatDateTime(new Date(grade.releasedAt))}. A released grade cannot be changed.</p>
+      </section>
+    )
+  }
+
+  if (!isLatest) {
+    return (
+      <section className="submittable-card" aria-labelledby="grade-title">
+        <h2 id="grade-title" className="submittable-card-title">Grade and feedback</h2>
+        <p className="submittable-note">
+          A newer submission exists. Only the latest submission can be graded.
+          {newestId !== undefined && <> <Link to={paths.courseSubmission(courseId, contentId, newestId)}>Go to the latest</Link></>}
         </p>
-        {submission.type === 'GIT_URL'
-          ? (url ? <a href={url} target="_blank" rel="noreferrer">{url}</a> : <span>{submission.payload}</span>)
-          : <div className="submittable-text">{submission.payload}</div>}
-      </div>
-    </section>
-  )
-}
+      </section>
+    )
+  }
 
-type FactsProps = {
-  submission: ContentSubmission
-  /** undefined while loading; null for no deadline. */
-  deadline: string | null | undefined
-  /** How many times this student has handed in this item. */
-  attempts: number
-}
-
-function Facts({ submission, deadline, attempts }: FactsProps) {
-  const grade = submission.grade
-  return (
-    <dl className="submittable-facts">
-      <dt>Student</dt>
-      <dd>
-        {submission.student.firstName} {submission.student.lastName}
-        <br />
-        <a className="submittable-muted" href={`mailto:${submission.student.email}`}>{submission.student.email}</a>
-      </dd>
-      {submission.group && (
-        <>
-          <dt>Handed in for group</dt>
-          <dd>
-            <strong>{submission.group.name}</strong>
-            <ul className="submittable-members">
-              {submission.group.members.map(member => (
-                <li key={member.userId}>{member.firstName} {member.lastName}</li>
-              ))}
-            </ul>
-          </dd>
-        </>
-      )}
-      <dt>Submitted</dt>
-      <dd>
-        {formatDateTime(new Date(submission.submittedAt))}
-        {submission.late && <span className="submittable-late"> (late)</span>}
-        {attempts > 1 && <span className="submittable-muted"> · {attempts} submissions by this student</span>}
-      </dd>
-      <dt>Deadline</dt>
-      <dd>{deadline === undefined ? '…' : deadline ? formatDateTime(new Date(deadline)) : 'No deadline'}</dd>
-      <dt>Grade</dt>
-      <dd>
-        {grade ? <strong>{grade.value}</strong> : 'Not graded yet'}
-        {grade && (
-          <span className="submittable-muted">
-            <br />
-            {grade.publishedAt
-              ? `Published ${formatDateTime(new Date(grade.publishedAt))}`
-              : 'Saved, not published to the student'}
-          </span>
-        )}
-      </dd>
-    </dl>
-  )
-}
-
-/** The grade (a quick choice or typed) and feedback; save, or save and publish. */
-function GradeForm({ submission, contentId }: { submission: ContentSubmission, contentId: ContentId }) {
-  const save = useGradeSubmission()
-  const publish = usePublishSubmissionGrade()
-  const [grade, setGrade] = useState(submission.grade?.value ?? '')
-  const [feedback, setFeedback] = useState(submission.grade?.feedback ?? '')
-  const [done, setDone] = useState<'saved' | 'published' | null>(null)
-  const busy = save.isPending || publish.isPending
-  const failed = save.error || publish.error
-
-  async function submit(andPublish: boolean) {
+  async function submit(andRelease: boolean) {
     setDone(null)
     try {
-      await save.mutateAsync({ submissionId: submission.id, contentId, grade: grade.trim(), feedback: feedback.trim() })
-      if (andPublish) await publish.mutateAsync({ submissionId: submission.id, contentId })
-      setDone(andPublish ? 'published' : 'saved')
+      const saved = await save.mutateAsync({
+        submissionId: submission.id,
+        contentId,
+        score: number,
+        feedback: feedback.trim(),
+        version: grade?.version ?? null,
+      })
+      if (andRelease) await release.mutateAsync({ submissionId: submission.id, contentId, version: saved.version })
+      setDone(andRelease ? 'released' : 'saved')
     } catch {
       // Shown below from the mutations' errors.
     }
@@ -182,55 +238,77 @@ function GradeForm({ submission, contentId }: { submission: ContentSubmission, c
 
   function handleSubmit(event: FormEvent) {
     event.preventDefault()
-    void submit(true)
+    void submit(false)
   }
 
   return (
     <section className="submittable-card" aria-labelledby="grade-title">
       <h2 id="grade-title" className="submittable-card-title">Grade and feedback</h2>
       <form className="form grading-form" onSubmit={handleSubmit}>
-        <fieldset className="grading-choices">
-          <legend className="form-label">Grade</legend>
-          <div className="grading-quick">
-            {QUICK_GRADES.map(choice => (
-              <button
-                key={choice}
-                type="button"
-                className={`grading-choice${grade === choice ? ' is-selected' : ''}`}
-                aria-pressed={grade === choice}
-                onClick={() => setGrade(choice)}
-              >
-                {choice}
-              </button>
-            ))}
+        <div className="form-field grading-score-field">
+          <label htmlFor="grading-score">Score (0–{MAX_SCORE})</label>
+          <div className="grading-score-input">
+            <input id="grading-score" type="number" inputMode="decimal" min={0} max={MAX_SCORE} step={0.01}
+              value={score} onChange={event => setScore(event.target.value)} required />
+            <span className="submittable-muted">/ {MAX_SCORE}</span>
           </div>
-          <label className="grading-other">
-            <span className="form-hint">Or another grade, e.g. A–F</span>
-            <input type="text" value={grade} onChange={event => setGrade(event.target.value)} maxLength={50} />
-          </label>
-        </fieldset>
+          {score.trim() !== '' && !scoreValid && (
+            <p className="form-error" role="alert">A number from 0 to {MAX_SCORE}, with at most two decimals.</p>
+          )}
+        </div>
 
         <div className="form-field">
           <label htmlFor="grading-feedback">Feedback to the student</label>
-          <textarea id="grading-feedback" rows={6} value={feedback} onChange={event => setFeedback(event.target.value)} />
+          <textarea id="grading-feedback" rows={6} maxLength={10000} value={feedback}
+            onChange={event => setFeedback(event.target.value)} />
         </div>
 
-        {failed && <p className="form-error" role="alert">Could not save the grade. Try again.</p>}
+        {failed && <p className="form-error" role="alert">{gradeError(failed)}</p>}
         {done && (
           <p className="form-success" role="status">
-            {done === 'published' ? 'Saved and published to the student.' : 'Saved. The student cannot see it until you publish it.'}
+            {done === 'released' ? 'Saved and released to the student.' : 'Saved. The student cannot see it until you release it.'}
           </p>
         )}
 
         <div className="form-actions">
-          <button type="submit" className="button-primary" disabled={busy || grade.trim() === ''}>
-            {publish.isPending ? 'Publishing…' : 'Save and publish'}
+          <button type="submit" className="button-primary" disabled={busy || !scoreValid}>
+            {save.isPending && !release.isPending ? 'Saving…' : 'Save'}
           </button>
-          <button type="button" className="button-secondary" disabled={busy || grade.trim() === ''} onClick={() => void submit(false)}>
-            {save.isPending && !publish.isPending ? 'Saving…' : 'Save without publishing'}
+          <button type="button" className="button-secondary" disabled={busy || !scoreValid} onClick={() => void submit(true)}>
+            {release.isPending ? 'Releasing…' : 'Save and release to the student'}
           </button>
         </div>
+        <p className="submittable-note">A released grade cannot be changed afterwards.</p>
       </form>
+    </section>
+  )
+}
+
+type HistoryProps = {
+  courseId: CourseId
+  contentId: ContentId
+  /** Newest first. */
+  history: ReviewSubmission[]
+  currentId: string
+}
+
+/** Every submission by the student (or group) for the item; the shown one is marked. */
+function History({ courseId, contentId, history, currentId }: HistoryProps) {
+  return (
+    <section className="submittable-card" aria-labelledby="history-title">
+      <h2 id="history-title" className="submittable-card-title">All submissions ({history.length})</h2>
+      <ol className="grading-history">
+        {history.map((entry, i) => (
+          <li key={entry.id} className={String(entry.id) === currentId ? 'is-current' : undefined}>
+            {String(entry.id) === currentId
+              ? <strong>{formatDateTime(new Date(entry.submittedAt))}</strong>
+              : <Link to={paths.courseSubmission(courseId, contentId, entry.id)}>{formatDateTime(new Date(entry.submittedAt))}</Link>}
+            <span className="submittable-muted">
+              {' · '}{submissionKindLabel(entry)}{entry.late && ' · late'}{i === 0 && ' · latest'}
+            </span>
+          </li>
+        ))}
+      </ol>
     </section>
   )
 }

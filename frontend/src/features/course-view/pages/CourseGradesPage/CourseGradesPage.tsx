@@ -4,6 +4,7 @@ import { paths } from '../../../../shared/paths'
 import PageHeader from '../../../../shared/ui/PageHeader'
 import QueryState from '../../../../shared/ui/QueryState'
 import { contentTypeLabel } from '../../../content/contentTypes'
+import { formatScore } from '../../../assignments/scoreFormat'
 import { useMyGrades } from '../../../grades/hooks'
 import type { GradeEntry } from '../../../grades/types'
 import DataTable from '../../components/DataTable'
@@ -67,9 +68,9 @@ function MyGrades({ courseId, courseTitle }: { courseId: string, courseTitle: st
               ),
             },
             {
-              header: 'Grade',
+              header: 'Score',
               cell: entry => entry.grade
-                ? <span className="data-table-strong">{entry.grade.value}</span>
+                ? <span className="data-table-strong">{formatScore(entry.grade.score)}</span>
                 : <span className="data-table-muted">Awaiting grade</span>,
             },
             {

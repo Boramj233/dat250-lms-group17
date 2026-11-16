@@ -2,7 +2,7 @@ import { formatDateTime } from '../../../../shared/lib/dateFormat'
 import { TrailLink } from '../../../../shared/navigation/Trail'
 import { paths } from '../../../../shared/paths'
 import PageHeader from '../../../../shared/ui/PageHeader'
-import { useContentSubmissionsFor } from '../../../assignments/hooks'
+import { useGradeReviewsFor, useReviewSubmissionsFor } from '../../../assignments/hooks'
 import { contentTypeLabel } from '../../../content/contentTypes'
 import { useContents, useCourseContent } from '../../../content/hooks'
 import type { Content, ContentSummary } from '../../../content/types'
@@ -23,8 +23,8 @@ type Row = {
 
 /**
  * Teachers: everything students hand in (assignments and coding exercises), with the
- * deadline, how many students have answered, the number of submissions and graded
- * ones, and whether it is mandatory. A row opens its submissions.
+ * deadline, how many students have answered, the latest submissions and how many of
+ * them are graded and released, and whether it is mandatory. A row opens its submissions.
  */
 export default function CourseSubmissionsPage() {
   const { course, modules, isTeacher } = useCourseView()
@@ -34,7 +34,9 @@ export default function CourseSubmissionsPage() {
       .filter(item => item.type === 'ASSIGNMENT' || item.type === 'CODING_EXERCISE')
       .map(item => ({ item, module })))
   const details = useContents(items.map(({ item }) => ({ type: item.type, id: item.id })))
-  const submissions = useContentSubmissionsFor(items.map(({ item }) => item.id))
+  const submissions = useReviewSubmissionsFor(items.map(({ item }) => item.id))
+  const allSubmissions = [...submissions.byContent.values()].flat()
+  const grades = useGradeReviewsFor(allSubmissions.map(submission => submission.id))
   const members = useCourseEnrollments(course.id)
 
   if (!isTeacher) return <p role="alert">Only teachers of {course.title} can see its submissions.</p>
@@ -44,7 +46,7 @@ export default function CourseSubmissionsPage() {
     return {
       ...row,
       details: details.byId.get(String(row.item.id)),
-      stats: list && submissionStats(list, members.data),
+      stats: list && submissionStats(list, members.data, s => grades.bySubmission.get(String(s.id))),
     }
   })
   // A cell without counts: still loading, or the list could not be loaded.
@@ -88,16 +90,20 @@ export default function CourseSubmissionsPage() {
               { header: 'Submissions', cell: row => row.stats ? row.stats.submissions : noCounts },
               {
                 header: 'Graded',
-                cell: row => row.stats
-                  ? <span className={row.stats.graded < row.stats.submissions ? 'data-table-strong' : 'data-table-muted'}>
-                      {row.stats.graded}/{row.stats.submissions}
-                    </span>
-                  : noCounts,
+                cell: row => !row.stats ? noCounts : grades.isPending ? '…' : (
+                  <span className={row.stats.graded < row.stats.submissions ? 'data-table-strong' : 'data-table-muted'}>
+                    {row.stats.graded}/{row.stats.submissions}
+                    {row.stats.graded > 0 && <span className="data-table-muted"> · {row.stats.released} released</span>}
+                  </span>
+                ),
               },
               { header: 'Mandatory', cell: ({ details }) => <Mandatory content={details} /> },
             ]}
           />
         )}
+      <p className="data-table-muted">
+        Submissions counts the latest submission of each student or group; earlier attempts are on each submission.
+      </p>
     </>
   )
 }

@@ -5,6 +5,7 @@ import type { CourseId } from '../../../../shared/types'
 import { contentSection } from '../../../content/contentTypes'
 import { useContents } from '../../../content/hooks'
 import type { Content, ContentSummary, ContentType } from '../../../content/types'
+import { formatScore } from '../../../assignments/scoreFormat'
 import { useMyGrades } from '../../../grades/hooks'
 import type { GradeEntry } from '../../../grades/types'
 import type { CourseModule } from '../../../modules/types'
@@ -150,5 +151,5 @@ function Status({ row, loaded }: { row: Row, loaded: boolean }) {
   if (!loaded) return '…'
   if (!row.grade) return <span className="data-table-muted">Not submitted</span>
   if (!row.grade.grade) return 'Submitted'
-  return <span className="data-table-strong">Graded: {row.grade.grade.value}</span>
+  return <span className="data-table-strong">Graded: {formatScore(row.grade.grade.score)}</span>
 }

@@ -13,7 +13,7 @@ import type { EnrolledCourse } from '../src/features/courses/types'
 import type { UpcomingDeadline } from '../src/features/deadlines/types'
 import { canRequire, checkAvailabilityDates, isAccessible } from '../src/features/modules/prerequisites'
 import { completions, contents, courses, enrollments, groups, modules, quizAttempts, quizQuestions, submissions, users } from './data'
-import { created, forbidden, noContent, notFound, ok, type MockHandler, type MockResult, type MockUser } from './types'
+import { conflict, created, forbidden, noContent, notFound, ok, type MockHandler, type MockMultipart, type MockResult, type MockUser } from './types'
 
 /** Like the backend: you may read your own data; ADMIN may read anyone's. */
 function canReadUser(user: MockUser, userId: string) {
@@ -45,7 +45,7 @@ function isOwnSubmission(user: MockUser, submission: (typeof submissions)[number
   return group?.memberIds.includes(user.userId) ?? false
 }
 
-/** The members' names of a group (proposed in GroupDTO and SubmissionGroup). */
+/** The members' names of a group (proposed in GroupDTO). */
 function groupMembers(group: (typeof groups)[number]) {
   return group.memberIds.flatMap(userId => {
     const member = users.find(u => u.userId === userId)
@@ -53,27 +53,89 @@ function groupMembers(group: (typeof groups)[number]) {
   })
 }
 
-/** A group as in SubmissionGroup; null for no group. */
-function groupResponse(groupId: number | undefined) {
-  const group = groups.find(g => g.id === groupId)
-  if (!group) return null
-  return { id: group.id, name: group.name ?? `Group ${group.groupNumber}`, members: groupMembers(group) }
+type MockSubmission = (typeof submissions)[number]
+
+/** The mock has no enrollment ids; use the position in the enrollments list. */
+function enrollmentIdOf(userId: number, courseId: number) {
+  return enrollments.findIndex(e => e.userId === userId && e.courseId === courseId) + 1
 }
 
-/** Students only see published grades. */
-function publishedGrade(grade: (typeof submissions)[number]['grade']) {
-  return grade?.publishedAt ? grade : null
-}
-
-/** A submission as a teacher sees it (ContentSubmission in src/features/assignments). */
-function contentSubmissionResponse(s: (typeof submissions)[number]) {
-  const student = users.find(u => u.userId === s.userId)!
-  return {
+/**
+ * SubmissionResponse (the student's own) or, for teachers, SubmissionReviewResponse.
+ * The file's downloadPath differs: /file for the student, /review/file for a teacher.
+ */
+function submissionResponse(s: MockSubmission, forTeacher = false) {
+  const content = contents.find(c => c.id === s.contentId)!
+  const group = groups.find(g => g.id === s.groupId)
+  const base = {
     id: s.id, contentId: s.contentId, type: s.type, payload: s.payload, submittedAt: s.submittedAt, late: s.late,
-    student: { userId: student.userId, firstName: student.firstName, lastName: student.lastName, email: student.email },
-    group: groupResponse(s.groupId),
-    grade: s.grade,
+    file: s.file
+      ? {
+          name: s.file.name, mediaType: s.file.mediaType, sizeBytes: s.file.content.length,
+          downloadPath: `/api/submissions/${s.id}/${forTeacher ? 'review/file' : 'file'}`,
+        }
+      : null,
+    groupId: s.groupId ?? null,
+    submittedByUserId: s.userId,
+    members: (group?.memberIds ?? []).map(userId => ({ userId, enrollmentId: enrollmentIdOf(userId, content.courseId) })),
   }
+  return forTeacher
+    ? { ...base, studentUserId: s.userId, enrollmentId: enrollmentIdOf(s.userId, content.courseId) }
+    : base
+}
+
+/** The submissions by the same student (or group) for the same item, newest first. */
+function sequenceOf(s: MockSubmission) {
+  return submissions
+    .filter(other => other.contentId === s.contentId
+      && (s.groupId !== undefined ? other.groupId === s.groupId : other.groupId === undefined && other.userId === s.userId))
+    .sort((a, b) => Date.parse(b.submittedAt) - Date.parse(a.submittedAt))
+}
+
+/** GradeReviewResponse (teachers). */
+function gradeReviewResponse(s: MockSubmission) {
+  const g = s.grade!
+  const content = contents.find(c => c.id === s.contentId)!
+  const teacher = enrollments.find(e => e.courseId === content.courseId && e.role === 'TEACHER')
+  const teacherEnrollment = teacher ? enrollmentIdOf(teacher.userId, content.courseId) : 0
+  return {
+    submissionId: s.id, score: g.score, feedback: g.feedback,
+    gradedByEnrollmentId: teacherEnrollment, gradedAt: g.gradedAt,
+    releasedByEnrollmentId: g.releasedAt ? teacherEnrollment : null, releasedAt: g.releasedAt, version: g.version,
+  }
+}
+
+/** The submission and its course, when the user teaches that course. */
+function teacherSubmission(user: MockUser, submissionId: string): MockSubmission | MockResult {
+  const submission = submissions.find(s => String(s.id) === submissionId)
+  if (!submission) return notFound()
+  const content = contents.find(c => c.id === submission.contentId)!
+  if (!isTeacher(user, content.courseId)) return forbidden()
+  return submission
+}
+const isResult = (value: MockSubmission | MockResult): value is MockResult => 'status' in value
+
+/**
+ * Like SubmissionService: an assignment or coding exercise the user may hand in to,
+ * as a member of `groupId` if given. Late after the deadline; 409 when not allowed.
+ */
+function checkSubmit(user: MockUser, contentId: string, groupId: number | undefined) {
+  const content = contents.find(c => String(c.id) === contentId)
+  if (!content) return { error: notFound() }
+  if (content.type !== 'ASSIGNMENT' && content.type !== 'CODING_EXERCISE') return { error: badRequest('Cannot submit to this content') }
+  if (!canReadCourse(user, content.courseId)) return { error: forbidden() }
+  if (groupId !== undefined) {
+    const group = groups.find(g => g.id === groupId && g.courseId === content.courseId)
+    if (!group?.memberIds.includes(user.userId)) return { error: forbidden() }
+  }
+  const late = content.deadline !== null && Date.now() > Date.parse(content.deadline)
+  if (late && !content.allowLateSubmission) return { error: conflict('Submission deadline has passed') }
+  return { content, late }
+}
+
+/** Students only see released grades: ReleasedGradeResponse without submissionId. */
+function releasedGrade(s: MockSubmission) {
+  return s.grade?.releasedAt ? { score: s.grade.score, feedback: s.grade.feedback, releasedAt: s.grade.releasedAt } : null
 }
 
 /** Course content is for enrolled users (and ADMIN). */
@@ -252,56 +314,71 @@ export const handlers: MockHandler[] = [
       if (!canReadCourse(user, content.courseId)) return forbidden()
       return ok(submissions
         .filter(s => s.contentId === content.id && isOwnSubmission(user, s))
-        .map(({ id, contentId, type, payload, submittedAt, late, groupId }) =>
-          ({ id, contentId, type, payload, submittedAt, late, group: groupResponse(groupId) })))
+        .map(s => submissionResponse(s)))
     },
   },
   {
-    // CreateSubmissionRequest { type, payload } → SubmissionResponse (201), like the backend.
+    // CreateSubmissionRequest { type, payload, groupId? } → SubmissionResponse (201).
     method: 'POST',
     path: '/api/contents/:contentId/submissions',
     handle: ({ user, params, body }) => {
-      const content = contents.find(c => String(c.id) === params.contentId)
-      if (!content) return notFound()
-      if (content.type !== 'ASSIGNMENT' && content.type !== 'CODING_EXERCISE') return badRequest('Cannot submit to this content')
-      if (!canReadCourse(user, content.courseId)) return forbidden()
-      const { type, payload } = body as { type?: 'TEXT' | 'GIT_URL', payload?: string }
+      const { type, payload, groupId } = body as { type?: 'TEXT' | 'GIT_URL', payload?: string, groupId?: number }
       if ((type !== 'TEXT' && type !== 'GIT_URL') || !payload?.trim()) return badRequest('Type and payload are required')
-      const late = content.deadline !== null && Date.now() > Date.parse(content.deadline)
-      if (late && !content.allowLateSubmission) return badRequest('The deadline has passed')
-      // A group assignment is handed in for the user's group in the course.
-      let groupId: number | undefined
-      if (content.type === 'ASSIGNMENT' && content.groupAssignment) {
-        groupId = groups.find(g => g.courseId === content.courseId && g.memberIds.includes(user.userId))?.id
-        if (groupId === undefined) return badRequest('You are not in a group in this course')
-      }
-      const submission = {
-        id: nextId(submissions), userId: user.userId, contentId: Number(content.id), groupId, type,
-        payload: payload.trim(), submittedAt: new Date().toISOString(), late, grade: null,
+      const check = checkSubmit(user, params.contentId, groupId ?? undefined)
+      if (check.error) return check.error
+      const submission: MockSubmission = {
+        id: nextId(submissions), userId: user.userId, contentId: Number(check.content.id), groupId: groupId ?? undefined,
+        type, payload: payload.trim(), submittedAt: new Date().toISOString(), late: check.late, grade: null,
       }
       submissions.push(submission)
-      const { id, contentId, submittedAt } = submission
-      return {
-        status: 201,
-        body: { id, contentId, type, payload: submission.payload, submittedAt, late, group: groupResponse(groupId) },
-      }
+      return created(submissionResponse(submission))
     },
   },
   {
-    // Proposed endpoint (src/features/assignments): SubmissionResult with the published grade.
+    // Multipart: one PDF in "file" (at most 10 MB), optional "groupId" → SubmissionResponse (201).
+    method: 'POST',
+    path: '/api/contents/:contentId/submissions/file',
+    handle: ({ user, params, body }) => {
+      const form = body as MockMultipart | undefined
+      const files = form?.files.filter(f => f.field === 'file') ?? []
+      if (files.length !== 1) return badRequest('Exactly one file part named file is required')
+      const file = files[0]
+      const header = new TextDecoder().decode(file.content.slice(0, 5))
+      if (!file.name.toLowerCase().endsWith('.pdf') || file.mediaType !== 'application/pdf' || header !== '%PDF-') {
+        return { status: 415, body: { detail: 'Only PDF files with application/pdf content type and a PDF header are accepted' } }
+      }
+      if (file.content.length > 10 * 1024 * 1024) return { status: 413, body: { detail: 'File too large' } }
+      const groupId = form?.fields.groupId ? Number(form.fields.groupId) : undefined
+      const check = checkSubmit(user, params.contentId, groupId)
+      if (check.error) return check.error
+      const submission: MockSubmission = {
+        id: nextId(submissions), userId: user.userId, contentId: Number(check.content.id), groupId,
+        type: 'FILE', payload: null, file: { name: file.name, mediaType: file.mediaType, content: file.content },
+        submittedAt: new Date().toISOString(), late: check.late, grade: null,
+      }
+      submissions.push(submission)
+      return created(submissionResponse(submission))
+    },
+  },
+  {
+    // The student's own file.
     method: 'GET',
-    path: '/api/submissions/:submissionId/result',
+    path: '/api/submissions/:submissionId/file',
     handle: ({ user, params }) => {
       const submission = submissions.find(s => String(s.id) === params.submissionId)
-      if (!submission) return notFound()
-      if (!isOwnSubmission(user, submission) && user.access !== 'ADMIN') return forbidden()
-      return ok({
-        submissionId: submission.id,
-        status: submission.grade ? 'GRADED' : 'SUBMITTED',
-        grade: publishedGrade(submission.grade),
-        testResults: null,
-        errorMessage: null,
-      })
+      if (!submission?.file || !isOwnSubmission(user, submission)) return notFound()
+      return { status: 200, download: submission.file }
+    },
+  },
+  {
+    // ReleasedGradeResponse for the student's own submission; 404 until released.
+    method: 'GET',
+    path: '/api/submissions/:submissionId/grade',
+    handle: ({ user, params }) => {
+      const submission = submissions.find(s => String(s.id) === params.submissionId)
+      if (!submission || !isOwnSubmission(user, submission)) return notFound()
+      const grade = releasedGrade(submission)
+      return grade ? ok({ submissionId: submission.id, ...grade }) : notFound()
     },
   },
   {
@@ -330,7 +407,7 @@ export const handlers: MockHandler[] = [
           submissionId: submission.id,
           submittedAt: submission.submittedAt,
           late: submission.late,
-          grade: publishedGrade(submission.grade),
+          grade: releasedGrade(submission),
         }]
       }))
     },
@@ -668,49 +745,109 @@ export const handlers: MockHandler[] = [
     },
   },
   {
-    // Proposed (src/features/assignments/README.md): every submission, for teachers.
+    // Page<SubmissionReviewResponse>: the latest submission per student or group (teachers).
     method: 'GET',
-    path: '/api/contents/:contentId/submissions',
-    handle: ({ user, params }) => {
+    path: '/api/contents/:contentId/submissions/review',
+    handle: ({ user, params, query }) => {
       const content = contents.find(c => String(c.id) === params.contentId)
       if (!content) return notFound()
       if (!isTeacher(user, content.courseId)) return forbidden()
-      return ok(submissions
-        .filter(s => s.contentId === content.id)
-        .sort((a, b) => Date.parse(b.submittedAt) - Date.parse(a.submittedAt))
-        .map(contentSubmissionResponse))
+      const page = Number(query.get('page') ?? 0)
+      const size = Number(query.get('size') ?? 20)
+      if (page < 0 || size < 1 || size > 100) return badRequest('Page must be nonnegative and size between 1 and 100')
+      const latest = new Map<string, MockSubmission>()
+      for (const s of submissions.filter(s => s.contentId === content.id)) {
+        const key = s.groupId !== undefined ? `group-${s.groupId}` : `user-${s.userId}`
+        const previous = latest.get(key)
+        if (!previous || Date.parse(s.submittedAt) > Date.parse(previous.submittedAt)) latest.set(key, s)
+      }
+      const all = [...latest.values()].sort((a, b) => Date.parse(b.submittedAt) - Date.parse(a.submittedAt))
+      const pageItems = all.slice(page * size, page * size + size)
+      const totalPages = Math.ceil(all.length / size)
+      return ok({
+        content: pageItems.map(s => submissionResponse(s, true)),
+        totalElements: all.length, totalPages, number: page, size,
+        first: page === 0, last: page >= totalPages - 1, numberOfElements: pageItems.length, empty: pageItems.length === 0,
+      })
     },
   },
   {
-    // Proposed: save a grade (not visible to the student until published).
+    method: 'GET',
+    path: '/api/submissions/:submissionId/review',
+    handle: ({ user, params }) => {
+      const submission = teacherSubmission(user, params.submissionId)
+      return isResult(submission) ? submission : ok(submissionResponse(submission, true))
+    },
+  },
+  {
+    method: 'GET',
+    path: '/api/submissions/:submissionId/review/history',
+    handle: ({ user, params }) => {
+      const submission = teacherSubmission(user, params.submissionId)
+      return isResult(submission) ? submission : ok(sequenceOf(submission).map(s => submissionResponse(s, true)))
+    },
+  },
+  {
+    method: 'GET',
+    path: '/api/submissions/:submissionId/review/file',
+    handle: ({ user, params }) => {
+      const submission = teacherSubmission(user, params.submissionId)
+      if (isResult(submission)) return submission
+      return submission.file ? { status: 200, download: submission.file } : notFound()
+    },
+  },
+  {
+    // GradeReviewResponse (teachers); 404 when not graded.
+    method: 'GET',
+    path: '/api/submissions/:submissionId/grade/review',
+    handle: ({ user, params }) => {
+      const submission = teacherSubmission(user, params.submissionId)
+      if (isResult(submission)) return submission
+      return submission.grade ? ok(gradeReviewResponse(submission)) : notFound()
+    },
+  },
+  {
+    // SaveGradeRequest { score, feedback, version }: version null creates the grade.
     method: 'PUT',
     path: '/api/submissions/:submissionId/grade',
     handle: ({ user, params, body }) => {
-      const submission = submissions.find(s => String(s.id) === params.submissionId)
-      if (!submission) return notFound()
-      const content = contents.find(c => c.id === submission.contentId)!
-      if (!isTeacher(user, content.courseId)) return forbidden()
-      const { grade, feedback } = body as { grade: string, feedback?: string }
-      if (!grade?.trim()) return badRequest('Grade is required')
-      submission.grade = { value: grade.trim(), feedback: feedback?.trim() || null, publishedAt: null }
-      return ok(contentSubmissionResponse(submission))
+      const submission = teacherSubmission(user, params.submissionId)
+      if (isResult(submission)) return submission
+      const { score, feedback, version } = body as { score?: number, feedback?: string | null, version?: number | null }
+      if (typeof score !== 'number' || score < 0 || score > 100 || Math.round(score * 100) !== score * 100
+        || (feedback?.length ?? 0) > 10000) {
+        return badRequest('Invalid grade request')
+      }
+      if (sequenceOf(submission)[0].id !== submission.id) return conflict('A newer submission exists; review the latest version')
+      const now = new Date().toISOString()
+      if (!submission.grade) {
+        if (version !== null && version !== undefined) return conflict('Grade does not exist; refresh before creating')
+        submission.grade = { score, feedback: feedback || null, gradedAt: now, releasedAt: null, version: 0 }
+      } else {
+        if (submission.grade.releasedAt) return conflict('Released grades cannot be edited')
+        if (version !== submission.grade.version) return conflict('Grade changed; refresh before updating')
+        submission.grade = { ...submission.grade, score, feedback: feedback || null, gradedAt: now, version: version + 1 }
+      }
+      return ok(gradeReviewResponse(submission))
     },
   },
   {
-    // Proposed: publish the saved grade to the student.
+    // ReleaseGradeRequest { version }: shows the grade to the student(s).
     method: 'POST',
-    path: '/api/submissions/:submissionId/grade/publish',
-    handle: ({ user, params }) => {
-      const submission = submissions.find(s => String(s.id) === params.submissionId)
-      if (!submission?.grade) return notFound()
-      const content = contents.find(c => c.id === submission.contentId)!
-      if (!isTeacher(user, content.courseId)) return forbidden()
-      submission.grade.publishedAt = new Date().toISOString()
+    path: '/api/submissions/:submissionId/grade/release',
+    handle: ({ user, params, body }) => {
+      const submission = teacherSubmission(user, params.submissionId)
+      if (isResult(submission)) return submission
+      if (!submission.grade) return notFound()
+      const { version } = body as { version?: number }
+      if (version !== submission.grade.version) return conflict('Grade changed; refresh before updating')
+      if (submission.grade.releasedAt) return conflict('Grade is already released')
+      submission.grade = { ...submission.grade, releasedAt: new Date().toISOString(), version: version + 1 }
       // A graded submission also counts as completed.
       if (!completions.some(c => c.userId === submission.userId && c.contentId === submission.contentId)) {
         completions.push({ userId: submission.userId, contentId: submission.contentId, completedAt: submission.submittedAt })
       }
-      return ok(contentSubmissionResponse(submission))
+      return ok(gradeReviewResponse(submission))
     },
   },
   { method: 'GET', path: '/api/contents/:contentId', handle: contentDetail('STATIC_PAGE') },

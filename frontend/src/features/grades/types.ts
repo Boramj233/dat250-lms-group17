@@ -1,9 +1,9 @@
 import type { ContentId, CourseId, ModuleId } from "../../shared/types";
-import type { SubmissionGrade, SubmissionId } from "../assignments/types";
+import type { ReleasedGrade, SubmissionId } from "../assignments/types";
 
 /**
  * One assignment or coding exercise the logged-in user has submitted: either graded
- * (grade published) or waiting for a grade.
+ * (grade released) or waiting for a grade.
  */
 export interface GradeEntry {
   contentId: ContentId;
@@ -17,6 +17,6 @@ export interface GradeEntry {
   /** ISO 8601 instant. */
   submittedAt: string;
   late: boolean;
-  /** Null while the grade is not published (awaiting grade). */
-  grade: SubmissionGrade | null;
+  /** The released grade, as GET /api/submissions/{id}/grade; null while not released. */
+  grade: Omit<ReleasedGrade, "submissionId"> | null;
 }

@@ -97,31 +97,40 @@ export const completions: { userId: number, contentId: number, completedAt: stri
   { userId: 1, contentId: 201, completedAt: inDays(-2, 15, 0) },
 ]
 
+/** A tiny but valid PDF, for the sample file submission. */
+const SAMPLE_PDF = new TextEncoder().encode(
+  '%PDF-1.4\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n'
+  + '2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj\n'
+  + '3 0 obj<</Type/Page/Parent 2 0 R/MediaBox[0 0 200 100]>>endobj\n'
+  + 'trailer<</Root 1 0 R>>\n%%EOF\n')
+
 /**
- * Submissions to assignments and coding exercises. `grade` is what the teacher has
- * published (null: not graded yet). Keep `completions` above in step with this list.
+ * Submissions to assignments and coding exercises, like the backend's Submission. A
+ * group submission has `groupId` and counts for the group's members. `grade` is the
+ * teacher's grade (GradeReviewResponse): a score from 0 to 100; `releasedAt` null means
+ * the student cannot see it yet. Keep `completions` above in step with this list.
  */
 export const submissions: {
   id: number
   userId: number
   contentId: number
-  type: 'TEXT' | 'GIT_URL'
-  payload: string
+  type: 'TEXT' | 'GIT_URL' | 'FILE'
+  /** Null for FILE. */
+  payload: string | null
+  file?: { name: string, mediaType: string, content: Uint8Array }
   submittedAt: string
   late: boolean
-  /** Set for a group assignment: the group that handed in (see groups). */
   groupId?: number
-  /** publishedAt null: saved by the teacher but not visible to the student yet. */
-  grade: { value: string, feedback: string | null, publishedAt: string | null } | null
+  grade: { score: number, feedback: string | null, gradedAt: string, releasedAt: string | null, version: number } | null
 }[] = [
   {
     id: 1, userId: 1, contentId: 104, type: 'TEXT', late: false,
     payload: 'My answer to the old assignment.', submittedAt: inDays(-4, 20, 0),
     grade: {
-      value: 'Passed',
+      score: 90,
       feedback: 'Good work! The explanation of the status codes is clear.\n'
         + 'Remember to test the error cases too.',
-      publishedAt: inDays(-1, 9, 30),
+      gradedAt: inDays(-2, 10, 0), releasedAt: inDays(-1, 9, 30), version: 1,
     },
   },
   {
@@ -132,7 +141,7 @@ export const submissions: {
   {
     id: 3, userId: 1, contentId: 201, type: 'TEXT', late: false,
     payload: 'Our first sprint went well.', submittedAt: inDays(-2, 15, 0),
-    grade: { value: 'B', feedback: null, publishedAt: inDays(0, 8, 0) },
+    grade: { score: 80, feedback: null, gradedAt: inDays(-1, 14, 0), releasedAt: inDays(0, 8, 0), version: 1 },
   },
   {
     id: 4, userId: 5, contentId: 102, type: 'GIT_URL', late: true,
@@ -142,18 +151,27 @@ export const submissions: {
   {
     id: 5, userId: 5, contentId: 104, type: 'TEXT', late: false,
     payload: 'Sam answered the old assignment.', submittedAt: inDays(-3, 22, 10),
-    grade: { value: 'Not passed', feedback: 'Please explain the HTTP methods.', publishedAt: null },
+    grade: { score: 40, feedback: 'Please explain the HTTP methods.', gradedAt: inDays(-1, 11, 0), releasedAt: null, version: 0 },
   },
   {
     // Group assignment: Sam handed in for the group, so Siri sees it too.
     id: 6, userId: 5, contentId: 103, groupId: 1, type: 'TEXT', late: false,
     payload: 'We send a PollCreated event to a topic exchange and log it in a consumer.',
     submittedAt: inDays(-1, 16, 20),
-    grade: { value: 'Passed', feedback: 'Nice and simple. Add a dead letter queue next time.', publishedAt: inDays(0, 9, 0) },
+    grade: {
+      score: 95, feedback: 'Nice and simple. Add a dead letter queue next time.',
+      gradedAt: inDays(0, 8, 30), releasedAt: inDays(0, 9, 0), version: 1,
+    },
   },
   {
     id: 7, userId: 5, contentId: 101, type: 'TEXT', late: false,
     payload: 'My REST API has GET, POST and DELETE for polls. The code is in the repository I shared.',
+    submittedAt: inDays(-2, 12, 0), grade: null,
+  },
+  {
+    // Sam handed in again, as a PDF: only this latest one can be graded.
+    id: 8, userId: 5, contentId: 101, type: 'FILE', late: false, payload: null,
+    file: { name: 'rest-api-report.pdf', mediaType: 'application/pdf', content: SAMPLE_PDF },
     submittedAt: inDays(-1, 12, 0), grade: null,
   },
 ]

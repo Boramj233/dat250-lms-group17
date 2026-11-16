@@ -11,7 +11,7 @@
 // apply on the next request without restarting the dev server.
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import type { Plugin, ViteDevServer } from 'vite'
-import type { MockHandler, MockResult, MockUser } from './types.ts'
+import type { MockHandler, MockMultipart, MockResult, MockUser } from './types.ts'
 
 const SESSION_COOKIE = 'mock_session'
 const TOKEN_PREFIX = 'mock-token-'
@@ -45,7 +45,7 @@ async function handle(server: ViteDevServer, req: IncomingMessage, res: ServerRe
   }
 
   if (path === '/mock/login' && method === 'POST') {
-    const form = new URLSearchParams(await readBody(req))
+    const form = new URLSearchParams((await readBody(req)).toString('utf8'))
     const { users } = await load<DataModule>(server, '/mock/data.ts')
     const user = users.find(u => String(u.userId) === form.get('userId'))
     if (!user) return redirect(res, '/?login_error')
@@ -83,13 +83,12 @@ async function handle(server: ViteDevServer, req: IncomingMessage, res: ServerRe
       const params = matchPath(handler.path, path)
       if (handler.method !== method || !params) continue
       const raw = await readBody(req)
-      const result = await handler.handle({
-        user,
-        params,
-        query: url.searchParams,
-        body: raw ? JSON.parse(raw) : undefined,
-      })
-      return sendJson(res, result)
+      const contentType = req.headers['content-type'] ?? ''
+      const body = raw.length === 0 ? undefined
+        : contentType.startsWith('multipart/form-data') ? parseMultipart(raw, contentType)
+        : JSON.parse(raw.toString('utf8'))
+      const result = await handler.handle({ user, params, query: url.searchParams, body })
+      return result.download ? sendFile(res, result.download) : sendJson(res, result)
     }
     server.config.logger.warn(`[mock] No handler for ${method} ${path}: add one in mock/handlers.ts`)
     return sendJson(res, { status: 404, body: { error: `No mock handler for ${method} ${path}` } })
@@ -131,14 +130,41 @@ function matchPath(pattern: string, path: string): Record<string, string> | unde
   return params
 }
 
-function readBody(req: IncomingMessage): Promise<string> {
+function readBody(req: IncomingMessage): Promise<Buffer> {
   return new Promise((resolve, reject) => {
-    let body = ''
-    req.setEncoding('utf8')
-    req.on('data', chunk => { body += chunk })
-    req.on('end', () => resolve(body))
+    const chunks: Buffer[] = []
+    req.on('data', (chunk: Buffer) => { chunks.push(chunk) })
+    req.on('end', () => resolve(Buffer.concat(chunks)))
     req.on('error', reject)
   })
+}
+
+/** Just enough multipart/form-data parsing for the mock: text fields and file parts. */
+function parseMultipart(raw: Buffer, contentType: string): MockMultipart {
+  const boundary = contentType.match(/boundary=(?:"([^"]+)"|([^;]+))/)?.slice(1).find(Boolean)
+  const result: MockMultipart = { fields: {}, files: [] }
+  if (!boundary) return result
+  // latin1 keeps one character per byte, so offsets map back to the buffer.
+  const text = raw.toString('latin1')
+  for (const part of text.split(`--${boundary}`).slice(1, -1)) {
+    const headerEnd = part.indexOf('\r\n\r\n')
+    if (headerEnd < 0) continue
+    const headers = part.slice(0, headerEnd)
+    const content = part.slice(headerEnd + 4, part.length - 2) // drop the trailing CRLF
+    const field = headers.match(/name="([^"]*)"/)?.[1] ?? ''
+    const filename = headers.match(/filename="([^"]*)"/)?.[1]
+    if (filename === undefined) {
+      result.fields[field] = Buffer.from(content, 'latin1').toString('utf8')
+    } else {
+      result.files.push({
+        field,
+        name: Buffer.from(filename, 'latin1').toString('utf8'),
+        mediaType: headers.match(/content-type:\s*([^\r\n]+)/i)?.[1].trim() ?? 'application/octet-stream',
+        content: Buffer.from(content, 'latin1'),
+      })
+    }
+  }
+  return result
 }
 
 function sendJson(res: ServerResponse, result: MockResult): true {
@@ -149,6 +175,15 @@ function sendJson(res: ServerResponse, result: MockResult): true {
     res.setHeader('Content-Type', 'application/json')
     res.end(JSON.stringify(result.body))
   }
+  return true
+}
+
+function sendFile(res: ServerResponse, file: NonNullable<MockResult['download']>): true {
+  res.statusCode = 200
+  res.setHeader('Content-Type', file.mediaType)
+  res.setHeader('Content-Length', String(file.content.length))
+  res.setHeader('Content-Disposition', `attachment; filename*=UTF-8''${encodeURIComponent(file.name)}`)
+  res.end(Buffer.from(file.content))
   return true
 }
 

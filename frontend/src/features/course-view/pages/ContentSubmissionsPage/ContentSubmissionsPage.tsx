@@ -4,19 +4,21 @@ import { Breadcrumbs, TrailLink } from '../../../../shared/navigation/Trail'
 import { paths } from '../../../../shared/paths'
 import PageHeader from '../../../../shared/ui/PageHeader'
 import QueryState from '../../../../shared/ui/QueryState'
-import { useContentSubmissions } from '../../../assignments/hooks'
-import type { ContentSubmission } from '../../../assignments/types'
+import { useGradeReviewsFor, useReviewSubmissions } from '../../../assignments/hooks'
+import { formatScore } from '../../../assignments/scoreFormat'
+import type { ReviewSubmission } from '../../../assignments/types'
 import { contentTypeLabel } from '../../../content/contentTypes'
 import { useContent, useCourseContent } from '../../../content/hooks'
-import { useCourseEnrollments } from '../../../courses/hooks'
 import DataTable from '../../components/DataTable'
 import { useCourseView } from '../../courseContext'
-import { studentsOf, submissionStats } from '../../submissionStats'
+import { studentsOf, submissionKindLabel, submissionStats } from '../../submissionStats'
+import { usePeopleNames } from '../../usePeopleNames'
 import './ContentSubmissionsPage.css'
 
 /**
- * Teachers: every submission for one assignment or coding exercise, newest first, and
- * the students who have not handed in. A row opens the submission to grade it.
+ * Teachers: the latest submission of each student or group for one assignment or
+ * coding exercise, newest first, and the students who have not handed in. A row opens
+ * the submission (with earlier attempts) to grade it.
  */
 export default function ContentSubmissionsPage() {
   const { contentId = '' } = useParams()
@@ -25,8 +27,9 @@ export default function ContentSubmissionsPage() {
   const item = modules.flatMap(module => content.byModule.get(String(module.id)) ?? [])
     .find(entry => String(entry.id) === contentId)
   const details = useContent(item?.type, contentId)
-  const submissions = useContentSubmissions(contentId)
-  const members = useCourseEnrollments(course.id)
+  const submissions = useReviewSubmissions(contentId)
+  const grades = useGradeReviewsFor((submissions.data ?? []).map(submission => submission.id))
+  const people = usePeopleNames(course.id)
 
   if (!isTeacher) return <p role="alert">Only teachers of {course.title} can see its submissions.</p>
 
@@ -38,6 +41,7 @@ export default function ContentSubmissionsPage() {
   const deadline = details.data && (details.data.type === 'ASSIGNMENT' || details.data.type === 'CODING_EXERCISE')
     ? details.data.deadline
     : undefined
+  const gradeOf = (submission: ReviewSubmission) => grades.bySubmission.get(String(submission.id))
 
   return (
     <>
@@ -52,16 +56,16 @@ export default function ContentSubmissionsPage() {
 
       <QueryState query={submissions} loading="Loading submissions…" error="Could not load the submissions.">
         {all => {
-          const stats = submissionStats(all, members.data)
-          const missing = studentsOf(members.data).filter(student => !stats.answeredIds.has(String(student.userId)))
+          const stats = submissionStats(all, people.members, gradeOf)
+          const missing = studentsOf(people.members).filter(student => !stats.answeredIds.has(String(student.userId)))
           return (
             <>
               <p className="content-submissions-facts">
                 <strong>{stats.answered}/{stats.students ?? '…'}</strong> students have answered
                 {' · '}{stats.submissions} {stats.submissions === 1 ? 'submission' : 'submissions'}
-                {' · '}{stats.graded} graded
+                {' · '}{stats.graded} graded, {stats.released} released
               </p>
-              <DataTable<ContentSubmission>
+              <DataTable<ReviewSubmission>
                 caption={`Submissions for ${item?.title ?? 'this content'}`}
                 rows={all}
                 rowKey={submission => String(submission.id)}
@@ -72,9 +76,11 @@ export default function ContentSubmissionsPage() {
                     cell: submission => (
                       <>
                         <TrailLink to={paths.courseSubmission(course.id, contentId, submission.id)}>
-                          {submission.student.firstName} {submission.student.lastName}
+                          {people.nameOf(submission.studentUserId)}
                         </TrailLink>
-                        {submission.group && <span className="data-table-tag">for {submission.group.name}</span>}
+                        {submission.groupId !== null && (
+                          <span className="data-table-tag">for {people.groupLabel(submission.groupId)}</span>
+                        )}
                       </>
                     ),
                   },
@@ -89,28 +95,30 @@ export default function ContentSubmissionsPage() {
                   },
                   {
                     header: 'Answer',
-                    cell: submission => (
-                      <span className="data-table-muted">{submission.type === 'GIT_URL' ? 'Repository' : 'Text'}</span>
-                    ),
+                    cell: submission => <span className="data-table-muted">{submissionKindLabel(submission)}</span>,
                   },
                   {
-                    header: 'Grade',
-                    cell: submission => submission.grade
-                      ? <span className="data-table-strong">{submission.grade.value}</span>
-                      : <span className="data-table-muted">Not graded</span>,
+                    header: 'Score',
+                    cell: submission => {
+                      const grade = gradeOf(submission)
+                      if (grade === undefined) return '…'
+                      return grade
+                        ? <span className="data-table-strong">{formatScore(grade.score)}</span>
+                        : <span className="data-table-muted">Not graded</span>
+                    },
                   },
                   {
-                    header: 'Published',
-                    cell: submission => !submission.grade
-                      ? <span className="data-table-muted">–</span>
-                      : submission.grade.publishedAt
-                        ? 'Published'
-                        : <span className="data-table-tag">Not published yet</span>,
+                    header: 'Released',
+                    cell: submission => {
+                      const grade = gradeOf(submission)
+                      if (!grade) return <span className="data-table-muted">–</span>
+                      return grade.releasedAt ? 'Released' : <span className="data-table-tag">Not released yet</span>
+                    },
                   },
                 ]}
               />
 
-              {members.data && (
+              {people.members && (
                 <section className="content-submissions-missing" aria-labelledby="missing-title">
                   <h2 id="missing-title" className="section-title">Not handed in ({missing.length})</h2>
                   {missing.length === 0

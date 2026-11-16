@@ -3,92 +3,123 @@ import type { ContentId, GroupId, UserId } from "../../shared/types";
 export type SubmissionId = string | number;
 
 // Matches the backend's SubmissionType.
-export type SubmissionKind = "TEXT" | "GIT_URL";
+export type SubmissionKind = "TEXT" | "GIT_URL" | "FILE";
 
-// Matches the backend's SubmissionResponse, from
-// GET /api/contents/{contentId}/submissions/me (the user's own submission history).
+// The backend's SubmissionFileResponse: metadata of a FILE submission. `downloadPath`
+// needs the token, so download it with apiDownload, not a plain link.
+export interface SubmissionFile {
+  name: string;
+  mediaType: string;
+  sizeBytes: number;
+  /** /api/submissions/{id}/file for the student, …/review/file for a teacher. */
+  downloadPath: string;
+}
+
+// The backend's SubmissionMemberResponse: a member of the group that handed in.
+export interface SubmissionMember {
+  userId: UserId;
+  enrollmentId: number;
+}
+
+// Matches the backend's SubmissionResponse: POST /api/contents/{contentId}/submissions
+// (and …/submissions/file) and GET /api/contents/{contentId}/submissions/me.
 export interface MySubmission {
   id: SubmissionId;
   contentId: ContentId;
   type: SubmissionKind;
-  /** The text, or the repository URL for GIT_URL. */
-  payload: string;
+  /** The text, or the repository URL for GIT_URL; null for FILE. */
+  payload: string | null;
   /** ISO 8601 instant. */
   submittedAt: string;
   late: boolean;
-  /**
-   * Proposed (see content/README.md): the group that handed in, for a group assignment.
-   * Missing or null for an individual submission. Every member's history includes
-   * the group's submissions.
-   */
-  group?: SubmissionGroup | null;
+  /** Only for FILE. */
+  file: SubmissionFile | null;
+  /** The group that handed in; null for an individual submission. */
+  groupId: GroupId | null;
+  submittedByUserId: UserId;
+  /** The group's members when it was handed in; empty for an individual submission. */
+  members: SubmissionMember[];
 }
 
-/** A student group with its members' names (proposed; the backend has no groups yet). */
-export interface SubmissionGroup {
-  id: GroupId;
-  name: string;
-  members: { userId: UserId; firstName: string; lastName: string }[];
+// Matches the backend's SubmissionReviewResponse (teachers of the course):
+// GET /api/contents/{contentId}/submissions/review (the latest per student or group),
+// GET /api/submissions/{submissionId}/review and …/review/history.
+export interface ReviewSubmission extends MySubmission {
+  studentUserId: UserId;
+  enrollmentId: number;
 }
 
-export type SubmissionStatus = "SUBMITTED" | "GRADING" | "GRADED" | "GRADING_FAILED";
-
-export interface SubmissionGrade {
-  // The course's grading scheme determines valid values, e.g. "A" or "Passed".
-  value: string;
-  feedback: string | null;
-  publishedAt: string | null;
+// Spring Data's Page, as the backend sends it.
+export interface Page<T> {
+  content: T[];
+  totalElements: number;
+  totalPages: number;
+  /** Zero-based page number. */
+  number: number;
+  size: number;
+  last: boolean;
 }
 
-export interface CodingTestResult {
-  id: string;
-  name: string;
-  status: "PASSED" | "FAILED" | "ERROR";
-  message: string | null;
-}
-
-export interface SubmissionResult {
-  submissionId: SubmissionId;
-  status: SubmissionStatus;
-  // Backend hides unpublished grades/feedback from students, returning null.
-  grade: SubmissionGrade | null;
-  // Only results the current viewer may see; hidden test definitions stay on the server.
-  testResults: CodingTestResult[] | null;
-  errorMessage: string | null;
-}
-
-// Matches the backend's CreateSubmissionRequest (POST /api/contents/{contentId}/submissions):
-// TEXT for an assignment answer, GIT_URL for a coding exercise's repository.
+// Matches the backend's CreateSubmissionRequest: TEXT for an assignment answer,
+// GIT_URL for a coding exercise's repository.
 export interface SubmitMySubmissionInput {
   contentId: ContentId;
-  type: SubmissionKind;
+  type: "TEXT" | "GIT_URL";
   /** The text, or the repository URL; at most 10 000 characters. */
   payload: string;
+  /** Hand in for this group (the user must be a member); leave out for yourself. */
+  groupId?: GroupId;
 }
 
-// Teachers: grading (proposed, see README.md).
-
-/**
- * One submission as a teacher sees it (GET /api/contents/{contentId}/submissions): the
- * student's SubmissionResponse plus who handed it in and the grade, also before it is
- * published (`publishedAt` null).
- */
-export interface ContentSubmission extends MySubmission {
-  student: { userId: UserId; firstName: string; lastName: string; email: string };
-  grade: SubmissionGrade | null;
+// POST /api/contents/{contentId}/submissions/file (multipart): one PDF, at most 10 MB.
+export interface SubmitFileInput {
+  contentId: ContentId;
+  file: File;
+  groupId?: GroupId;
 }
 
-export interface GradeSubmissionInput {
+// --- Grades (GradeController) ---------------------------------------------------------
+
+// The backend's GradeReviewResponse (teachers): GET/PUT /api/submissions/{id}/grade/review
+// and POST …/grade/release. Not released while `releasedAt` is null.
+export interface GradeReview {
+  submissionId: SubmissionId;
+  /** 0–100, at most two decimals. */
+  score: number;
+  feedback: string | null;
+  gradedByEnrollmentId: number;
+  gradedAt: string;
+  releasedByEnrollmentId: number | null;
+  releasedAt: string | null;
+  /** Send it back when changing or releasing the grade (optimistic locking). */
+  version: number;
+}
+
+// The backend's ReleasedGradeResponse (the student): GET /api/submissions/{id}/grade,
+// 404 until the teacher releases it.
+export interface ReleasedGrade {
+  submissionId: SubmissionId;
+  score: number;
+  feedback: string | null;
+  releasedAt: string;
+}
+
+// The backend's SaveGradeRequest: version null creates the grade; an update needs the
+// version from GradeReview. A released grade cannot be changed, and only the latest
+// submission can be graded.
+export interface SaveGradeInput {
   submissionId: SubmissionId;
   /** Cache scope: the content the submission belongs to. */
   contentId: ContentId;
-  /** e.g. "Passed", "Not passed" or "B". */
-  grade: string;
+  score: number;
   feedback: string;
+  version: number | null;
 }
 
-export interface PublishGradeInput {
+// The backend's ReleaseGradeRequest.
+export interface ReleaseGradeInput {
   submissionId: SubmissionId;
   /** Cache scope: the content the submission belongs to. */
   contentId: ContentId;
+  version: number;
 }

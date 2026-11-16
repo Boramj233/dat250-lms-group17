@@ -67,6 +67,32 @@
   border-radius: var(--radius-control);
 }
 
+/* A handed-in PDF: name and size, then the Download button. */
+.submittable-file {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3) var(--space-5);
+  overflow-wrap: anywhere;
+}
+
+/* Text or PDF: two options in a row above the answer field. */
+.submittable-kind {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-5);
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+
+.submittable-kind label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  cursor: pointer;
+}
+
 .submittable-empty {
   font-style: italic;
 }

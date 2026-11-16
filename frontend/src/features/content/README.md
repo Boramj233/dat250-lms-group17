@@ -90,11 +90,9 @@ Two more fields on `AssignmentContent`, set when the assignment is created:
 
 - `groupAssignment` (boolean): students hand in as a group, one submission per
   group (the submission's `groupId`, see `features/assignments`). A member hands in
-  with the usual `POST /api/contents/{contentId}/submissions`; the backend records it
-  for the member's group in the course. `GET /api/contents/{contentId}/submissions/me`
-  then lists the group's submissions for every member, each with
-  `group: { id, name, members: [{ userId, firstName, lastName }] }` (null for an
-  individual submission), so students see which group handed in and who is in it.
+  with `groupId` in `POST /api/contents/{contentId}/submissions` (or `…/submissions/file`),
+  and every member then sees it in `…/submissions/me` with `groupId` and the `members`
+  at that time. The frontend shows the group's name from the course's groups.
 - `acceptedFileTypes` (string array): the file name extensions that may be handed
   in, lower case with a dot, e.g. `[".pdf", ".zip"]`. Empty means any file type.
   The backend must check uploaded files against it.
