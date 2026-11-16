@@ -152,6 +152,16 @@ public class FileSubmissionService {
 
         // The owner-scoped SQL query must succeed before any object storage access.
         Submission submission = submissionService.findOwnSubmission(submissionId, userId);
+        return prepareDownload(submission);
+    }
+
+    @Transactional(propagation = Propagation.NEVER)
+    public SubmissionFileDownload findTeacherFile(Long submissionId, Long teacherUserId) {
+        return prepareDownload(submissionService.requireTeacherSubmission(submissionId, teacherUserId));
+    }
+
+    private SubmissionFileDownload prepareDownload(Submission submission) {
+        Long submissionId = submission.getId();
         SubmissionFileMetadata file = submission.getFile();
 
         if (submission.getType() != SubmissionType.FILE || file == null) {

@@ -1,27 +1,32 @@
-
 package no.hvl.dat250.lms.submission.service;
 
 import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.UUID;
+import no.hvl.dat250.lms.submission.domain.SubmissionAccepted;
+import org.springframework.context.ApplicationEventPublisher;
 
 import no.hvl.dat250.lms.content.domain.Assignment;
 import no.hvl.dat250.lms.content.domain.CodingExercise;
 import no.hvl.dat250.lms.content.domain.Content;
 import no.hvl.dat250.lms.content.service.ContentService;
-
 import no.hvl.dat250.lms.enrollment.domain.Enrollment;
+import no.hvl.dat250.lms.enrollment.service.EnrollmentService;
 import no.hvl.dat250.lms.enrollment.service.StudentEnrollmentLookupService;
-
+import no.hvl.dat250.lms.submission.api.dto.SubmissionReviewResponse;
 import no.hvl.dat250.lms.submission.domain.Submission;
-import no.hvl.dat250.lms.submission.domain.SubmissionType;
 import no.hvl.dat250.lms.submission.domain.SubmissionFileMetadata;
+import no.hvl.dat250.lms.submission.domain.SubmissionType;
 import no.hvl.dat250.lms.submission.repository.SubmissionRepository;
 
+import org.hibernate.Hibernate;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.stereotype.Service;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
@@ -31,17 +36,23 @@ public class SubmissionService {
     private final StudentEnrollmentLookupService enrollmentLookupService;
     private final SubmissionRepository submissionRepository;
     private final Clock clock;
+    private final ApplicationEventPublisher events;
+    private final EnrollmentService enrollmentService;
 
     public SubmissionService(
             ContentService contentService,
             StudentEnrollmentLookupService enrollmentLookupService,
             SubmissionRepository submissionRepository,
-            @Qualifier("submissionClock") Clock clock) {
+            @Qualifier("submissionClock") Clock clock,
+            EnrollmentService enrollmentService,
+            ApplicationEventPublisher events) {
 
         this.contentService = contentService;
         this.enrollmentLookupService = enrollmentLookupService;
         this.submissionRepository = submissionRepository;
         this.clock = clock;
+        this.events = events;
+        this.enrollmentService = enrollmentService;
     }
 
     @Transactional
@@ -71,26 +82,8 @@ public class SubmissionService {
         // 2. Retrieve Content through its own feature Service.
         Content content = contentService.requireContent(contentId);
 
-        // 3. Determine deadline rules.
-        Instant deadline;
-        boolean allowLateSubmission;
-
-        if (content instanceof Assignment assignment) {
-
-            deadline = assignment.getDeadline();
-            allowLateSubmission =
-                assignment.isAllowLateSubmission();
-
-        } else if (content instanceof CodingExercise exercise) {
-
-            deadline = exercise.getDeadline();
-            allowLateSubmission =
-                exercise.isAllowLateSubmission();
-
-        } else {
-            throw new IllegalArgumentException(
-                "This Content does not accept submissions"
-            );
+        if (!(content instanceof Assignment) && !(content instanceof CodingExercise)) {
+            throw new IllegalArgumentException("This Content does not accept submissions");
         }
 
         // 4. Determine the Course owning this Content.
@@ -101,8 +94,25 @@ public class SubmissionService {
 
         // 5. Verify the student and obtain their Enrollment.
         Enrollment enrollment = requireStudentEnrollment(userId, courseId);
+        enrollmentService.lockSubmissionOwner(enrollment.getId());
+        // refresh under the lock may reveal withdrawal while waiting.
+        enrollment = requireStudentEnrollment(userId, courseId);
 
-        // 6. Calculate lateness using the server clock.
+        // Owner -> content is the lock order. Read rules only after both locks.
+        content = contentService.lockSubmissionContent(contentId);
+        Instant deadline;
+        boolean allowLateSubmission;
+        if (content instanceof Assignment assignment) {
+            deadline = assignment.getDeadline();
+            allowLateSubmission = assignment.isAllowLateSubmission();
+        } else if (content instanceof CodingExercise exercise) {
+            deadline = exercise.getDeadline();
+            allowLateSubmission = exercise.isAllowLateSubmission();
+        } else {
+            throw new IllegalArgumentException("This Content does not accept submissions");
+        }
+
+        // 6. Calculate lateness using refreshed rules and the server clock.
         Instant now = clock.instant();
 
         boolean late = deadline != null
@@ -123,7 +133,10 @@ public class SubmissionService {
             late
         );
 
-        return submissionRepository.save(submission);
+        Submission saved = submissionRepository.save(submission);
+        events.publishEvent(new SubmissionAccepted(
+            UUID.randomUUID(), saved.getId(), contentId, saved.getSubmittedAt(), saved.isLate()));
+        return saved;
     }
 
     // Short preflight transaction; no SQL transaction remains open during upload.
@@ -149,7 +162,11 @@ public class SubmissionService {
         Assignment assignment = requireFileAssignment(contentId, userId);
         Long courseId = assignment.getModule().getCourse().getId();
         Enrollment enrollment = requireStudentEnrollment(userId, courseId);
+        enrollmentService.lockSubmissionOwner(enrollment.getId());
+        // refresh under the lock may reveal withdrawal while waiting.
+        enrollment = requireStudentEnrollment(userId, courseId);
 
+        assignment = (Assignment) contentService.lockSubmissionContent(contentId);
         Instant now = clock.instant();
         boolean late = requireDeadlineAccepted(assignment, now);
 
@@ -161,7 +178,10 @@ public class SubmissionService {
             late
         );
 
-        return submissionRepository.save(submission);
+        Submission saved = submissionRepository.save(submission);
+        events.publishEvent(new SubmissionAccepted(
+            UUID.randomUUID(), saved.getId(), contentId, saved.getSubmittedAt(), saved.isLate()));
+        return saved;
     }
 
     private Assignment requireFileAssignment(
@@ -265,6 +285,81 @@ public class SubmissionService {
                 contentId,
                 userId
             );
+    }
+
+    @Transactional(readOnly = true)
+    public Submission requireTeacherSubmission(
+            Long submissionId,
+            Long teacherUserId) {
+        if (submissionId == null || submissionId <= 0) {
+            throw new IllegalArgumentException("Submission ID must be positive");
+        }
+        Submission submission = submissionRepository.findById(submissionId)
+            .orElseThrow(() -> new NoSuchElementException("Submission not found"));
+        requireTeacherAssignment(submission.getContent(), teacherUserId);
+        return submission;
+    }
+
+    private void requireTeacherAssignment(Content content, Long teacherUserId) {
+        // A lazy Content association can be a base-class proxy even for an Assignment.
+        if (!(Hibernate.unproxy(content) instanceof Assignment)) {
+            throw new NoSuchElementException("Assignment not found");
+        }
+        enrollmentService.requireActiveTeacher(
+            teacherUserId, content.getModule().getCourse().getId());
+    }
+
+    @Transactional(readOnly = true)
+    public SubmissionReviewResponse reviewSubmission(
+            Long submissionId,
+            Long teacherUserId) {
+        return SubmissionReviewResponse.from(
+            requireTeacherSubmission(submissionId, teacherUserId));
+    }
+
+    @Transactional(readOnly = true)
+    public Page<SubmissionReviewResponse>
+            reviewLatest(
+                Long contentId,
+                Long teacherUserId,
+                int page,
+                int size) {
+        if (page < 0 || size < 1 || size > 100) {
+            throw new IllegalArgumentException("Page must be nonnegative and size between 1 and 100");
+        }
+        Content content = contentService.requireContent(contentId);
+        requireTeacherAssignment(content, teacherUserId);
+        return submissionRepository.findLatestForReview(
+            contentId, PageRequest.of(page, size))
+            .map(SubmissionReviewResponse::from);
+    }
+
+    @Transactional(readOnly = true)
+    public List<SubmissionReviewResponse> reviewHistory(
+            Long submissionId,
+            Long teacherUserId) {
+        Submission submission = requireTeacherSubmission(submissionId, teacherUserId);
+        return submissionRepository
+            .findByContent_IdAndSubmittedBy_IdOrderBySubmittedAtDescIdDesc(
+                submission.getContent().getId(), submission.getSubmittedBy().getId())
+            .stream().map(SubmissionReviewResponse::from).toList();
+    }
+
+    @Transactional
+    public Submission lockTeacherSubmission(Long submissionId, Long teacherUserId) {
+        Submission submission = requireTeacherSubmission(submissionId, teacherUserId);
+        enrollmentService.lockSubmissionOwner(submission.getSubmittedBy().getId());
+        enrollmentService.lockActiveTeacher(teacherUserId,
+            submission.getContent().getModule().getCourse().getId());
+        return submission;
+    }
+
+    @Transactional(readOnly = true)
+    public boolean isLatestSubmission(Submission submission) {
+        return submissionRepository
+            .findFirstByContent_IdAndSubmittedBy_IdOrderBySubmittedAtDescIdDesc(
+                submission.getContent().getId(), submission.getSubmittedBy().getId())
+            .map(latest -> latest.getId().equals(submission.getId())).orElse(false);
     }
 
 }
