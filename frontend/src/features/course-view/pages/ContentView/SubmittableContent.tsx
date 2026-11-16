@@ -8,6 +8,7 @@ import { useMyReleasedGrade, useMySubmissionHistory, useSubmitFile, useSubmitMyS
 import { formatScore } from '../../../assignments/scoreFormat'
 import type { MySubmission } from '../../../assignments/types'
 import type { AssignmentContent, CodingExerciseContent } from '../../../content/types'
+import PassedBadge from '../../components/PassedBadge'
 import SubmissionAnswer from '../../components/SubmissionAnswer'
 import { useCourseView } from '../../courseContext'
 import { usePeopleNames } from '../../usePeopleNames'
@@ -44,7 +45,12 @@ export default function SubmittableContent({ content, isTeacher }: SubmittableCo
           </p>
         </>
       }
-      panel={<DeadlineFact deadline={deadline} allowLate={content.allowLateSubmission} now={now} />}
+      panel={
+        <>
+          <MandatoryFact content={content} />
+          <DeadlineFact deadline={deadline} allowLate={content.allowLateSubmission} now={now} />
+        </>
+      }
     />
   )
 }
@@ -157,6 +163,7 @@ function StudentSubmission({ content, deadline, now }: StudentSubmissionProps) {
       }
       panel={
         <>
+          <MandatoryFact content={content} />
           <DeadlineFact deadline={deadline} allowLate={content.allowLateSubmission} now={now} />
           <dl className="submittable-facts">
             <dt>Submitted</dt>
@@ -180,7 +187,7 @@ function StudentSubmission({ content, deadline, now }: StudentSubmissionProps) {
             <dt>Score</dt>
             <dd>
               {grade.data
-                ? <strong>{formatScore(grade.data.score)}</strong>
+                ? <><strong>{formatScore(grade.data.score)}</strong> <PassedBadge passed={grade.data.passed} /></>
                 : latest ? 'Not graded yet' : '–'}
             </dd>
             {grade.data?.feedback && (
@@ -193,6 +200,32 @@ function StudentSubmission({ content, deadline, now }: StudentSubmissionProps) {
         </>
       }
     />
+  )
+}
+
+/**
+ * Whether an assignment is mandatory or optional, at the top of the panel. Nothing for
+ * coding exercises, or while the backend does not send `mandatory` (proposed).
+ */
+function MandatoryFact({ content }: { content: Submittable }) {
+  if (content.type !== 'ASSIGNMENT' || content.mandatory === undefined) return null
+  return (
+    <dl className="submittable-facts">
+      <dt>Requirement</dt>
+      <dd>
+        {content.mandatory
+          ? <>
+              <span className="submittable-mandatory">Mandatory</span>
+              <br />
+              <span className="submittable-muted">Must be approved to complete the course</span>
+            </>
+          : <>
+              <strong>Optional</strong>
+              <br />
+              <span className="submittable-muted">Not required to complete the course</span>
+            </>}
+      </dd>
+    </dl>
   )
 }
 

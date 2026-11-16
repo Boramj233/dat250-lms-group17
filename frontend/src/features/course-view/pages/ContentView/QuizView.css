@@ -154,3 +154,17 @@
   font-size: var(--font-size-lg);
   font-weight: var(--font-weight-bold);
 }
+
+/* "To pass, you need at least 3 of 5 correct answers": under the description. */
+.quiz-pass-rule {
+  margin: var(--space-5) 0 0;
+  padding: var(--space-3) var(--space-5);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  font-family: var(--font-ui);
+  font-size: var(--text-small);
+}
+
+.quiz-result-score .passed-badge {
+  vertical-align: middle;
+}

@@ -10,6 +10,10 @@
   --color-on-primary: var(--white);
   --color-accent: var(--hvl-teal);
   --color-on-accent: var(--hvl-dark-blue);
+  /* Passed / not passed on a graded submission. */
+  --color-passed: var(--hvl-green);
+  --color-not-passed: var(--hvl-coral);
+  --color-on-status: var(--hvl-dark-blue);
 
   /* Typography */
   --font-body: var(--font-family-serif);

@@ -43,3 +43,23 @@
 .grading-nav a {
   color: var(--color-text);
 }
+
+/* Passed / Not passed / Not decided yet: radio buttons in a row. */
+.grading-passed {
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: var(--space-3) var(--space-7);
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+
+.grading-passed legend {
+  width: 100%;
+  margin-bottom: var(--space-2);
+  padding: 0;
+}
+
+.grading-score .passed-badge {
+  vertical-align: middle;
+}

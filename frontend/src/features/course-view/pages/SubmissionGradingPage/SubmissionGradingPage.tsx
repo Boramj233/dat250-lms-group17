@@ -11,6 +11,7 @@ import { useGradeReview, useReleaseGrade, useReviewHistory, useReviewSubmission,
 import { formatScore, MAX_SCORE } from '../../../assignments/scoreFormat'
 import type { GradeReview, ReviewSubmission } from '../../../assignments/types'
 import { useContent, useCourseContent } from '../../../content/hooks'
+import PassedBadge from '../../components/PassedBadge'
 import SubmissionAnswer from '../../components/SubmissionAnswer'
 import { useCourseView } from '../../courseContext'
 import { submissionKindLabel } from '../../submissionStats'
@@ -139,6 +140,7 @@ export default function SubmissionGradingPage() {
                   <dt>Score</dt>
                   <dd>
                     {grade.data ? <strong>{formatScore(grade.data.score)}</strong> : 'Not graded yet'}
+                    {grade.data && <> <PassedBadge passed={grade.data.passed} /></>}
                     {grade.data && (
                       <span className="submittable-muted">
                         <br />
@@ -168,6 +170,13 @@ function gradeError(error: unknown): string {
   return 'Could not save the grade. Try again.'
 }
 
+/** The passed / not passed choice in the grading form (proposed in the backend). */
+const PASSED_CHOICES: { value: boolean | null, label: string }[] = [
+  { value: true, label: 'Passed' },
+  { value: false, label: 'Not passed' },
+  { value: null, label: 'Not decided yet' },
+]
+
 type GradeCardProps = {
   submission: ReviewSubmission
   contentId: ContentId
@@ -188,6 +197,7 @@ function GradeCard({ submission, contentId, courseId, grade, isLatest, newestId 
   const release = useReleaseGrade()
   const [score, setScore] = useState(grade ? String(grade.score) : '')
   const [feedback, setFeedback] = useState(grade?.feedback ?? '')
+  const [passed, setPassed] = useState<boolean | null>(grade?.passed ?? null)
   const [done, setDone] = useState<'saved' | 'released' | null>(null)
   const busy = save.isPending || release.isPending
   const failed = save.error ?? release.error
@@ -200,7 +210,9 @@ function GradeCard({ submission, contentId, courseId, grade, isLatest, newestId 
     return (
       <section className="submittable-card" aria-labelledby="grade-title">
         <h2 id="grade-title" className="submittable-card-title">Grade and feedback</h2>
-        <p className="grading-score">{formatScore(grade.score)}</p>
+        <p className="grading-score">
+          {formatScore(grade.score)} <PassedBadge passed={grade.passed} />
+        </p>
         <div className="submittable-text">{grade.feedback || <span className="submittable-muted">No feedback.</span>}</div>
         <p className="submittable-note">Released to the student {formatDateTime(new Date(grade.releasedAt))}. A released grade cannot be changed.</p>
       </section>
@@ -227,6 +239,7 @@ function GradeCard({ submission, contentId, courseId, grade, isLatest, newestId 
         contentId,
         score: number,
         feedback: feedback.trim(),
+        passed,
         version: grade?.version ?? null,
       })
       if (andRelease) await release.mutateAsync({ submissionId: submission.id, contentId, version: saved.version })
@@ -256,6 +269,17 @@ function GradeCard({ submission, contentId, courseId, grade, isLatest, newestId 
             <p className="form-error" role="alert">A number from 0 to {MAX_SCORE}, with at most two decimals.</p>
           )}
         </div>
+
+        <fieldset className="form-field grading-passed">
+          <legend className="form-label">Passed</legend>
+          {PASSED_CHOICES.map(choice => (
+            <label key={String(choice.value)} className="form-check">
+              <input type="radio" name="grading-passed" checked={passed === choice.value}
+                onChange={() => setPassed(choice.value)} />
+              {choice.label}
+            </label>
+          ))}
+        </fieldset>
 
         <div className="form-field">
           <label htmlFor="grading-feedback">Feedback to the student</label>

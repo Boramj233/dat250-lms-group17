@@ -4,14 +4,17 @@ import { paths, type CourseSection } from '../../../../shared/paths'
 import type { CourseId } from '../../../../shared/types'
 import { contentSection } from '../../../content/contentTypes'
 import { useContents } from '../../../content/hooks'
-import type { Content, ContentSummary, ContentType } from '../../../content/types'
+import type { Content, ContentSummary, ContentType, QuizContent } from '../../../content/types'
 import { formatScore } from '../../../assignments/scoreFormat'
 import { useMyGrades } from '../../../grades/hooks'
 import type { GradeEntry } from '../../../grades/types'
 import type { CourseModule } from '../../../modules/types'
 import { useMyQuizAttemptsFor } from '../../../quizzes/hooks'
 import type { QuizAttemptScore } from '../../../quizzes/types'
+import { quizPassed } from '../../../quizzes/passRule'
 import DataTable, { type Column } from '../../components/DataTable'
+import MandatoryLabel from '../../components/MandatoryLabel'
+import PassedBadge from '../../components/PassedBadge'
 
 export type ContentTypeRow = { item: ContentSummary, module: CourseModule }
 
@@ -89,17 +92,30 @@ export default function ContentTypeTable(
       { header: 'Deadline', cell: ({ details }) => <Deadline content={details} /> },
       { header: 'Late submissions', cell: ({ details }) => <LateSubmissions content={details} /> },
     )
+    // First, to the left of the title.
+    if (type === 'ASSIGNMENT') columns.unshift({ header: 'Mandatory', cell: ({ details }) => <MandatoryLabel content={details} /> })
     if (!isTeacher) columns.push({ header: 'Status', cell: row => <Status row={row} loaded={!grades.isPending} /> })
   } else if (type === 'QUIZ') {
     columns.push(
       { header: 'Questions', cell: ({ details }) => details?.type === 'QUIZ' ? details.questions?.length ?? '–' : '…' },
       { header: 'Attempts allowed', cell: ({ details }) => details?.type === 'QUIZ' ? details.maxAttempts : '…' },
+      {
+        header: 'To pass',
+        cell: ({ details }) => {
+          if (details?.type !== 'QUIZ') return '…'
+          const required = details.requiredCorrectAnswers ?? null
+          return required === null
+            ? <span className="data-table-muted">–</span>
+            : `${required} of ${details.questions?.length ?? '?'} correct`
+        },
+      },
     )
     if (!isTeacher) {
       columns.push({
         header: 'Status',
-        cell: ({ item }) => (
-          <QuizStatus attempts={quizAttempts.byQuiz.get(String(item.id))} loading={quizAttempts.isPending} />
+        cell: ({ item, details }) => (
+          <QuizStatus attempts={quizAttempts.byQuiz.get(String(item.id))} loading={quizAttempts.isPending}
+            quiz={details?.type === 'QUIZ' ? details : undefined} />
         ),
       })
     }
@@ -128,11 +144,43 @@ function LateSubmissions({ content }: { content?: Content }) {
   return <span className="data-table-muted">{content.allowLateSubmission ? 'Accepted' : 'Not accepted'}</span>
 }
 
-/** Completed (with a check mark and the best score) once a quiz has an attempt. */
-function QuizStatus({ attempts, loading }: { attempts?: QuizAttemptScore[], loading: boolean }) {
+/**
+ * A quiz's status for the student. With a pass requirement it is done only once an
+ * attempt passed: "Passed" with a check mark; "Not passed yet" while attempts are left;
+ * "Not passed" when none are. Without one, "Completed" once it has an attempt.
+ */
+function QuizStatus({ attempts, loading, quiz }: {
+  attempts?: QuizAttemptScore[]
+  loading: boolean
+  /** The quiz's details (pass requirement and attempts); undefined while loading. */
+  quiz?: QuizContent
+}) {
   if (!attempts) return loading ? '…' : <span className="data-table-muted">–</span>
   if (attempts.length === 0) return <span className="data-table-muted">Not started</span>
   const best = attempts.reduce((top, attempt) => (attempt.correctCount > top.correctCount ? attempt : top))
+  const bestText = <span className="data-table-muted"> · best {best.correctCount}/{best.totalQuestions}</span>
+  if (!quiz) return '…'
+
+  const passed = quizPassed(attempts, quiz.requiredCorrectAnswers)
+  if (passed === false) {
+    const left = Math.max(0, quiz.maxAttempts - attempts.length)
+    return left > 0
+      ? (
+        <span>
+          <span className="data-table-strong">Not passed yet</span>
+          {bestText}
+          <span className="data-table-muted"> · {left} {left === 1 ? 'attempt' : 'attempts'} left</span>
+        </span>
+      )
+      : (
+        <span>
+          <PassedBadge passed={false} />
+          {bestText}
+          <span className="data-table-muted"> · no attempts left</span>
+        </span>
+      )
+  }
+
   return (
     <span className="data-table-done">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
@@ -140,8 +188,8 @@ function QuizStatus({ attempts, loading }: { attempts?: QuizAttemptScore[], load
         <circle cx="12" cy="12" r="10" />
         <path d="M7.5 12.5l3 3 6-6.5" />
       </svg>
-      Completed
-      <span className="data-table-muted"> · best {best.correctCount}/{best.totalQuestions}</span>
+      {passed ? 'Passed' : 'Completed'}
+      {bestText}
     </span>
   )
 }
@@ -151,5 +199,9 @@ function Status({ row, loaded }: { row: Row, loaded: boolean }) {
   if (!loaded) return '…'
   if (!row.grade) return <span className="data-table-muted">Not submitted</span>
   if (!row.grade.grade) return 'Submitted'
-  return <span className="data-table-strong">Graded: {formatScore(row.grade.grade.score)}</span>
+  return (
+    <span className="data-table-strong">
+      Graded: {formatScore(row.grade.grade.score)} <PassedBadge passed={row.grade.grade.passed} />
+    </span>
+  )
 }

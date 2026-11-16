@@ -8,6 +8,7 @@ import { formatScore } from '../../../assignments/scoreFormat'
 import { useMyGrades } from '../../../grades/hooks'
 import type { GradeEntry } from '../../../grades/types'
 import DataTable from '../../components/DataTable'
+import PassedBadge from '../../components/PassedBadge'
 import { useCourseView } from '../../courseContext'
 
 /**
@@ -72,6 +73,12 @@ function MyGrades({ courseId, courseTitle }: { courseId: string, courseTitle: st
               cell: entry => entry.grade
                 ? <span className="data-table-strong">{formatScore(entry.grade.score)}</span>
                 : <span className="data-table-muted">Awaiting grade</span>,
+            },
+            {
+              header: 'Passed',
+              cell: entry => entry.grade?.passed != null
+                ? <PassedBadge passed={entry.grade.passed} />
+                : <span className="data-table-muted">–</span>,
             },
             {
               header: 'Feedback',

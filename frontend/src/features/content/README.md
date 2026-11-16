@@ -74,6 +74,24 @@ its correct options. Proposed, for the quiz page:
   `MULTIPLE_CHOICE` (every correct answer) or `TRUE_FALSE` (two options). The page
   shows each type differently; missing means `SINGLE_CHOICE`.
 
+### Pass requirement (proposed)
+
+The teacher sets how many questions must be correct for an attempt to pass; the
+backend checks it when it grades the attempt.
+
+- `requiredCorrectAnswers` (Integer, nullable) on `CreateQuizRequest` and
+  `QuizDetailResponse`. Null: no pass requirement. Otherwise at least 1 and at most the
+  number of questions (400 otherwise).
+- `passed` (Boolean, nullable) on `QuizAttemptResponse`: `correctCount >=
+  requiredCorrectAnswers`, null when the quiz has no requirement. The quiz counts as
+  passed once any attempt passed.
+- A quiz with a requirement is only completed (e.g. for `requiredForCompletion` and
+  module prerequisites) once it is passed, not after any attempt. The frontend shows it
+  that way: "Not passed yet" while attempts are left, never "Completed".
+
+Until the backend sends `passed`, the frontend works it out from
+`requiredCorrectAnswers` (`features/quizzes/passRule.ts`).
+
 ## Starter code for coding exercises (proposed)
 
 `CodingExerciseContent.starterCode` (string or null) is code the students start from,

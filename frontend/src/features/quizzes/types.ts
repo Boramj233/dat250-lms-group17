@@ -15,6 +15,11 @@ export interface QuizAttemptScore {
   submittedAt: string;
   correctCount: number;
   totalQuestions: number;
+  /**
+   * Proposed: whether the attempt reached the quiz's requiredCorrectAnswers. Null when
+   * the quiz has no pass requirement; missing until the backend sends it.
+   */
+  passed?: boolean | null;
 }
 
 // Matches the backend's SubmitQuizRequest; an unanswered question has no option ids.

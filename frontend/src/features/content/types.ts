@@ -47,6 +47,11 @@ export interface QuizContent extends ContentDetailBase {
   description?: string | null;
   /** Proposed (see README): ISO 8601 instant after which it cannot be taken; null for none. */
   deadline?: string | null;
+  /**
+   * Proposed (see README): how many questions must be correct for an attempt to pass.
+   * Null or missing: the quiz has no pass requirement.
+   */
+  requiredCorrectAnswers?: number | null;
 }
 
 /**
@@ -175,6 +180,8 @@ export interface NewQuizQuestion {
 export interface CreateQuizInput extends CreateContentBase {
   type: "QUIZ";
   maxAttempts: number;
+  /** Proposed: correct answers needed to pass; null for no pass requirement. */
+  requiredCorrectAnswers: number | null;
   /** Added one by one after the quiz is created (POST /api/quizzes/{id}/questions). */
   questions: NewQuizQuestion[];
 }

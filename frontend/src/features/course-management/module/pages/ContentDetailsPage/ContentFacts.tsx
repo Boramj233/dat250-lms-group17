@@ -3,6 +3,7 @@ import type { Content } from '../../../../content/types'
 import { formatDateTime } from '../../../../../shared/lib/dateFormat'
 import { safeHttpUrl } from '../../../../../shared/lib/safeUrl'
 import { formatExtensions } from '../../../fileTypes'
+import { passRequirementText } from '../../../../quizzes/passRule'
 import QuizQuestionsView from './QuizQuestionsView'
 
 /**
@@ -21,6 +22,15 @@ export default function ContentFacts({ content }: { content: Content }) {
           <dl className="content-facts">
             <Fact label="Attempts allowed">{content.maxAttempts}</Fact>
             <Fact label="Questions">{content.questions?.length ?? 'Unknown'}</Fact>
+            {content.requiredCorrectAnswers !== undefined && (
+              <Fact label="To pass">
+                {content.requiredCorrectAnswers === null
+                  ? 'No pass requirement'
+                  : content.questions
+                    ? passRequirementText(content.requiredCorrectAnswers, content.questions.length)
+                    : `${content.requiredCorrectAnswers} correct`}
+              </Fact>
+            )}
           </dl>
           <section aria-labelledby="quiz-questions-title">
             <h2 id="quiz-questions-title" className="section-title">Questions and answers</h2>

@@ -36,6 +36,8 @@ export default function NewContentPage() {
   const [starterUrl, setStarterUrl] = useState('')
   const [starterCode, setStarterCode] = useState('')
   const [maxAttempts, setMaxAttempts] = useState(1)
+  // Correct answers needed to pass; empty for no pass requirement.
+  const [requiredCorrect, setRequiredCorrect] = useState('')
   const [questions, setQuestions] = useState<NewQuizQuestion[]>([emptyQuestion()])
   const [problem, setProblem] = useState<string | null>(null)
 
@@ -49,6 +51,12 @@ export default function NewContentPage() {
     const invalid = type === 'QUIZ' ? firstInvalidQuestion(questions) : undefined
     if (invalid) {
       setProblem(`Question ${invalid} needs a text, text in every answer and at least one correct answer.`)
+      return
+    }
+    const requiredCorrectAnswers = requiredCorrect.trim() === '' ? null : Number(requiredCorrect)
+    if (type === 'QUIZ' && requiredCorrectAnswers !== null
+      && (!Number.isInteger(requiredCorrectAnswers) || requiredCorrectAnswers < 1 || requiredCorrectAnswers > questions.length)) {
+      setProblem(`Correct answers to pass must be a whole number from 1 to ${questions.length} (the number of questions), or empty.`)
       return
     }
     if (type === 'CODING_EXERCISE' && !starterUrl.trim() && !starterCode.trim()) {
@@ -69,7 +77,7 @@ export default function NewContentPage() {
             starterRepositoryUrl: starterUrl.trim() || null,
             starterCode: starterCode.trim() ? starterCode : null,
           }
-            : { ...base, type, maxAttempts, questions }
+            : { ...base, type, maxAttempts, requiredCorrectAnswers, questions }
     createContent.mutate(input, { onSuccess: () => navigate(backTo) })
   }
 
@@ -168,6 +176,17 @@ export default function NewContentPage() {
               <label htmlFor="quiz-attempts">Attempts allowed</label>
               <input id="quiz-attempts" type="number" required min={1} value={maxAttempts}
                 onChange={event => setMaxAttempts(Number(event.target.value))} />
+            </div>
+            <div className="form-field">
+              <label htmlFor="quiz-required-correct">Correct answers to pass</label>
+              <input id="quiz-required-correct" type="number" min={1} max={questions.length} step={1}
+                inputMode="numeric" value={requiredCorrect} placeholder="No pass requirement"
+                aria-describedby="quiz-required-correct-hint"
+                onChange={event => setRequiredCorrect(event.target.value)} />
+              <p id="quiz-required-correct-hint" className="form-hint">
+                An attempt is passed automatically when at least this many of the {questions.length}
+                {questions.length === 1 ? ' question is' : ' questions are'} correct. Leave it empty for no pass requirement.
+              </p>
             </div>
             <QuizQuestionsEditor questions={questions} onChange={setQuestions} />
           </>

@@ -9,6 +9,7 @@ import type { Content, ContentSummary } from '../../../content/types'
 import { useCourseEnrollments } from '../../../courses/hooks'
 import type { CourseModule } from '../../../modules/types'
 import DataTable from '../../components/DataTable'
+import MandatoryLabel from '../../components/MandatoryLabel'
 import { useCourseView } from '../../courseContext'
 import { submissionStats, type SubmissionStats } from '../../submissionStats'
 
@@ -97,7 +98,7 @@ export default function CourseSubmissionsPage() {
                   </span>
                 ),
               },
-              { header: 'Mandatory', cell: ({ details }) => <Mandatory content={details} /> },
+              { header: 'Mandatory', cell: ({ details }) => <MandatoryLabel content={details} /> },
             ]}
           />
         )}
@@ -114,11 +115,3 @@ function Deadline({ content }: { content?: Content }) {
   return content.deadline ? formatDateTime(new Date(content.deadline)) : 'No deadline'
 }
 
-/** Only assignments can be mandatory (proposed field; missing until the backend has it). */
-function Mandatory({ content }: { content?: Content }) {
-  if (!content) return '…'
-  if (content.type !== 'ASSIGNMENT' || content.mandatory === undefined) return <span className="data-table-muted">–</span>
-  return content.mandatory
-    ? <span className="data-table-strong">Mandatory</span>
-    : <span className="data-table-muted">Optional</span>
-}

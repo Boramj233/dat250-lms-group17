@@ -92,6 +92,12 @@ function sequenceOf(s: MockSubmission) {
     .sort((a, b) => Date.parse(b.submittedAt) - Date.parse(a.submittedAt))
 }
 
+/** Proposed QuizAttemptResponse.passed: null when the quiz has no pass requirement. */
+function attemptPassedMock(quiz: { requiredCorrectAnswers?: number | null }, correctCount: number) {
+  const required = quiz.requiredCorrectAnswers ?? null
+  return required === null ? null : correctCount >= required
+}
+
 /** GradeReviewResponse (teachers). */
 function gradeReviewResponse(s: MockSubmission) {
   const g = s.grade!
@@ -99,7 +105,7 @@ function gradeReviewResponse(s: MockSubmission) {
   const teacher = enrollments.find(e => e.courseId === content.courseId && e.role === 'TEACHER')
   const teacherEnrollment = teacher ? enrollmentIdOf(teacher.userId, content.courseId) : 0
   return {
-    submissionId: s.id, score: g.score, feedback: g.feedback,
+    submissionId: s.id, score: g.score, feedback: g.feedback, passed: g.passed,
     gradedByEnrollmentId: teacherEnrollment, gradedAt: g.gradedAt,
     releasedByEnrollmentId: g.releasedAt ? teacherEnrollment : null, releasedAt: g.releasedAt, version: g.version,
   }
@@ -135,7 +141,7 @@ function checkSubmit(user: MockUser, contentId: string, groupId: number | undefi
 
 /** Students only see released grades: ReleasedGradeResponse without submissionId. */
 function releasedGrade(s: MockSubmission) {
-  return s.grade?.releasedAt ? { score: s.grade.score, feedback: s.grade.feedback, releasedAt: s.grade.releasedAt } : null
+  return s.grade?.releasedAt ? { score: s.grade.score, feedback: s.grade.feedback, passed: s.grade.passed, releasedAt: s.grade.releasedAt } : null
 }
 
 /** Course content is for enrolled users (and ADMIN). */
@@ -180,6 +186,7 @@ function detailResponse(content: Content & { courseId: number }, forTeacher = fa
       return { ...base, courseId: content.courseId, body: content.body }
     case 'QUIZ':
       return { ...base, courseId: content.courseId, maxAttempts: content.maxAttempts,
+        requiredCorrectAnswers: content.requiredCorrectAnswers ?? null,
         description: content.description ?? null, deadline: content.deadline ?? null,
         questions: quizQuestionsResponse(content.id, forTeacher) }
     case 'ASSIGNMENT':
@@ -677,6 +684,13 @@ export const handlers: MockHandler[] = [
       if (!isTeacher(user, params.courseId)) return forbidden()
       const fields = body as Record<string, unknown>
       if (!String(fields.title ?? '').trim()) return badRequest('Title is required')
+      // Proposed: correct answers to pass, null for none. The questions are added after the
+      // quiz is created, so it cannot be checked against their number here.
+      const required = fields.requiredCorrectAnswers
+      if (type === 'QUIZ' && required !== undefined && required !== null
+        && (!Number.isInteger(required) || (required as number) < 1)) {
+        return badRequest('requiredCorrectAnswers must be a positive integer or null')
+      }
       const content = {
         ...fields,
         id: nextId(contents),
@@ -765,7 +779,7 @@ export const handlers: MockHandler[] = [
       }
       quizAttempts.push(attempt)
       const { userId: _userId, ...response } = attempt
-      return created(response)
+      return created({ ...response, passed: attemptPassedMock(quiz, correctCount) })
     },
   },
   {
@@ -774,11 +788,11 @@ export const handlers: MockHandler[] = [
     path: '/api/quizzes/:quizId/attempts/me',
     handle: ({ user, params }) => {
       const quiz = contents.find(c => String(c.id) === params.quizId && c.type === 'QUIZ')
-      if (!quiz) return notFound()
+      if (!quiz || quiz.type !== 'QUIZ') return notFound()
       if (!canReadCourse(user, quiz.courseId)) return forbidden()
       return ok(quizAttempts
         .filter(a => a.quizId === Number(quiz.id) && a.userId === user.userId)
-        .map(({ userId: _userId, ...attempt }) => attempt))
+        .map(({ userId: _userId, ...attempt }) => ({ ...attempt, passed: attemptPassedMock(quiz, attempt.correctCount) })))
     },
   },
   {
@@ -872,26 +886,28 @@ export const handlers: MockHandler[] = [
     },
   },
   {
-    // SaveGradeRequest { score, feedback, version }: version null creates the grade.
+    // SaveGradeRequest { score, feedback, passed, version }: version null creates the grade.
+    // `passed` (true, false or null) is proposed.
     method: 'PUT',
     path: '/api/submissions/:submissionId/grade',
     handle: ({ user, params, body }) => {
       const submission = teacherSubmission(user, params.submissionId)
       if (isResult(submission)) return submission
-      const { score, feedback, version } = body as { score?: number, feedback?: string | null, version?: number | null }
+      const { score, feedback, passed = null, version } =
+        body as { score?: number, feedback?: string | null, passed?: boolean | null, version?: number | null }
       if (typeof score !== 'number' || score < 0 || score > 100 || Math.round(score * 100) !== score * 100
-        || (feedback?.length ?? 0) > 10000) {
+        || (feedback?.length ?? 0) > 10000 || (passed !== null && typeof passed !== 'boolean')) {
         return badRequest('Invalid grade request')
       }
       if (sequenceOf(submission)[0].id !== submission.id) return conflict('A newer submission exists; review the latest version')
       const now = new Date().toISOString()
       if (!submission.grade) {
         if (version !== null && version !== undefined) return conflict('Grade does not exist; refresh before creating')
-        submission.grade = { score, feedback: feedback || null, gradedAt: now, releasedAt: null, version: 0 }
+        submission.grade = { score, feedback: feedback || null, passed, gradedAt: now, releasedAt: null, version: 0 }
       } else {
         if (submission.grade.releasedAt) return conflict('Released grades cannot be edited')
         if (version !== submission.grade.version) return conflict('Grade changed; refresh before updating')
-        submission.grade = { ...submission.grade, score, feedback: feedback || null, gradedAt: now, version: version + 1 }
+        submission.grade = { ...submission.grade, score, feedback: feedback || null, passed, gradedAt: now, version: version + 1 }
       }
       return ok(gradeReviewResponse(submission))
     },

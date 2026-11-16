@@ -5,3 +5,10 @@ export const MAX_SCORE = 100
 export function formatScore(score: number): string {
   return `${Number(Number(score).toFixed(2))} / ${MAX_SCORE}`
 }
+
+/** "Passed", "Not passed", or null when the teacher has not decided (or the backend does not send it). */
+export function passedLabel(passed: boolean | null | undefined): string | null {
+  if (passed === true) return 'Passed'
+  if (passed === false) return 'Not passed'
+  return null
+}

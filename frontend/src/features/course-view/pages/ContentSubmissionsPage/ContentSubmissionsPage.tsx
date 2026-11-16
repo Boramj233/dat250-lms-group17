@@ -10,6 +10,7 @@ import type { ReviewSubmission } from '../../../assignments/types'
 import { contentTypeLabel } from '../../../content/contentTypes'
 import { useContent, useCourseContent } from '../../../content/hooks'
 import DataTable from '../../components/DataTable'
+import PassedBadge from '../../components/PassedBadge'
 import { useCourseView } from '../../courseContext'
 import { studentsOf, submissionKindLabel, submissionStats } from '../../submissionStats'
 import { usePeopleNames } from '../../usePeopleNames'
@@ -105,6 +106,16 @@ export default function ContentSubmissionsPage() {
                       return grade
                         ? <span className="data-table-strong">{formatScore(grade.score)}</span>
                         : <span className="data-table-muted">Not graded</span>
+                    },
+                  },
+                  {
+                    header: 'Passed',
+                    cell: submission => {
+                      const grade = gradeOf(submission)
+                      if (grade === undefined) return '…'
+                      return grade?.passed != null
+                        ? <PassedBadge passed={grade.passed} />
+                        : <span className="data-table-muted">–</span>
                     },
                   },
                   {

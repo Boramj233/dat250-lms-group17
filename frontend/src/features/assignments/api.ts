@@ -62,10 +62,10 @@ export function getGradeReview(submissionId: SubmissionId): Promise<GradeReview 
 }
 
 /** Creates (version null) or changes the grade; the student sees it once released. */
-export function saveGrade({ submissionId, score, feedback, version }: SaveGradeInput): Promise<GradeReview> {
+export function saveGrade({ submissionId, score, feedback, passed, version }: SaveGradeInput): Promise<GradeReview> {
   return apiClient<GradeReview>(
     apiPath`/api/submissions/${submissionId}/grade`,
-    jsonBody("PUT", { score, feedback, version })
+    jsonBody("PUT", { score, feedback, passed, version })
   );
 }
 

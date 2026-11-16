@@ -2,7 +2,9 @@ import { useState, type FormEvent, type ReactNode } from 'react'
 import { formatDateTime, formatTimeLeft } from '../../../../shared/lib/dateFormat'
 import type { QuizContent, QuizContentQuestion, QuizQuestionType } from '../../../content/types'
 import { useMyQuizAttempts, useSubmitQuizAnswers } from '../../../quizzes/hooks'
+import { attemptPassed, passRequirementText, quizPassed } from '../../../quizzes/passRule'
 import type { QuizAttemptScore } from '../../../quizzes/types'
+import PassedBadge from '../../components/PassedBadge'
 import '../../../../shared/styles/forms.css'
 import './SubmittableContent.css'
 import './QuizView.css'
@@ -31,8 +33,9 @@ type Mode = { kind: 'info' } | { kind: 'taking' } | { kind: 'result', score: Qui
 
 /**
  * A quiz: its explanation with a Start button, and a panel with the deadline, attempts
- * and best score. Starting shows one box per question, styled by its type; submitting
- * grades it at once and shows the score.
+ * best score and, when the quiz has one, how many correct answers it takes to pass.
+ * Starting shows one box per question, styled by its type; submitting grades it at once
+ * and shows the score and whether the attempt passed.
  */
 export default function QuizView({ content, isTeacher }: QuizViewProps) {
   const [now] = useState(() => new Date())
@@ -44,6 +47,9 @@ export default function QuizView({ content, isTeacher }: QuizViewProps) {
   const used = attempts.data?.length ?? 0
   const best = attempts.data?.reduce<QuizAttemptScore | undefined>(
     (top, attempt) => (!top || attempt.correctCount > top.correctCount ? attempt : top), undefined)
+  const required = content.requiredCorrectAnswers ?? null
+  const passed = attempts.data ? quizPassed(attempts.data, required) : null
+  const attemptsLeft = Math.max(0, content.maxAttempts - used)
 
   // Why the quiz cannot be started, if it cannot.
   const blocked = deadline && deadline < now ? 'The deadline has passed.'
@@ -57,6 +63,12 @@ export default function QuizView({ content, isTeacher }: QuizViewProps) {
         <section className="submittable-card" aria-labelledby="quiz-about-title">
           <h2 id="quiz-about-title" className="submittable-card-title">About this quiz</h2>
           <div className="submittable-text">{content.description || 'No description.'}</div>
+          {required !== null && (
+            <p className="quiz-pass-rule">
+              To pass, you need at least <strong>{passRequirementText(required, questions.length)}</strong> answers
+              in one attempt. It is checked automatically when you submit.
+            </p>
+          )}
           {mode.kind === 'info' && (
             <div className="submittable-actions">
               {isTeacher
@@ -93,7 +105,16 @@ export default function QuizView({ content, isTeacher }: QuizViewProps) {
             <h2 id="quiz-result-title" className="submittable-card-title">Your result</h2>
             <p className="quiz-result-score">
               {mode.score.correctCount} of {mode.score.totalQuestions} correct
+              {' '}<PassedBadge passed={attemptPassed(mode.score, required)} />
             </p>
+            {attemptPassed(mode.score, required) === false && (
+              <p className="submittable-muted">
+                You needed {passRequirementText(required ?? 0, mode.score.totalQuestions)} to pass.
+                {attemptsLeft > 0
+                  ? ` You have ${attemptsLeft} ${attemptsLeft === 1 ? 'attempt' : 'attempts'} left.`
+                  : ' You have no attempts left.'}
+              </p>
+            )}
             <div className="submittable-actions">
               <button type="button" className="button-secondary" onClick={() => setMode({ kind: 'info' })}>
                 Back to the quiz
@@ -124,10 +145,35 @@ export default function QuizView({ content, isTeacher }: QuizViewProps) {
           )}
           <dt>Questions</dt>
           <dd>{questions.length}</dd>
+          {required !== null && (
+            <>
+              <dt>To pass</dt>
+              <dd>{passRequirementText(required, questions.length)}</dd>
+            </>
+          )}
           {!isTeacher && (
             <>
               <dt>Best score</dt>
               <dd>{best ? <strong>{best.correctCount} / {best.totalQuestions}</strong> : '–'}</dd>
+              {required !== null && (
+                <>
+                  <dt>Result</dt>
+                  <dd>
+                    {attempts.isPending ? '…'
+                      : passed === true ? <PassedBadge passed />
+                      : passed === false
+                        ? attemptsLeft > 0
+                          ? <>
+                              <strong>Not passed yet</strong>
+                              <span className="submittable-muted">
+                                {' '}· {attemptsLeft} {attemptsLeft === 1 ? 'attempt' : 'attempts'} left
+                              </span>
+                            </>
+                          : <><PassedBadge passed={false} /><span className="submittable-muted"> · no attempts left</span></>
+                        : 'Not taken yet'}
+                  </dd>
+                </>
+              )}
             </>
           )}
         </dl>

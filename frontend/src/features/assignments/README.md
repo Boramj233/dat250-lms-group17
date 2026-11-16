@@ -47,3 +47,15 @@ graded and released it. Rules (the backend answers 409 otherwise):
 
 The student sees the grade (`ReleasedGradeResponse`: `score, feedback, releasedAt`)
 once it is released.
+
+## Proposed: passed / not passed
+
+The teacher also marks a submission as passed or not passed. The frontend sends and
+shows it already; the backend needs one new field, `passed: Boolean` (nullable):
+
+- `SaveGradeRequest` (PUT `/grade`): `{ score, feedback, passed, version }`. `true` is
+  passed, `false` not passed, `null` not decided yet. Anything else: 400.
+- `GradeReviewResponse` and `ReleasedGradeResponse`: `passed`. The student only sees it
+  once the grade is released, like the score; the same release rules apply.
+
+Until the backend sends it, the field is missing and the frontend shows no verdict.

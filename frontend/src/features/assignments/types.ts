@@ -87,6 +87,11 @@ export interface GradeReview {
   /** 0–100, at most two decimals. */
   score: number;
   feedback: string | null;
+  /**
+   * Proposed: the teacher's passed / not passed verdict. Null: not decided. Missing
+   * until the backend sends it.
+   */
+  passed?: boolean | null;
   gradedByEnrollmentId: number;
   gradedAt: string;
   releasedByEnrollmentId: number | null;
@@ -101,6 +106,11 @@ export interface ReleasedGrade {
   submissionId: SubmissionId;
   score: number;
   feedback: string | null;
+  /**
+   * Proposed: the teacher's passed / not passed verdict. Null: not decided. Missing
+   * until the backend sends it.
+   */
+  passed?: boolean | null;
   releasedAt: string;
 }
 
@@ -113,6 +123,8 @@ export interface SaveGradeInput {
   contentId: ContentId;
   score: number;
   feedback: string;
+  /** Proposed: passed / not passed; null when not decided. */
+  passed: boolean | null;
   version: number | null;
 }
 

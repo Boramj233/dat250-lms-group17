@@ -121,13 +121,15 @@ export const submissions: {
   submittedAt: string
   late: boolean
   groupId?: number
-  grade: { score: number, feedback: string | null, gradedAt: string, releasedAt: string | null, version: number } | null
+  /** `passed` is proposed: the teacher's passed / not passed; null when not decided. */
+  grade: { score: number, feedback: string | null, passed: boolean | null, gradedAt: string, releasedAt: string | null, version: number } | null
 }[] = [
   {
     id: 1, userId: 1, contentId: 104, type: 'TEXT', late: false,
     payload: 'My answer to the old assignment.', submittedAt: inDays(-4, 20, 0),
     grade: {
       score: 90,
+      passed: true,
       feedback: 'Good work! The explanation of the status codes is clear.\n'
         + 'Remember to test the error cases too.',
       gradedAt: inDays(-2, 10, 0), releasedAt: inDays(-1, 9, 30), version: 1,
@@ -141,7 +143,7 @@ export const submissions: {
   {
     id: 3, userId: 1, contentId: 201, type: 'TEXT', late: false,
     payload: 'Our first sprint went well.', submittedAt: inDays(-2, 15, 0),
-    grade: { score: 80, feedback: null, gradedAt: inDays(-1, 14, 0), releasedAt: inDays(0, 8, 0), version: 1 },
+    grade: { score: 80, feedback: null, passed: true, gradedAt: inDays(-1, 14, 0), releasedAt: inDays(0, 8, 0), version: 1 },
   },
   {
     id: 4, userId: 5, contentId: 102, type: 'GIT_URL', late: true,
@@ -151,7 +153,7 @@ export const submissions: {
   {
     id: 5, userId: 5, contentId: 104, type: 'TEXT', late: false,
     payload: 'Sam answered the old assignment.', submittedAt: inDays(-3, 22, 10),
-    grade: { score: 40, feedback: 'Please explain the HTTP methods.', gradedAt: inDays(-1, 11, 0), releasedAt: null, version: 0 },
+    grade: { score: 40, feedback: 'Please explain the HTTP methods.', passed: false, gradedAt: inDays(-1, 11, 0), releasedAt: null, version: 0 },
   },
   {
     // Group assignment: Sam handed in for the group, so Siri sees it too.
@@ -160,6 +162,7 @@ export const submissions: {
     submittedAt: inDays(-1, 16, 20),
     grade: {
       score: 95, feedback: 'Nice and simple. Add a dead letter queue next time.',
+      passed: true,
       gradedAt: inDays(0, 8, 30), releasedAt: inDays(0, 9, 0), version: 1,
     },
   },
@@ -261,7 +264,7 @@ export const contents: (Content & { courseId: number })[] = [
     body: 'REST is an architectural style for APIs.\n\nResources are identified by URLs, and the '
       + 'HTTP methods (GET, POST, PUT, PATCH, DELETE) say what to do with them.',
   },
-  { id: 13, courseId: 1, moduleId: 1, position: 2, type: 'QUIZ', title: 'REST basics quiz', maxAttempts: 3, requiredForCompletion: true,
+  { id: 13, courseId: 1, moduleId: 1, position: 2, type: 'QUIZ', title: 'REST basics quiz', maxAttempts: 3, requiredCorrectAnswers: 3, requiredForCompletion: true,
     description: 'Three short questions about HTTP methods and status codes. You get your score right after you submit.',
     deadline: inDays(5, 23, 59) },
   {
