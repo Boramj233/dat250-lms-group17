@@ -35,3 +35,33 @@ Run from the project root (Windows):
 ```
 
 Report: `backend/build/reports/tests/test/index.html`.
+
+## Mandatory Assignment API
+
+Backend integration note: `Assignment.mandatoryForExam` defaults to `false` and is
+returned by the existing Assignment detail and creation responses. It is independent
+of `Content.requiredForModuleCompletion`, Grade Pass/Fail and `isCompleted()`.
+This flag records the teacher's requirement only; exam eligibility is not calculated.
+
+An active teacher in the Assignment's course can update it:
+
+```http
+PATCH /api/assignments/{assignmentId}/exam-requirement
+Authorization: Bearer <access-token>
+Content-Type: application/json
+
+{"mandatoryForExam": true}
+```
+
+Success returns 204. Set `false` to clear the requirement. Missing/null values return
+400; missing authentication returns 401; students, inactive teachers and teachers
+of other courses receive 403. Unknown Assignment IDs and other Content types return
+404. The caller's identity comes from the verified principal, never from the request
+body. Assignment creation also requires an active course teacher; its request body
+is unchanged, and new Assignments start with `mandatoryForExam=false`.
+
+For an existing H2 schema, back up the database and stop the application before
+manually applying `src/main/resources/db/manual/h2-mandatory-assignments.sql`.
+It adds a non-null Boolean column defaulting to false without changing existing
+completion or grading data. The script is not executed automatically; H2 DDL is
+not atomic. No frontend integration or exam eligibility endpoint is included.
