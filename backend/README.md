@@ -346,3 +346,42 @@ Do not rerun the older Ordering script on a database already containing Matching
 questions: that older script enumerates only the first four types. Scripts are
 not an automatic migration system; H2 DDL is non-atomic. No developer database
 has been accessed or migrated by these tests.
+
+## CodingExercise 4A API
+
+Creating a CodingExercise requires an active TEACHER enrollment in the course:
+`POST /api/courses/{courseId}/modules/{moduleId}/contents/coding-exercises`.
+The teacher's local User ID comes from the verified principal. The module must
+belong to the specified course. Reading `GET /api/coding-exercises/{exerciseId}`
+requires an active enrollment (student or teacher) in the exercise's course.
+Missing authentication returns 401; insufficient course access returns 403;
+a missing exercise, another Content type or a mismatched course/module returns 404.
+
+The creation body accepts optional `starterCode` alongside the existing required
+`starterRepositoryUrl`:
+
+```json
+{
+  "title": "Implement greeting",
+  "position": 0,
+  "instructions": "Complete the greet method.",
+  "starterRepositoryUrl": "https://example.com/course/starter",
+  "starterCode": "public String greet() {\n    // TODO\n    return null;\n}\n",
+  "allowLateSubmission": false
+}
+```
+
+Creation and detail responses include `starterCode`. It is plain display text,
+limited to 10,000 characters; omitted/null values remain null, empty strings are
+allowed, and whitespace/indentation/newlines are preserved. No language selection,
+execution, repository fetching or automatic grading is performed. A frontend
+should render it as text in a code block, not as HTML. This field is independent
+of instructions and the repository URL; it is not a student's submission.
+
+For existing H2 databases, back up and stop the application before manually
+applying `src/main/resources/db/manual/h2-coding-starter-code.sql`. It adds a
+nullable column; existing exercises retain null. The script is not run
+automatically and H2 DDL is not atomic. No development database was migrated.
+
+This phase does not change Submission/Grade, enable CodingExercise review/grading
+or Completion, implement global content visibility, or include frontend changes.

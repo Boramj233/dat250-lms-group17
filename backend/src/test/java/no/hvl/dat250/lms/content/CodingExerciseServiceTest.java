@@ -10,6 +10,8 @@ import no.hvl.dat250.lms.content.domain.StaticPage;
 import no.hvl.dat250.lms.content.repository.ContentRepository;
 import no.hvl.dat250.lms.content.service.CodingExerciseService;
 import no.hvl.dat250.lms.module.domain.Module;
+import no.hvl.dat250.lms.enrollment.service.EnrollmentService;
+import org.springframework.security.access.AccessDeniedException;
 import no.hvl.dat250.lms.module.service.ModuleService;
 
 import org.junit.jupiter.api.Test;
@@ -31,6 +33,9 @@ class CodingExerciseServiceTest {
 
     @Mock
     private ModuleService moduleService;
+
+    @Mock
+    private EnrollmentService enrollmentService;
 
     @InjectMocks
     private CodingExerciseService exerciseService;
@@ -59,8 +64,10 @@ class CodingExerciseServiceTest {
                 2,
                 "Implement GET and POST endpoints.",
                 "https://gitlab.com/example/starter",
+                "  // TODO\n",
                 deadline,
-                false
+                false,
+                5L
             );
 
         assertSame(module, result.getModule());
@@ -77,10 +84,23 @@ class CodingExerciseServiceTest {
             result.getStarterRepositoryUrl()
         );
 
+        assertEquals("  // TODO\n", result.getStarterCode());
         assertEquals(deadline, result.getDeadline());
         assertFalse(result.isAllowLateSubmission());
 
         verify(contentRepository).save(result);
+        verify(enrollmentService).requireActiveTeacher(5L, 1L);
+    }
+
+    @Test
+    void nonTeacherCannotCreateExercise() {
+        doThrow(new AccessDeniedException("Active teacher enrollment required"))
+            .when(enrollmentService).requireActiveTeacher(5L, 1L);
+
+        assertThrows(AccessDeniedException.class, () -> exerciseService.createCodingExercise(
+            1L, 10L, "REST", 0, "Implement", "https://example.com/starter", null, null, false, 5L));
+
+        verifyNoInteractions(moduleService, contentRepository);
     }
 
     @Test
@@ -99,7 +119,9 @@ class CodingExerciseServiceTest {
                 "Implement REST endpoints.",
                 "https://gitlab.com/example/starter",
                 null,
-                false
+                null,
+                false,
+                5L
             )
         );
 
@@ -119,7 +141,9 @@ class CodingExerciseServiceTest {
                 "Implement REST endpoints.",
                 "https://gitlab.com/example/starter",
                 null,
-                false
+                null,
+                false,
+                5L
             )
         );
 
@@ -142,7 +166,9 @@ class CodingExerciseServiceTest {
                 "Implement REST endpoints.",
                 "https://gitlab.com/example/starter",
                 null,
-                false
+                null,
+                false,
+                5L
             )
         );
 
@@ -150,6 +176,18 @@ class CodingExerciseServiceTest {
             moduleService,
             contentRepository
         );
+    }
+
+    @Test
+    void oversizedStarterCodeIsRejectedBeforeSave() {
+        Module module = mock(Module.class);
+        when(moduleService.findModuleInCourse(1L, 10L)).thenReturn(Optional.of(module));
+
+        assertThrows(IllegalArgumentException.class, () -> exerciseService.createCodingExercise(
+            1L, 10L, "REST", 0, "Implement", "https://example.com/starter",
+            "x".repeat(10001), null, false, 5L));
+
+        verifyNoInteractions(contentRepository);
     }
 
     @Test

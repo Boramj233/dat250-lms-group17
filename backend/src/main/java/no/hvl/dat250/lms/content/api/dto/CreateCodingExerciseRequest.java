@@ -26,6 +26,9 @@ public record CreateCodingExerciseRequest(
     @Size(max = 2048)
     String starterRepositoryUrl,
 
+    @Size(max = 10000)
+    String starterCode,
+
     Instant deadline,
 
     boolean allowLateSubmission
