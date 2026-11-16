@@ -64,7 +64,9 @@ class SubmissionServiceTest {
             contentService,
             enrollmentLookupService,
             submissionRepository,
-            fixedClock
+            fixedClock,
+            mock(no.hvl.dat250.lms.enrollment.service.EnrollmentService.class),
+            mock(org.springframework.context.ApplicationEventPublisher.class)
         );
     }
 
@@ -73,6 +75,7 @@ class SubmissionServiceTest {
         Module module = mock(Module.class);
         Course course = mock(Course.class);
 
+        lenient().when(contentService.lockSubmissionContent(30L)).thenReturn(content);
         when(contentService.requireContent(30L))
             .thenReturn(content);
 
@@ -144,7 +147,7 @@ class SubmissionServiceTest {
         assertEquals(NOW, result.getSubmittedAt());
         assertFalse(result.isLate());
 
-        verify(enrollmentLookupService)
+        verify(enrollmentLookupService, times(2))
             .requireActiveStudentEnrollment(5L, 10L);
 
         verify(submissionRepository).save(result);

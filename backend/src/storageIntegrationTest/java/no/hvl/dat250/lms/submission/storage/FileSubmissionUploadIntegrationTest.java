@@ -501,4 +501,35 @@ class FileSubmissionUploadIntegrationTest {
         assertEquals(count, submissions.count());
         assertEquals(before, keys());
     }
+    @Test
+    void courseTeacherDownloadsHistoricalFileThroughReviewEndpoint() throws Exception {
+        Fixture fixture = student();
+        Submission original = uploadAndFind(fixture);
+        uploadAndFind(fixture);
+        User teacher = new TransactionTemplate(transactionManager).execute(status -> {
+            User user = new User("teacher_" + UUID.randomUUID() + "@example.com", "Test", "Teacher");
+            entities.persist(user);
+            Course course = entities.find(Assignment.class, fixture.assignment().getId())
+                .getModule().getCourse();
+            entities.persist(new Enrollment(user, course, CourseRole.TEACHER));
+            entities.flush();
+            return user;
+        });
+        String path = "/api/submissions/" + original.getId() + "/review/file";
+        mvc.perform(get(path).header("Authorization", TestTokens.bearer(teacher)))
+            .andExpect(status().isOk()).andExpect(content().bytes(PDF))
+            .andExpect(header().string("Cache-Control", "no-store, private"));
+        mvc.perform(head(path).header("Authorization", TestTokens.bearer(teacher)))
+            .andExpect(status().isOk()).andExpect(content().bytes(new byte[0]))
+            .andExpect(header().longValue("Content-Length", PDF.length));
+        // The existing owner-only endpoint deliberately remains owner-only.
+        mvc.perform(get("/api/submissions/{id}/file", original.getId())
+                .header("Authorization", TestTokens.bearer(teacher)))
+            .andExpect(status().isNotFound());
+        clearInvocations(storage);
+        mvc.perform(get(path).header("Authorization", TestTokens.bearer(fixture.user())))
+            .andExpect(status().isForbidden());
+        verify(storage, never()).get(any());
+    }
+
 }

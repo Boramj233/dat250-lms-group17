@@ -3,19 +3,28 @@ package no.hvl.dat250.lms.content.service;
 import java.util.List;
 import java.util.NoSuchElementException;
 
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.LockModeType;
+import jakarta.persistence.PersistenceContext;
+
 import no.hvl.dat250.lms.content.domain.Content;
 import no.hvl.dat250.lms.content.domain.StaticPage;
 import no.hvl.dat250.lms.content.repository.ContentRepository;
 import no.hvl.dat250.lms.module.domain.Module;
 import no.hvl.dat250.lms.module.service.ModuleService;
 
+import org.hibernate.Hibernate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class ContentService {
 
     private final ContentRepository contentRepository;
+
+    @PersistenceContext
+    private EntityManager entityManager;
     private final ModuleService moduleService;
 
     public ContentService(
@@ -113,6 +122,15 @@ public class ContentService {
             .orElseThrow(() -> new NoSuchElementException(
                 "Content not found: " + contentId
             ));
+    }
+
+    // Acquire after the submission owner lock, and hold through submission commit.
+    // Refresh reads current rules even when preflight/OSIV already loaded this entity.
+    @Transactional(propagation = Propagation.MANDATORY)
+    public Content lockSubmissionContent(Long contentId) {
+        Content content = (Content) Hibernate.unproxy(requireContent(contentId));
+        entityManager.refresh(content, LockModeType.PESSIMISTIC_WRITE);
+        return content;
     }
 
     // Find a Content item only if it is a StaticPage.

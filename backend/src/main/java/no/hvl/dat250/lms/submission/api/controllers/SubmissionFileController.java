@@ -90,6 +90,10 @@ public class SubmissionFileController {
             currentUser.userId()
         );
 
+        return download(download);
+    }
+
+    private ResponseEntity<Resource> download(SubmissionFileDownload download) {
         ResponseEntity.BodyBuilder response = downloadHeaders(download);
         InputStream input = download.openStream();
         Resource resource = new InputStreamResource(input);
@@ -110,6 +114,24 @@ public class SubmissionFileController {
             submissionId,
             currentUser.userId()
         );
+        return inspect(download);
+    }
+
+    @GetMapping("/submissions/{submissionId}/review/file")
+    public ResponseEntity<Resource> downloadTeacherFile(
+            @PathVariable Long submissionId,
+            @AuthenticationPrincipal AuthenticatedUser currentUser) {
+        return download(fileSubmissionService.findTeacherFile(submissionId, currentUser.userId()));
+    }
+
+    @RequestMapping(value = "/submissions/{submissionId}/review/file", method = RequestMethod.HEAD)
+    public ResponseEntity<Void> inspectTeacherFile(
+            @PathVariable Long submissionId,
+            @AuthenticationPrincipal AuthenticatedUser currentUser) {
+        return inspect(fileSubmissionService.findTeacherFile(submissionId, currentUser.userId()));
+    }
+
+    private ResponseEntity<Void> inspect(SubmissionFileDownload download) {
         ResponseEntity.BodyBuilder response = downloadHeaders(download);
 
         // Check object availability, but do not read or send its body for HEAD.
@@ -146,7 +168,7 @@ public class SubmissionFileController {
 
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<ProblemDetail> handleAccessDenied() {
-        return failure(HttpStatus.FORBIDDEN, "Active student enrollment required");
+        return failure(HttpStatus.FORBIDDEN, "Required course role is missing or inactive");
     }
 
     @ExceptionHandler(NoSuchElementException.class)

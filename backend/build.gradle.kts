@@ -45,6 +45,7 @@ dependencies {
     // Security
 
     // Messaging
+    implementation("org.springframework.boot:spring-boot-starter-amqp")
 
     // Tests
     testImplementation("org.springframework.boot:spring-boot-starter-data-jpa-test")
@@ -75,5 +76,22 @@ tasks.register<Test>("storageIntegrationTest") {
     testClassesDirs = storageIntegrationTest.output.classesDirs
     classpath = storageIntegrationTest.runtimeClasspath
     systemProperty("storage.init-script", rootProject.file("infra/seaweedfs/start.sh").absolutePath)
+    shouldRunAfter(tasks.test)
+}
+
+// Explicit opt-in: broker tests use their own temporary RabbitMQ container.
+val messagingIntegrationTest by sourceSets.creating
+configurations[messagingIntegrationTest.implementationConfigurationName].extendsFrom(configurations.testImplementation.get())
+configurations[messagingIntegrationTest.runtimeOnlyConfigurationName].extendsFrom(configurations.testRuntimeOnly.get())
+dependencies {
+    add(messagingIntegrationTest.implementationConfigurationName, sourceSets.main.get().output)
+    add(messagingIntegrationTest.implementationConfigurationName, sourceSets.test.get().output)
+    add(messagingIntegrationTest.implementationConfigurationName, "org.testcontainers:testcontainers:2.0.5")
+}
+tasks.register<Test>("messagingIntegrationTest") {
+    description = "Tests submission events with a real isolated RabbitMQ broker (requires Docker)."
+    group = "verification"
+    testClassesDirs = messagingIntegrationTest.output.classesDirs
+    classpath = messagingIntegrationTest.runtimeClasspath
     shouldRunAfter(tasks.test)
 }
