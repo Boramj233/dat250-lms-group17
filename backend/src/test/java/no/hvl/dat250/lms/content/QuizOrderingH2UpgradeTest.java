@@ -87,6 +87,9 @@ class QuizOrderingH2UpgradeTest {
             oldAnswerId = answer.getId();
         }
         try (var connection = DriverManager.getConnection(url, "sa", ""); var sql = connection.createStatement()) {
+            // Remove later Matching tables before reconstructing the pre-Ordering schema.
+            sql.execute("DROP TABLE quiz_answer_matches");
+            sql.execute("DROP TABLE quiz_question_correct_matches");
             sql.execute("DROP TABLE quiz_answer_ordered_items");
             sql.execute("DROP TABLE quiz_question_correct_order");
             sql.execute("DROP TABLE quiz_items");
@@ -95,6 +98,10 @@ class QuizOrderingH2UpgradeTest {
             sql.execute("ALTER TABLE quiz_questions ALTER COLUMN question_type " + oldType + " NOT NULL");
             ScriptUtils.executeSqlScript(connection, new ClassPathResource("db/manual/h2-quiz-ordering.sql"));
             ScriptUtils.executeSqlScript(connection, new ClassPathResource("db/manual/h2-quiz-ordering.sql"));
+        }
+        // Validate against today's metadata after applying the full incremental chain.
+        try (var connection = DriverManager.getConnection(url, "sa", "")) {
+            ScriptUtils.executeSqlScript(connection, new ClassPathResource("db/manual/h2-quiz-matching.sql"));
         }
         Long orderingAnswerId;
         Long orderingQuestionId;

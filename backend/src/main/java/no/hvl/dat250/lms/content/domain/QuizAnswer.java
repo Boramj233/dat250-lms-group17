@@ -56,6 +56,16 @@ public class QuizAnswer {
     @OrderColumn(name = "order_position", nullable = false)
     private List<QuizItem> orderedItems = new ArrayList<>();
 
+    @ElementCollection
+    @CollectionTable(name = "quiz_answer_matches", joinColumns = @JoinColumn(name = "answer_id"),
+        uniqueConstraints = {
+            @UniqueConstraint(columnNames = {"answer_id", "left_item_id"}),
+            @UniqueConstraint(columnNames = {"answer_id", "right_item_id"})
+        })
+    private List<QuizMatch> matches = new ArrayList<>();
+
+    public List<QuizMatch> getMatches() { return List.copyOf(matches); }
+
     public List<QuizItem> getOrderedItems() {
         return List.copyOf(orderedItems);
     }
@@ -67,6 +77,11 @@ public class QuizAnswer {
 
     public QuizAnswer(QuizAttempt attempt, QuizQuestion question, Set<ChoiceOption> selectedOptions,
                       boolean correct, String textAnswer, List<QuizItem> orderedItems) {
+        this(attempt, question, selectedOptions, correct, textAnswer, orderedItems, List.of());
+    }
+
+    public QuizAnswer(QuizAttempt attempt, QuizQuestion question, Set<ChoiceOption> selectedOptions,
+                      boolean correct, String textAnswer, List<QuizItem> orderedItems, List<QuizMatch> matches) {
         this(attempt, question, selectedOptions, correct);
         if (textAnswer != null && textAnswer.length() > 255) {
             throw new IllegalArgumentException("Text answer must not exceed 255 characters");
@@ -91,6 +106,18 @@ public class QuizAnswer {
         } else if (!orderedItems.isEmpty()) {
             throw new IllegalArgumentException("Only ordering answers may contain ordered items");
         }
+        if (matches == null) {
+            throw new IllegalArgumentException("Matches must not be null");
+        }
+        if (question.getType() == QuestionType.MATCHING) {
+            if (!selectedOptions.isEmpty() || textAnswer != null) {
+                throw new IllegalArgumentException("Matching answers must not contain selected options or text");
+            }
+            QuizMatch.validateComplete(question.getItems(), matches);
+        } else if (!matches.isEmpty()) {
+            throw new IllegalArgumentException("Only matching answers may contain matches");
+        }
+        this.matches.addAll(matches);
         this.orderedItems.addAll(orderedItems);
         this.textAnswer = textAnswer;
     }

@@ -5,10 +5,46 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
+import java.util.Map;
+import java.util.HashMap;
 
 import no.hvl.dat250.lms.content.domain.ChoiceOption;
 
 public class QuizGrader {
+
+    public record MatchIds(UUID leftItemId, UUID rightItemId) {
+    }
+
+    public boolean isMatchingCorrect(List<MatchIds> correctMatches, List<MatchIds> submittedMatches) {
+        Map<UUID, UUID> expected;
+        try {
+            expected = matchingMap(correctMatches);
+        } catch (IllegalArgumentException ex) {
+            throw new IllegalStateException("Saved matching key is invalid", ex);
+        }
+        Map<UUID, UUID> submitted = matchingMap(submittedMatches);
+        if (!submitted.keySet().equals(expected.keySet())
+                || !new HashSet<>(submitted.values()).equals(new HashSet<>(expected.values()))) {
+            throw new IllegalArgumentException("Matches must cover both sides of this question completely");
+        }
+        return submitted.equals(expected);
+    }
+
+    private Map<UUID, UUID> matchingMap(List<MatchIds> matches) {
+        if (matches == null || matches.size() < 2 || matches.size() > 20) {
+            throw new IllegalArgumentException("Matching requires 2–20 complete pairs");
+        }
+        Map<UUID, UUID> result = new HashMap<>();
+        var rightIds = new HashSet<UUID>();
+        for (MatchIds match : matches) {
+            if (match == null || match.leftItemId() == null || match.rightItemId() == null
+                    || result.putIfAbsent(match.leftItemId(), match.rightItemId()) != null
+                    || !rightIds.add(match.rightItemId())) {
+                throw new IllegalArgumentException("Each left and right item must appear exactly once");
+            }
+        }
+        return result;
+    }
 
     public boolean isOrderCorrect(List<UUID> correctOrder, List<UUID> submittedOrder) {
         if (correctOrder == null || correctOrder.size() < 2 || correctOrder.size() > 20

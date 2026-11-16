@@ -248,3 +248,97 @@ Hibernate can have a native ENUM restricted to the old three types, while the
 older manual 3A script used VARCHAR. The migration handles both and preserves
 existing questions and answers. H2 DDL is not atomic; this is not an automatic
 migration system. Only disposable H2 databases are used in upgrade tests.
+
+## Quiz 3B-2 Matching
+
+Matching supports complete one-to-one associations, with 2–20 items on each side
+and equal side sizes. It reuses QuizItem's random UUIDs and question ownership.
+QuizItemKind distinguishes ORDERING, MATCHING_LEFT and MATCHING_RIGHT; existing
+Ordering items retain the ORDERING kind. No partial credit, distractors, many-to-one
+matching, frontend work or new locking is included.
+
+Create through the existing teacher-only question endpoint:
+
+```json
+{
+  "questionText": "Match each term to its description.",
+  "position": 0,
+  "type": "MATCHING",
+  "hint": "Review these concepts.",
+  "matching": {
+    "leftItems": [
+      {"key": "l1", "text": "Java"},
+      {"key": "l2", "text": "React"}
+    ],
+    "rightItems": [
+      {"key": "r1", "text": "UI library"},
+      {"key": "r2", "text": "Programming language"}
+    ],
+    "correctMatches": [
+      {"leftKey": "l1", "rightKey": "r2"},
+      {"leftKey": "l2", "rightKey": "r1"}
+    ]
+  }
+}
+```
+
+Each side requires nonblank unique temporary keys (up to 64 characters) and
+nonblank display texts (up to 255 characters). Texts must be distinct within the
+same side after stripping their edges; keys are scoped to their side. Every left
+and right key must occur exactly once in correctMatches. Matching rejects options,
+acceptedAnswers and an Ordering definition. Other types reject a non-null Matching
+definition. The server replaces temporary keys with random UUID references.
+
+Quiz detail adds `leftItems` and `rightItems`, each containing only `{id, text}`.
+Each side is independently sorted by its UUID string; neither side is generated
+by traversing correctMatches. Teacher keys, paired item IDs, correct pairs and
+hints are absent from student detail. As with Ordering, a display can coincide
+with the correct alignment by chance; it is not forced to be incorrect. Other
+question types have empty leftItems/rightItems; Matching has an empty Ordering
+items array.
+
+Submit through the existing whole-quiz attempt endpoint:
+
+```json
+{
+  "answers": [
+    {
+      "questionId": 10,
+      "matches": [
+        {"leftItemId": "<uuid-for-l1>", "rightItemId": "<uuid-for-r2>"},
+        {"leftItemId": "<uuid-for-l2>", "rightItemId": "<uuid-for-r1>"}
+      ]
+    }
+  ]
+}
+```
+
+Missing/null/empty/incomplete matches, reused left or right items, invalid UUIDs,
+foreign-question items and reversed sides return 400 without creating an attempt.
+Matching rejects textAnswer and nonempty selectedOptionIds/orderedItemIds; other
+types reject nonempty matches. Empty unused lists remain acceptable.
+
+Complete valid pairs are compared as a left-to-right map. Pair-array order does
+not matter. A complete but incorrect association is a valid answer that counts
+as wrong and receives the configured nonblank Hint, without revealing which pair
+was wrong. A correct answer receives no Hint. Question weights, attempt limits,
+Passing Percentage, Content Completion and first-attempt question freeze retain
+their existing behavior.
+
+QuizMatch is an embeddable pair of QuizItem references. Correct matches and each
+student's submitted matches are stored in separate element-collection tables,
+with foreign keys and per-owner uniqueness on both sides. Pair order is not
+persisted as meaningful state. No cascade remove is added. Student detail and
+submission work with OSIV disabled and without an outer test transaction.
+
+For an existing Ordering schema, manually apply
+`src/main/resources/db/manual/h2-quiz-matching.sql` after backup and stopping the
+application. It expands the question-type ENUM, defaults existing items to
+ORDERING, and adds quiz_question_correct_matches and quiz_answer_matches. Tests
+cover old native H2 ENUM and VARCHAR question-type columns, preserved Ordering
+history, and distinct correct/submitted Matching pairs after restart. Prior
+upgrade tests apply the incremental chain before validating today's mappings.
+Do not rerun the older Ordering script on a database already containing Matching
+questions: that older script enumerates only the first four types. Scripts are
+not an automatic migration system; H2 DDL is non-atomic. No developer database
+has been accessed or migrated by these tests.

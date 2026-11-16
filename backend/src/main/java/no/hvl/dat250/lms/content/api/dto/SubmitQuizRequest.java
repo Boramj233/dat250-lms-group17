@@ -17,6 +17,9 @@ public record SubmitQuizRequest(
 
 ) {
 
+    public record MatchInput(@NotNull UUID leftItemId, @NotNull UUID rightItemId) {
+    }
+
     public record Answer(
 
             @NotNull
@@ -29,11 +32,18 @@ public record SubmitQuizRequest(
             String textAnswer,
 
             @Size(max = 20)
-            List<@NotNull UUID> orderedItemIds
+            List<@NotNull UUID> orderedItemIds,
+
+            @Size(max = 20)
+            List<@NotNull @Valid MatchInput> matches
 
     ) {
         public Answer(Long questionId, List<Long> selectedOptionIds, String textAnswer) {
-            this(questionId, selectedOptionIds, textAnswer, null);
+            this(questionId, selectedOptionIds, textAnswer, null, null);
+        }
+
+        public Answer(Long questionId, List<Long> selectedOptionIds, String textAnswer, List<UUID> orderedItemIds) {
+            this(questionId, selectedOptionIds, textAnswer, orderedItemIds, null);
         }
     }
 }

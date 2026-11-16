@@ -47,6 +47,28 @@ public class QuizQuestion {
     @OrderColumn(name = "order_position", nullable = false)
     private List<QuizItem> correctOrder = new ArrayList<>();
 
+    @ElementCollection
+    @CollectionTable(name = "quiz_question_correct_matches", joinColumns = @JoinColumn(name = "question_id"),
+        uniqueConstraints = {
+            @UniqueConstraint(columnNames = {"question_id", "left_item_id"}),
+            @UniqueConstraint(columnNames = {"question_id", "right_item_id"})
+        })
+    private List<QuizMatch> correctMatches = new ArrayList<>();
+
+    public List<QuizMatch> getCorrectMatches() { return List.copyOf(correctMatches); }
+
+    public void configureMatching(List<QuizItem> items, List<QuizMatch> correctMatches) {
+        if (type != QuestionType.MATCHING || !this.items.isEmpty() || !this.correctMatches.isEmpty()) {
+            throw new IllegalStateException("Matching items can only be initialized once on a matching question");
+        }
+        QuizMatch.validateComplete(items, correctMatches);
+        if (items.stream().anyMatch(item -> !Objects.equals(item.getQuestion().getId(), id))) {
+            throw new IllegalArgumentException("Matching items must belong to this question");
+        }
+        this.items.addAll(items);
+        this.correctMatches.addAll(correctMatches);
+    }
+
     public List<QuizItem> getItems() { return List.copyOf(items); }
     public List<QuizItem> getCorrectOrder() { return List.copyOf(correctOrder); }
 
@@ -55,7 +77,7 @@ public class QuizQuestion {
             throw new IllegalStateException("Ordering items can only be initialized once on an ordering question");
         }
         if (items == null || correctOrder == null || items.size() < 2 || items.size() > 20
-                || items.stream().anyMatch(item -> item == null || item.getId() == null
+                || items.stream().anyMatch(item -> item == null || item.getId() == null || item.getKind() != QuizItemKind.ORDERING
                     || !Objects.equals(item.getQuestion().getId(), id))
                 || new HashSet<>(items).size() != items.size()
                 || correctOrder.size() != items.size()

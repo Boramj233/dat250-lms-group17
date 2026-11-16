@@ -2,6 +2,8 @@
 package no.hvl.dat250.lms.content.api.dto;
 
 import no.hvl.dat250.lms.content.domain.QuestionType;
+import no.hvl.dat250.lms.content.domain.QuizQuestion;
+import no.hvl.dat250.lms.content.domain.QuizItemKind;
 
 import java.util.List;
 import java.util.UUID;
@@ -27,7 +29,9 @@ public record QuizDetailResponse(
         int position,
         QuestionType type,
         List<OptionResponse> options,
-        List<ItemResponse> items
+        List<ItemResponse> items,
+        List<ItemResponse> leftItems,
+        List<ItemResponse> rightItems
     ) {}
 
     public record ItemResponse(UUID id, String text) {
@@ -38,6 +42,17 @@ public record QuizDetailResponse(
         String optionText,
         int position
     ) {}
+
+    private static List<ItemResponse> displayItems(QuizQuestion question, QuizItemKind kind) {
+        if (question.getType() != QuestionType.ORDERING && question.getType() != QuestionType.MATCHING) {
+            return List.of();
+        }
+        return question.getItems().stream()
+            .filter(item -> item.getKind() == kind)
+            .map(item -> new ItemResponse(item.getId(), item.getText()))
+            .sorted(Comparator.comparing(item -> item.id().toString()))
+            .toList();
+    }
 
     public static QuizDetailResponse from(
             QuizWithQuestions details) {
@@ -58,10 +73,9 @@ public record QuizDetailResponse(
                             option.getPosition()
                         ))
                         .toList(),
-                    item.question().getType() != QuestionType.ORDERING ? List.of() : item.question().getItems().stream()
-                        .map(value -> new ItemResponse(value.getId(), value.getText()))
-                        .sorted(Comparator.comparing(value -> value.id().toString()))
-                        .toList()
+                    displayItems(item.question(), QuizItemKind.ORDERING),
+                    displayItems(item.question(), QuizItemKind.MATCHING_LEFT),
+                    displayItems(item.question(), QuizItemKind.MATCHING_RIGHT)
                 ))
                 .toList();
 
