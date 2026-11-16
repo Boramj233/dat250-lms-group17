@@ -365,13 +365,6 @@ class ContentServiceTest {
 
     @Test
     @Disabled("Not implemented yet")
-    void contentOrderIsScopedToModule() {
-        // Test insertion/reordering of items without changing another module's order.
-        fail("Not implemented yet");
-    }
-
-    @Test
-    @Disabled("Not implemented yet")
     void studentsOnlySeeContentWithinVisibilityWindow() {
         // Use a fixed/injected clock. Test before opening, during visibility, and
         // after closing, including exact boundaries according to the chosen policy.

@@ -126,6 +126,10 @@ public class QuizService {
             module, title, position, maxAttempts
         );
 
+        if (contentRepository.existsByModule_IdAndPosition(moduleId, position)) {
+            throw new ContentPositionConflictException("Content position is already occupied in this module");
+        }
+
         return contentRepository.save(quiz);
     }
 

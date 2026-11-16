@@ -7,6 +7,7 @@ import java.util.NoSuchElementException;
 import jakarta.validation.Valid;
 
 import no.hvl.dat250.lms.content.api.dto.CreateStaticPageRequest;
+import no.hvl.dat250.lms.content.api.dto.ReorderContentRequest;
 import no.hvl.dat250.lms.content.api.dto.ContentSummaryResponse;
 import no.hvl.dat250.lms.content.api.dto.StaticPageResponse;
 import no.hvl.dat250.lms.content.domain.StaticPage;
@@ -52,6 +53,21 @@ public class ContentController {
                 .body(StaticPageResponse.from(
                     page, courseId, moduleId
                 ));
+    }
+
+    @IsTeacherInCourse
+    @PutMapping(MODULE_CONTENTS_PATH + "/order")
+    public ResponseEntity<Void> reorder(
+            @PathVariable Long courseId,
+            @PathVariable Long moduleId,
+            @Valid @RequestBody ReorderContentRequest request) {
+        contentService.reorder(courseId, moduleId, request.contentIds());
+        return ResponseEntity.noContent().build();
+    }
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<Void> handleInvalidArgument() {
+        return ResponseEntity.badRequest().build();
     }
 
     @IsEnrolledInCourse

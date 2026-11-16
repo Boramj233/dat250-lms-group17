@@ -1,6 +1,10 @@
 package no.hvl.dat250.lms.content.service;
 
 import java.util.List;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 import java.util.NoSuchElementException;
 
 import jakarta.persistence.EntityManager;
@@ -99,6 +103,10 @@ public class ContentService {
             body
         );
 
+        if (contentRepository.existsByModule_IdAndPosition(moduleId, position)) {
+            throw new ContentPositionConflictException("Content position is already occupied in this module");
+        }
+
         return contentRepository.save(page);
     }
 
@@ -122,6 +130,42 @@ public class ContentService {
 
         return contentRepository
             .findByModule_IdOrderByPositionAsc(moduleId);
+    }
+
+    @Transactional
+    public void reorder(Long courseId, Long moduleId, List<Long> contentIds) {
+        if (contentIds == null || contentIds.stream().anyMatch(id -> id == null || id <= 0)) {
+            throw new IllegalArgumentException("Content IDs must be a non-null list of positive IDs");
+        }
+        List<Content> contents = findContentsByModule(courseId, moduleId);
+        Map<Long, Content> byId = new HashMap<>();
+        Set<Integer> occupiedPositions = new HashSet<>();
+        for (Content content : contents) {
+            byId.put(content.getId(), content);
+            occupiedPositions.add(content.getPosition());
+        }
+        if (contentIds.size() != contents.size() || !new HashSet<>(contentIds).equals(byId.keySet())) {
+            throw new IllegalArgumentException("Order must contain every Content in this module exactly once");
+        }
+        if (contents.isEmpty()) {
+            return;
+        }
+        List<Content> ordered = contentIds.stream().map(byId::get).toList();
+
+        // Temporary positions are outside both the current positions and final 0..n-1.
+        // Flush each phase so swaps never violate the module/position unique constraint.
+        int temporaryPosition = contents.size();
+        for (Content content : ordered) {
+            while (occupiedPositions.contains(temporaryPosition)) {
+                temporaryPosition++;
+            }
+            content.changePosition(temporaryPosition++);
+        }
+        contentRepository.flush();
+        for (int position = 0; position < ordered.size(); position++) {
+            ordered.get(position).changePosition(position);
+        }
+        contentRepository.flush();
     }
 
     // Find any Content subtype by ID.
