@@ -23,6 +23,9 @@ public class CodingExercise extends Content {
     )
     private String starterRepositoryUrl;
 
+    @Column(name = "starter_code", length = 10000)
+    private String starterCode;
+
     @Column(name = "deadline")
     private Instant deadline;
 
@@ -39,6 +42,20 @@ public class CodingExercise extends Content {
             int position,
             String instructions,
             String starterRepositoryUrl,
+            Instant deadline,
+            boolean allowLateSubmission) {
+
+        this(module, title, position, instructions, starterRepositoryUrl, null,
+            deadline, allowLateSubmission);
+    }
+
+    public CodingExercise(
+            Module module,
+            String title,
+            int position,
+            String instructions,
+            String starterRepositoryUrl,
+            String starterCode,
             Instant deadline,
             boolean allowLateSubmission) {
 
@@ -59,6 +76,13 @@ public class CodingExercise extends Content {
             );
         }
 
+        if (starterCode != null && starterCode.length() > 10000) {
+            throw new IllegalArgumentException(
+                "Starter code must not exceed 10000 characters"
+            );
+        }
+
+        this.starterCode = starterCode;
         this.instructions = instructions;
         this.starterRepositoryUrl = starterRepositoryUrl;
         this.deadline = deadline;
@@ -71,6 +95,10 @@ public class CodingExercise extends Content {
 
     public String getStarterRepositoryUrl() {
         return starterRepositoryUrl;
+    }
+
+    public String getStarterCode() {
+        return starterCode;
     }
 
     public Instant getDeadline() {

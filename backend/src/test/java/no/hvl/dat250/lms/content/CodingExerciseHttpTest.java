@@ -17,6 +17,10 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import org.springframework.http.MediaType;
+import no.hvl.dat250.lms.security.AuthenticatedUser;
+import org.springframework.security.authentication.TestingAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.web.method.annotation.AuthenticationPrincipalArgumentResolver;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
@@ -38,6 +42,9 @@ class CodingExerciseHttpTest {
     @BeforeEach
     void setUp() {
 
+        // DTO/controller tests only; real filters are covered by CodingExerciseSecurityIntegrationTest.
+        SecurityContextHolder.getContext().setAuthentication(
+            new TestingAuthenticationToken(new AuthenticatedUser(5L), null));
         validator = new LocalValidatorFactoryBean();
         validator.afterPropertiesSet();
 
@@ -45,12 +52,14 @@ class CodingExerciseHttpTest {
             .standaloneSetup(
                 new CodingExerciseController(exerciseService)
             )
+            .setCustomArgumentResolvers(new AuthenticationPrincipalArgumentResolver())
             .setValidator(validator)
             .build();
     }
 
     @AfterEach
     void tearDown() {
+        SecurityContextHolder.clearContext();
         validator.close();
     }
 
@@ -93,7 +102,9 @@ class CodingExerciseHttpTest {
             eq("Implement GET and POST endpoints."),
             eq("https://gitlab.com/example/starter"),
             isNull(),
-            eq(true)
+            isNull(),
+            eq(true),
+            eq(5L)
         )).thenReturn(exercise);
 
         mockMvc.perform(
