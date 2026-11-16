@@ -9,6 +9,20 @@ import no.hvl.dat250.lms.content.domain.ChoiceOption;
 
 public class QuizGrader {
 
+    public boolean isTextCorrect(Set<String> acceptedAnswers, String textAnswer) {
+        if (acceptedAnswers == null || acceptedAnswers.isEmpty()) {
+            throw new IllegalStateException("Fill-in question has no accepted answers");
+        }
+        if (textAnswer == null || textAnswer.length() > 255) {
+            throw new IllegalArgumentException("Text answer is required and must not exceed 255 characters");
+        }
+        if (textAnswer.isBlank()) {
+            return false;
+        }
+        String normalized = textAnswer.strip();
+        return acceptedAnswers.stream().anyMatch(answer -> answer.strip().equalsIgnoreCase(normalized));
+    }
+
     public boolean isCorrect(
             List<ChoiceOption> options,
             List<Long> selectedOptionIds) {

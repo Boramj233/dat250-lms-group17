@@ -5,6 +5,9 @@ import java.util.List;
 import java.util.NoSuchElementException;
 
 import no.hvl.dat250.lms.content.domain.Content;
+import no.hvl.dat250.lms.content.domain.QuestionType;
+import no.hvl.dat250.lms.content.repository.QuizAttemptRepository;
+import org.hibernate.Hibernate;
 import no.hvl.dat250.lms.content.domain.Quiz;
 import no.hvl.dat250.lms.content.domain.QuizQuestion;
 import no.hvl.dat250.lms.content.domain.ChoiceOption;
@@ -26,17 +29,20 @@ public class QuizService {
     private final QuizQuestionRepository questionRepository;
     private final ChoiceOptionRepository optionRepository;
     private final ModuleService moduleService;
+    private final QuizAttemptRepository attemptRepository;
 
     public QuizService(
             ContentRepository contentRepository,
             QuizQuestionRepository questionRepository,
             ChoiceOptionRepository optionRepository,
-            ModuleService moduleService) {
+            ModuleService moduleService,
+            QuizAttemptRepository attemptRepository) {
 
         this.contentRepository = contentRepository;
         this.questionRepository = questionRepository;
         this.optionRepository = optionRepository;
         this.moduleService = moduleService;
+        this.attemptRepository = attemptRepository;
     }
 
     // Data needed to create one option.
@@ -47,8 +53,7 @@ public class QuizService {
             boolean correct
     ) {}
 
-    //  Find Quiz
-        public record QuestionWithOptions(
+    public record QuestionWithOptions(
         QuizQuestion question,
         List<ChoiceOption> options
     ) {}
@@ -107,9 +112,17 @@ public class QuizService {
             String hint,
             List<OptionDraft> options) {
 
-        if (quizId == null) {
-            throw new IllegalArgumentException(
-                "Quiz ID is required");
+        return addQuestion(quizId, questionText, position, hint, options,
+            QuestionType.MULTIPLE_CHOICE, List.of());
+    }
+
+    @Transactional
+    public QuizQuestion addQuestion(
+            Long quizId, String questionText, int position, String hint,
+            List<OptionDraft> options, QuestionType type, List<String> acceptedAnswers) {
+
+        if (quizId == null || quizId <= 0) {
+            throw new IllegalArgumentException("Positive Quiz ID is required");
         }
 
         if (questionText == null || questionText.isBlank()) {
@@ -122,20 +135,38 @@ public class QuizService {
                 "Question position must not be negative");
         }
 
-        validateOptions(options);
+        if (type == null) {
+            throw new IllegalArgumentException("Question type is required");
+        }
+        if (type == QuestionType.FILL_IN_BLANK) {
+            if (options != null && !options.isEmpty()) {
+                throw new IllegalArgumentException("Fill-in questions must not contain options");
+            }
+            options = List.of();
+        } else {
+            validateOptions(options);
+            if (type == QuestionType.TRUE_FALSE && (options.size() != 2
+                    || options.stream().filter(OptionDraft::correct).count() != 1)) {
+                throw new IllegalArgumentException("True/false questions need two options and exactly one correct option");
+            }
+        }
 
         Content content = contentRepository.findById(quizId)
                 .orElseThrow(() -> new NoSuchElementException(
                     "Quiz not found: " + quizId));
 
-        if (!(content instanceof Quiz quiz)) {
+        if (!(Hibernate.unproxy(content) instanceof Quiz quiz)) {
             throw new NoSuchElementException(
                 "Quiz not found: " + quizId);
         }
 
+        if (attemptRepository.existsByQuiz_Id(quizId)) {
+            throw new QuizQuestionConflictException();
+        }
+
         QuizQuestion question = questionRepository.save(
             new QuizQuestion(
-                quiz, questionText, position, hint
+                quiz, questionText, position, hint, type, acceptedAnswers
             )
         );
 
@@ -192,6 +223,16 @@ public class QuizService {
     }
 
     @Transactional(readOnly = true)
+    public Long courseId(Long quizId) {
+        Content content = contentRepository.findById(quizId)
+            .orElseThrow(() -> new NoSuchElementException("Quiz not found"));
+        if (!(Hibernate.unproxy(content) instanceof Quiz quiz)) {
+            throw new NoSuchElementException("Quiz not found");
+        }
+        return quiz.getModule().getCourse().getId();
+    }
+
+    @Transactional(readOnly = true)
     public QuizWithQuestions findQuizWithQuestions(Long quizId) {
 
         if (quizId == null) {
@@ -205,7 +246,7 @@ public class QuizService {
                 "Quiz not found: " + quizId
             ));
 
-        if (!(content instanceof Quiz quiz)) {
+        if (!(Hibernate.unproxy(content) instanceof Quiz quiz)) {
             throw new NoSuchElementException(
                 "Quiz not found: " + quizId
             );

@@ -1,5 +1,7 @@
 package no.hvl.dat250.lms.content.api.dto;
 
+import no.hvl.dat250.lms.content.domain.QuestionType;
+
 import no.hvl.dat250.lms.content.domain.QuizQuestion;
 
 public record QuizQuestionResponse(
@@ -7,7 +9,8 @@ public record QuizQuestionResponse(
     Long quizId,
     String questionText,
     int position,
-    String hint
+    String hint,
+    QuestionType type
 ) {
     public static QuizQuestionResponse from(
             QuizQuestion question,
@@ -18,7 +21,8 @@ public record QuizQuestionResponse(
             quizId,
             question.getQuestionText(),
             question.getPosition(),
-            question.getHint()
+            question.getHint(),
+            question.getType()
         );
     }
 }

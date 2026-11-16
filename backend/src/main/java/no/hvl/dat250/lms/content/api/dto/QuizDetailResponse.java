@@ -1,6 +1,8 @@
 
 package no.hvl.dat250.lms.content.api.dto;
 
+import no.hvl.dat250.lms.content.domain.QuestionType;
+
 import java.util.List;
 
 import no.hvl.dat250.lms.content.domain.Quiz;
@@ -21,6 +23,7 @@ public record QuizDetailResponse(
         Long id,
         String questionText,
         int position,
+        QuestionType type,
         List<OptionResponse> options
     ) {}
 
@@ -41,6 +44,7 @@ public record QuizDetailResponse(
                     item.question().getId(),
                     item.question().getQuestionText(),
                     item.question().getPosition(),
+                    item.question().getType(),
                     item.options().stream()
                         .map(option -> new OptionResponse(
                             option.getId(),

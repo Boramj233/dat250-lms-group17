@@ -2,10 +2,12 @@
 package no.hvl.dat250.lms.content;
 
 import java.time.Instant;
+import java.util.List;
 
 import no.hvl.dat250.lms.content.api.controllers.QuizAttemptController;
 import no.hvl.dat250.lms.content.domain.QuizAttempt;
 import no.hvl.dat250.lms.content.service.QuizAttemptService;
+import no.hvl.dat250.lms.content.service.QuizAttemptService.AttemptResult;
 import no.hvl.dat250.lms.security.AuthenticatedUser;
 import org.springframework.security.authentication.TestingAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -121,11 +123,11 @@ class QuizAttemptHttpTest {
         when(savedAttempt.getCorrectCount()).thenReturn(1);
         when(savedAttempt.getTotalQuestions()).thenReturn(2);
 
-        when(attemptService.submitAttempt(
+        when(attemptService.submitAttemptWithFeedback(
             eq(7L),
             eq(5L),
             anyList()
-        )).thenReturn(savedAttempt);
+        )).thenReturn(new AttemptResult(savedAttempt, List.of()));
 
         mockMvc.perform(
             post("/api/quizzes/7/attempts")
@@ -147,7 +149,7 @@ class QuizAttemptHttpTest {
         .andExpect(jsonPath("$.correctCount").value(1))
         .andExpect(jsonPath("$.totalQuestions").value(2));
 
-        verify(attemptService).submitAttempt(
+        verify(attemptService).submitAttemptWithFeedback(
             eq(7L),
             eq(5L),
             argThat(answers ->

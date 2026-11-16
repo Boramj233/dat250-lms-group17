@@ -14,6 +14,8 @@ public interface QuizAttemptRepository
         """)
     long countPassing(Long quizId, Long enrollmentId, int percentage);
 
+    boolean existsByQuiz_Id(Long quizId);
+
     long countByEnrollment_IdAndQuiz_Id(
         Long enrollmentId,
         Long quizId

@@ -3,6 +3,7 @@ package no.hvl.dat250.lms.content.service;
 
 import java.time.Instant;
 import java.util.HashMap;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -48,8 +49,23 @@ public class QuizAttemptService {
         this.answerRepository = answerRepository;
     }
 
+    public record QuestionHint(Long questionId, String hint) {
+    }
+
+    public record AttemptResult(QuizAttempt attempt, List<QuestionHint> hints) {
+    }
+
     @Transactional
     public QuizAttempt submitAttempt(
+            Long quizId,
+            Long userId,
+            List<AnswerInput> answers) {
+
+        return submitAttemptWithFeedback(quizId, userId, answers).attempt();
+    }
+
+    @Transactional
+    public AttemptResult submitAttemptWithFeedback(
             Long quizId,
             Long userId,
             List<AnswerInput> answers) {
@@ -111,6 +127,8 @@ public class QuizAttemptService {
             questions.put(item.question().getId(), item);
         }
 
+        List<QuestionHint> hints = new ArrayList<>();
+
         // 6. Save each individual answer.
         for (var graded : result.answers()) {
 
@@ -132,13 +150,18 @@ public class QuizAttemptService {
                 attempt,
                 item.question(),
                 selectedOptions,
-                graded.correct()
+                graded.correct(),
+                graded.textAnswer()
             );
 
             answerRepository.save(answer);
+            String hint = item.question().getHint();
+            if (!graded.correct() && hint != null && !hint.isBlank()) {
+                hints.add(new QuestionHint(graded.questionId(), hint));
+            }
         }
 
         // 7. Transaction commits when the method succeeds.
-        return attempt;
+        return new AttemptResult(attempt, List.copyOf(hints));
     }
 }

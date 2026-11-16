@@ -7,11 +7,12 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.Size;
 
 public record SubmitQuizRequest(
 
         @NotEmpty
-        List<@Valid Answer> answers
+        List<@NotNull @Valid Answer> answers
 
 ) {
 
@@ -21,8 +22,10 @@ public record SubmitQuizRequest(
             @Positive
             Long questionId,
 
-            @NotNull
-            List<@NotNull @Positive Long> selectedOptionIds
+            List<@NotNull @Positive Long> selectedOptionIds,
+
+            @Size(max = 255)
+            String textAnswer
 
     ) {}
 }
