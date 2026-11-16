@@ -11,7 +11,8 @@ public record SubmissionResponse(
         SubmissionType type,
         String payload,
         Instant submittedAt,
-        boolean late
+        boolean late,
+        SubmissionFileResponse file
 ) {
 
     public static SubmissionResponse from(
@@ -23,7 +24,11 @@ public record SubmissionResponse(
             submission.getType(),
             submission.getPayload(),
             submission.getSubmittedAt(),
-            submission.isLate()
+            submission.isLate(),
+            SubmissionFileResponse.from(
+                submission.getFile(),
+                submission.getId()
+            )
         );
     }
 }

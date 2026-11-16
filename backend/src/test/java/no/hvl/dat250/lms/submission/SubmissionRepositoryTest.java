@@ -312,4 +312,32 @@ class SubmissionRepositoryTest {
             )
         );
     }
+    @Test
+    void fileMetadataRoundTripsAlongsideLegacyHistory() {
+        Fixture f = createFixture();
+        Instant time = Instant.parse("2026-11-16T12:00:00Z");
+        Submission old = submissionRepository.saveAndFlush(new Submission(
+                f.assignment(), f.enrollment(), SubmissionType.TEXT, "Earlier answer", time, false));
+        var metadata = new no.hvl.dat250.lms.submission.domain.SubmissionFileMetadata(
+                "lms-submissions", "submissions/version-2", "report.pdf", "application/pdf", 123, "a".repeat(64));
+        Submission saved = submissionRepository.saveAndFlush(Submission.file(
+                f.assignment(), f.enrollment(), metadata, time, false));
+        entityManager.clear();
+        Submission stored = submissionRepository.findById(saved.getId()).orElseThrow();
+        assertEquals(SubmissionType.FILE, stored.getType());
+        assertNull(stored.getPayload());
+        assertEquals("lms-submissions", stored.getFile().getBucket());
+        assertEquals("submissions/version-2", stored.getFile().getObjectKey());
+        assertEquals("report.pdf", stored.getFile().getOriginalFilename());
+        assertEquals("application/pdf", stored.getFile().getMediaType());
+        assertEquals(123, stored.getFile().getSizeBytes());
+        assertEquals("a".repeat(64), stored.getFile().getSha256());
+        Submission legacy = submissionRepository.findById(old.getId()).orElseThrow();
+        assertEquals("Earlier answer", legacy.getPayload());
+        assertNull(legacy.getFile());
+        var history = submissionRepository.findByContent_IdAndSubmittedBy_IdOrderBySubmittedAtDescIdDesc(
+                f.assignment().getId(), f.enrollment().getId());
+        assertEquals(java.util.List.of(saved.getId(), old.getId()), history.stream().map(Submission::getId).toList());
+    }
+
 }
