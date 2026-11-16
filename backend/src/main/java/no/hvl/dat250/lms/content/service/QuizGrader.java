@@ -4,10 +4,24 @@ package no.hvl.dat250.lms.content.service;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 
 import no.hvl.dat250.lms.content.domain.ChoiceOption;
 
 public class QuizGrader {
+
+    public boolean isOrderCorrect(List<UUID> correctOrder, List<UUID> submittedOrder) {
+        if (correctOrder == null || correctOrder.size() < 2 || correctOrder.size() > 20
+                || correctOrder.stream().anyMatch(id -> id == null)
+                || new HashSet<>(correctOrder).size() != correctOrder.size()) {
+            throw new IllegalStateException("Saved ordering question must contain 2–20 distinct items");
+        }
+        if (submittedOrder == null || submittedOrder.size() != correctOrder.size()
+                || !new HashSet<>(submittedOrder).equals(new HashSet<>(correctOrder))) {
+            throw new IllegalArgumentException("Submitted order must contain every question item exactly once");
+        }
+        return submittedOrder.equals(correctOrder);
+    }
 
     public boolean isTextCorrect(Set<String> acceptedAnswers, String textAnswer) {
         if (acceptedAnswers == null || acceptedAnswers.isEmpty()) {

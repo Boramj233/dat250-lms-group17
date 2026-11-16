@@ -46,7 +46,8 @@ public class QuizAttemptController {
             .map(answer -> new AnswerInput(
                 answer.questionId(),
                 answer.selectedOptionIds(),
-                answer.textAnswer()
+                answer.textAnswer(),
+                answer.orderedItemIds()
             ))
             .toList();
 

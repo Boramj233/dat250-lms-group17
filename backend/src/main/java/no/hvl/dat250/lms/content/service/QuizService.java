@@ -2,6 +2,12 @@
 package no.hvl.dat250.lms.content.service;
 
 import java.util.List;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import no.hvl.dat250.lms.content.domain.QuizItem;
+import no.hvl.dat250.lms.content.repository.QuizItemRepository;
 import java.util.NoSuchElementException;
 
 import no.hvl.dat250.lms.content.domain.Content;
@@ -30,19 +36,22 @@ public class QuizService {
     private final ChoiceOptionRepository optionRepository;
     private final ModuleService moduleService;
     private final QuizAttemptRepository attemptRepository;
+    private final QuizItemRepository itemRepository;
 
     public QuizService(
             ContentRepository contentRepository,
             QuizQuestionRepository questionRepository,
             ChoiceOptionRepository optionRepository,
             ModuleService moduleService,
-            QuizAttemptRepository attemptRepository) {
+            QuizAttemptRepository attemptRepository,
+            QuizItemRepository itemRepository) {
 
         this.contentRepository = contentRepository;
         this.questionRepository = questionRepository;
         this.optionRepository = optionRepository;
         this.moduleService = moduleService;
         this.attemptRepository = attemptRepository;
+        this.itemRepository = itemRepository;
     }
 
     // Data needed to create one option.
@@ -52,6 +61,12 @@ public class QuizService {
             int position,
             boolean correct
     ) {}
+
+    public record ItemDraft(String key, String text) {
+    }
+
+    public record OrderingDraft(List<ItemDraft> items, List<String> correctOrder) {
+    }
 
     public record QuestionWithOptions(
         QuizQuestion question,
@@ -121,6 +136,15 @@ public class QuizService {
             Long quizId, String questionText, int position, String hint,
             List<OptionDraft> options, QuestionType type, List<String> acceptedAnswers) {
 
+        return addQuestion(quizId, questionText, position, hint, options, type, acceptedAnswers, null);
+    }
+
+    @Transactional
+    public QuizQuestion addQuestion(
+            Long quizId, String questionText, int position, String hint,
+            List<OptionDraft> options, QuestionType type, List<String> acceptedAnswers,
+            OrderingDraft ordering) {
+
         if (quizId == null || quizId <= 0) {
             throw new IllegalArgumentException("Positive Quiz ID is required");
         }
@@ -138,9 +162,14 @@ public class QuizService {
         if (type == null) {
             throw new IllegalArgumentException("Question type is required");
         }
-        if (type == QuestionType.FILL_IN_BLANK) {
+        if (type == QuestionType.ORDERING) {
+            validateOrdering(ordering);
+        } else if (ordering != null) {
+            throw new IllegalArgumentException("Only ordering questions may contain an ordering definition");
+        }
+        if (type == QuestionType.FILL_IN_BLANK || type == QuestionType.ORDERING) {
             if (options != null && !options.isEmpty()) {
-                throw new IllegalArgumentException("Fill-in questions must not contain options");
+                throw new IllegalArgumentException("Fill-in and ordering questions must not contain options");
             }
             options = List.of();
         } else {
@@ -181,7 +210,35 @@ public class QuizService {
             );
         }
 
+        if (type == QuestionType.ORDERING) {
+            Map<String, QuizItem> itemsByKey = new LinkedHashMap<>();
+            for (ItemDraft draft : ordering.items()) {
+                itemsByKey.put(draft.key(), itemRepository.save(new QuizItem(question, draft.text())));
+            }
+            List<QuizItem> correctOrder = ordering.correctOrder().stream().map(itemsByKey::get).toList();
+            question.configureOrdering(new ArrayList<>(itemsByKey.values()), correctOrder);
+        }
         return question;
+    }
+
+    private void validateOrdering(OrderingDraft ordering) {
+        if (ordering == null || ordering.items() == null || ordering.correctOrder() == null
+                || ordering.items().size() < 2 || ordering.items().size() > 20) {
+            throw new IllegalArgumentException("Ordering questions require 2–20 items and a correct order");
+        }
+        var keys = new HashSet<String>();
+        var labels = new HashSet<String>();
+        for (ItemDraft item : ordering.items()) {
+            if (item == null || item.key() == null || item.key().isBlank() || item.key().length() > 64
+                    || item.text() == null || item.text().isBlank() || item.text().length() > 255
+                    || !keys.add(item.key()) || !labels.add(item.text().strip())) {
+                throw new IllegalArgumentException("Ordering item keys and display texts must be nonblank and unique");
+            }
+        }
+        if (ordering.correctOrder().size() != keys.size()
+                || !new HashSet<>(ordering.correctOrder()).equals(keys)) {
+            throw new IllegalArgumentException("Correct order must contain every item key exactly once");
+        }
     }
 
     private void validateOptions(List<OptionDraft> options) {
@@ -256,13 +313,14 @@ public class QuizService {
             questionRepository
                 .findByQuiz_IdOrderByPositionAsc(quizId)
                 .stream()
-                .map(question -> new QuestionWithOptions(
-                    question,
-                    optionRepository
-                        .findByQuestion_IdOrderByPositionAsc(
-                            question.getId()
-                        )
-                ))
+                .map(question -> {
+                    // DTO conversion happens after this transaction, including when OSIV is disabled.
+                    if (question.getType() == QuestionType.ORDERING) {
+                        question.getItems();
+                    }
+                    return new QuestionWithOptions(question,
+                        optionRepository.findByQuestion_IdOrderByPositionAsc(question.getId()));
+                })
                 .toList();
 
         return new QuizWithQuestions(quiz, questions);

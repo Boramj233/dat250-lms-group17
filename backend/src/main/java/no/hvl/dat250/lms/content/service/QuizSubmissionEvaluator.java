@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 import no.hvl.dat250.lms.content.domain.QuestionType;
 import no.hvl.dat250.lms.content.service.QuizService.QuizWithQuestions;
@@ -12,14 +13,19 @@ public class QuizSubmissionEvaluator {
 
     private final QuizGrader grader = new QuizGrader();
 
-    public record AnswerInput(Long questionId, List<Long> selectedOptionIds, String textAnswer) {
+    public record AnswerInput(Long questionId, List<Long> selectedOptionIds, String textAnswer,
+                              List<UUID> orderedItemIds) {
+        public AnswerInput(Long questionId, List<Long> selectedOptionIds, String textAnswer) {
+            this(questionId, selectedOptionIds, textAnswer, null);
+        }
         public AnswerInput(Long questionId, List<Long> selectedOptionIds) {
-            this(questionId, selectedOptionIds, null);
+            this(questionId, selectedOptionIds, null, null);
         }
     }
 
     public record GradedAnswer(
-            Long questionId, List<Long> selectedOptionIds, boolean correct, String textAnswer) {
+            Long questionId, List<Long> selectedOptionIds, boolean correct, String textAnswer,
+            List<UUID> orderedItemIds) {
     }
 
     public record Result(int correctCount, int totalQuestions, List<GradedAnswer> answers) {
@@ -56,28 +62,46 @@ public class QuizSubmissionEvaluator {
             }
 
             boolean correct;
-            List<Long> selected;
-            if (item.question().getType() == QuestionType.FILL_IN_BLANK) {
-                if (answer.selectedOptionIds() != null && !answer.selectedOptionIds().isEmpty()) {
-                    throw new IllegalArgumentException("Fill-in answers must not contain selected options");
+            List<Long> selected = List.of();
+            List<UUID> ordered = List.of();
+            QuestionType type = item.question().getType();
+            if (type != QuestionType.ORDERING && answer.orderedItemIds() != null
+                    && !answer.orderedItemIds().isEmpty()) {
+                throw new IllegalArgumentException("Only ordering answers may contain ordered items");
+            }
+            switch (type) {
+                case ORDERING -> {
+                    if (answer.textAnswer() != null || (answer.selectedOptionIds() != null
+                            && !answer.selectedOptionIds().isEmpty())) {
+                        throw new IllegalArgumentException("Ordering answers must not contain text or selected options");
+                    }
+                    List<UUID> expected = item.question().getCorrectOrder().stream()
+                        .map(value -> value.getId()).toList();
+                    correct = grader.isOrderCorrect(expected, answer.orderedItemIds());
+                    ordered = List.copyOf(answer.orderedItemIds());
                 }
-                correct = grader.isTextCorrect(item.question().getAcceptedAnswers(), answer.textAnswer());
-                selected = List.of();
-            } else {
-                if (answer.textAnswer() != null) {
-                    throw new IllegalArgumentException("Choice answers must not contain text");
+                case FILL_IN_BLANK -> {
+                    if (answer.selectedOptionIds() != null && !answer.selectedOptionIds().isEmpty()) {
+                        throw new IllegalArgumentException("Fill-in answers must not contain selected options");
+                    }
+                    correct = grader.isTextCorrect(item.question().getAcceptedAnswers(), answer.textAnswer());
                 }
-                selected = answer.selectedOptionIds();
-                if (item.question().getType() == QuestionType.TRUE_FALSE
-                        && (selected == null || selected.size() != 1)) {
-                    throw new IllegalArgumentException("True/false answers require exactly one option");
+                case MULTIPLE_CHOICE, TRUE_FALSE -> {
+                    if (answer.textAnswer() != null) {
+                        throw new IllegalArgumentException("Choice answers must not contain text");
+                    }
+                    selected = answer.selectedOptionIds();
+                    if (type == QuestionType.TRUE_FALSE && (selected == null || selected.size() != 1)) {
+                        throw new IllegalArgumentException("True/false answers require exactly one option");
+                    }
+                    correct = grader.isCorrect(item.options(), selected);
                 }
-                correct = grader.isCorrect(item.options(), selected);
+                default -> throw new IllegalStateException("Unsupported question type");
             }
             if (correct) {
                 correctCount++;
             }
-            gradedAnswers.add(new GradedAnswer(questionId, List.copyOf(selected), correct, answer.textAnswer()));
+            gradedAnswers.add(new GradedAnswer(questionId, List.copyOf(selected), correct, answer.textAnswer(), ordered));
         }
         return new Result(correctCount, gradedAnswers.size(), List.copyOf(gradedAnswers));
     }

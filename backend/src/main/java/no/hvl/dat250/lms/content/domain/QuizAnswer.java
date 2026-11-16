@@ -3,6 +3,8 @@ package no.hvl.dat250.lms.content.domain;
 
 import java.util.HashSet;
 import java.util.Set;
+import java.util.List;
+import java.util.ArrayList;
 
 import jakarta.persistence.*;
 
@@ -46,8 +48,25 @@ public class QuizAnswer {
 
     public String getTextAnswer() { return textAnswer; }
 
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(name = "quiz_answer_ordered_items",
+        joinColumns = @JoinColumn(name = "answer_id"),
+        inverseJoinColumns = @JoinColumn(name = "item_id"),
+        uniqueConstraints = @UniqueConstraint(columnNames = {"answer_id", "item_id"}))
+    @OrderColumn(name = "order_position", nullable = false)
+    private List<QuizItem> orderedItems = new ArrayList<>();
+
+    public List<QuizItem> getOrderedItems() {
+        return List.copyOf(orderedItems);
+    }
+
     public QuizAnswer(QuizAttempt attempt, QuizQuestion question, Set<ChoiceOption> selectedOptions,
                       boolean correct, String textAnswer) {
+        this(attempt, question, selectedOptions, correct, textAnswer, List.of());
+    }
+
+    public QuizAnswer(QuizAttempt attempt, QuizQuestion question, Set<ChoiceOption> selectedOptions,
+                      boolean correct, String textAnswer, List<QuizItem> orderedItems) {
         this(attempt, question, selectedOptions, correct);
         if (textAnswer != null && textAnswer.length() > 255) {
             throw new IllegalArgumentException("Text answer must not exceed 255 characters");
@@ -59,6 +78,20 @@ public class QuizAnswer {
         } else if (textAnswer != null) {
             throw new IllegalArgumentException("Choice answers must not include text");
         }
+        if (orderedItems == null) {
+            throw new IllegalArgumentException("Ordered items must not be null");
+        }
+        if (question.getType() == QuestionType.ORDERING) {
+            if (!selectedOptions.isEmpty() || textAnswer != null
+                    || orderedItems.size() != question.getItems().size()
+                    || orderedItems.size() < 2 || orderedItems.size() > 20
+                    || !new HashSet<>(orderedItems).equals(new HashSet<>(question.getItems()))) {
+                throw new IllegalArgumentException("Ordering answer must contain every question item exactly once");
+            }
+        } else if (!orderedItems.isEmpty()) {
+            throw new IllegalArgumentException("Only ordering answers may contain ordered items");
+        }
+        this.orderedItems.addAll(orderedItems);
         this.textAnswer = textAnswer;
     }
 

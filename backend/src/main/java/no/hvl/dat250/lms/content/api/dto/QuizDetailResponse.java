@@ -4,6 +4,8 @@ package no.hvl.dat250.lms.content.api.dto;
 import no.hvl.dat250.lms.content.domain.QuestionType;
 
 import java.util.List;
+import java.util.UUID;
+import java.util.Comparator;
 
 import no.hvl.dat250.lms.content.domain.Quiz;
 import no.hvl.dat250.lms.content.service.QuizService.QuizWithQuestions;
@@ -24,8 +26,12 @@ public record QuizDetailResponse(
         String questionText,
         int position,
         QuestionType type,
-        List<OptionResponse> options
+        List<OptionResponse> options,
+        List<ItemResponse> items
     ) {}
+
+    public record ItemResponse(UUID id, String text) {
+    }
 
     public record OptionResponse(
         Long id,
@@ -51,6 +57,10 @@ public record QuizDetailResponse(
                             option.getOptionText(),
                             option.getPosition()
                         ))
+                        .toList(),
+                    item.question().getType() != QuestionType.ORDERING ? List.of() : item.question().getItems().stream()
+                        .map(value -> new ItemResponse(value.getId(), value.getText()))
+                        .sorted(Comparator.comparing(value -> value.id().toString()))
                         .toList()
                 ))
                 .toList();
