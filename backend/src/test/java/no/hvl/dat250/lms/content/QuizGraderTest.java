@@ -7,6 +7,7 @@ import java.util.UUID;
 
 import no.hvl.dat250.lms.content.domain.ChoiceOption;
 import no.hvl.dat250.lms.content.service.QuizGrader;
+import no.hvl.dat250.lms.content.service.QuizGrader.MatchIds;
 
 import org.junit.jupiter.api.Test;
 
@@ -16,6 +17,32 @@ import static org.mockito.Mockito.*;
 class QuizGraderTest {
 
     private final QuizGrader grader = new QuizGrader();
+
+    @Test
+    void matchingIgnoresPairArrayOrderButRequiresCorrectAssociations() {
+        UUID leftA = UUID.randomUUID(), leftB = UUID.randomUUID();
+        UUID rightA = UUID.randomUUID(), rightB = UUID.randomUUID();
+        var key = List.of(new MatchIds(leftA, rightA), new MatchIds(leftB, rightB));
+        assertTrue(grader.isMatchingCorrect(key, List.of(key.get(1), key.get(0))));
+        assertFalse(grader.isMatchingCorrect(key, List.of(new MatchIds(leftA, rightB), new MatchIds(leftB, rightA))));
+    }
+
+    @Test
+    void matchingRejectsIncompleteDuplicateReversedAndForeignSides() {
+        UUID leftA = UUID.randomUUID(), leftB = UUID.randomUUID();
+        UUID rightA = UUID.randomUUID(), rightB = UUID.randomUUID();
+        var key = List.of(new MatchIds(leftA, rightA), new MatchIds(leftB, rightB));
+        assertThrows(IllegalArgumentException.class, () -> grader.isMatchingCorrect(key, null));
+        assertThrows(IllegalArgumentException.class, () -> grader.isMatchingCorrect(key, List.of(key.get(0))));
+        assertThrows(IllegalArgumentException.class, () -> grader.isMatchingCorrect(key, List.of(key.get(0), key.get(0))));
+        assertThrows(IllegalArgumentException.class, () -> grader.isMatchingCorrect(key,
+            List.of(key.get(0), new MatchIds(leftB, rightA))));
+        assertThrows(IllegalArgumentException.class, () -> grader.isMatchingCorrect(key,
+            List.of(key.get(0), new MatchIds(rightB, leftB))));
+        assertThrows(IllegalArgumentException.class, () -> grader.isMatchingCorrect(key,
+            List.of(key.get(0), new MatchIds(leftB, UUID.randomUUID()))));
+        assertThrows(IllegalStateException.class, () -> grader.isMatchingCorrect(List.of(key.get(0)), key));
+    }
 
     @Test
     void orderingRequiresExactSequenceRatherThanSetEquality() {

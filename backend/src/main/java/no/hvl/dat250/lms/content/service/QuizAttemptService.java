@@ -15,6 +15,7 @@ import no.hvl.dat250.lms.content.domain.Quiz;
 import no.hvl.dat250.lms.content.domain.QuizAnswer;
 import no.hvl.dat250.lms.content.domain.QuizAttempt;
 import no.hvl.dat250.lms.content.domain.QuizItem;
+import no.hvl.dat250.lms.content.domain.QuizMatch;
 import java.util.UUID;
 
 import no.hvl.dat250.lms.content.repository.QuizAnswerRepository;
@@ -154,13 +155,18 @@ public class QuizAttemptService {
             }
             List<QuizItem> orderedItems = graded.orderedItemIds().stream().map(itemsById::get).toList();
 
+            List<QuizMatch> matches = graded.matches().stream()
+                .map(pair -> new QuizMatch(itemsById.get(pair.leftItemId()), itemsById.get(pair.rightItemId())))
+                .toList();
+
             QuizAnswer answer = new QuizAnswer(
                 attempt,
                 item.question(),
                 selectedOptions,
                 graded.correct(),
                 graded.textAnswer(),
-                orderedItems
+                orderedItems,
+                matches
             );
 
             answerRepository.save(answer);

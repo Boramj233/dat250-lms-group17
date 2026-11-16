@@ -6,7 +6,10 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Set;
 import no.hvl.dat250.lms.content.domain.QuizItem;
+import no.hvl.dat250.lms.content.domain.QuizItemKind;
+import no.hvl.dat250.lms.content.domain.QuizMatch;
 import no.hvl.dat250.lms.content.repository.QuizItemRepository;
 import java.util.NoSuchElementException;
 
@@ -63,6 +66,13 @@ public class QuizService {
     ) {}
 
     public record ItemDraft(String key, String text) {
+    }
+
+    public record MatchDraft(String leftKey, String rightKey) {
+    }
+
+    public record MatchingDraft(List<ItemDraft> leftItems, List<ItemDraft> rightItems,
+                                List<MatchDraft> correctMatches) {
     }
 
     public record OrderingDraft(List<ItemDraft> items, List<String> correctOrder) {
@@ -144,6 +154,14 @@ public class QuizService {
             Long quizId, String questionText, int position, String hint,
             List<OptionDraft> options, QuestionType type, List<String> acceptedAnswers,
             OrderingDraft ordering) {
+        return addQuestion(quizId, questionText, position, hint, options, type, acceptedAnswers, ordering, null);
+    }
+
+    @Transactional
+    public QuizQuestion addQuestion(
+            Long quizId, String questionText, int position, String hint,
+            List<OptionDraft> options, QuestionType type, List<String> acceptedAnswers,
+            OrderingDraft ordering, MatchingDraft matching) {
 
         if (quizId == null || quizId <= 0) {
             throw new IllegalArgumentException("Positive Quiz ID is required");
@@ -167,9 +185,14 @@ public class QuizService {
         } else if (ordering != null) {
             throw new IllegalArgumentException("Only ordering questions may contain an ordering definition");
         }
-        if (type == QuestionType.FILL_IN_BLANK || type == QuestionType.ORDERING) {
+        if (type == QuestionType.MATCHING) {
+            validateMatching(matching);
+        } else if (matching != null) {
+            throw new IllegalArgumentException("Only matching questions may contain a matching definition");
+        }
+        if (type == QuestionType.FILL_IN_BLANK || type == QuestionType.ORDERING || type == QuestionType.MATCHING) {
             if (options != null && !options.isEmpty()) {
-                throw new IllegalArgumentException("Fill-in and ordering questions must not contain options");
+                throw new IllegalArgumentException("Fill-in, ordering and matching questions must not contain options");
             }
             options = List.of();
         } else {
@@ -218,7 +241,60 @@ public class QuizService {
             List<QuizItem> correctOrder = ordering.correctOrder().stream().map(itemsByKey::get).toList();
             question.configureOrdering(new ArrayList<>(itemsByKey.values()), correctOrder);
         }
+        if (type == QuestionType.MATCHING) {
+            Map<String, QuizItem> leftItems = saveMatchingItems(question, matching.leftItems(), QuizItemKind.MATCHING_LEFT);
+            Map<String, QuizItem> rightItems = saveMatchingItems(question, matching.rightItems(), QuizItemKind.MATCHING_RIGHT);
+            List<QuizItem> items = new ArrayList<>(leftItems.values());
+            items.addAll(rightItems.values());
+            List<QuizMatch> correctMatches = matching.correctMatches().stream()
+                .map(pair -> new QuizMatch(leftItems.get(pair.leftKey()), rightItems.get(pair.rightKey())))
+                .toList();
+            question.configureMatching(items, correctMatches);
+        }
         return question;
+    }
+
+    private Map<String, QuizItem> saveMatchingItems(QuizQuestion question, List<ItemDraft> drafts, QuizItemKind kind) {
+        Map<String, QuizItem> itemsByKey = new LinkedHashMap<>();
+        for (ItemDraft draft : drafts) {
+            itemsByKey.put(draft.key(), itemRepository.save(new QuizItem(question, draft.text(), kind)));
+        }
+        return itemsByKey;
+    }
+
+    private void validateMatching(MatchingDraft matching) {
+        if (matching == null || matching.correctMatches() == null) {
+            throw new IllegalArgumentException("Matching definition and correct matches are required");
+        }
+        var leftKeys = validateMatchingSide(matching.leftItems());
+        var rightKeys = validateMatchingSide(matching.rightItems());
+        if (leftKeys.size() != rightKeys.size() || matching.correctMatches().size() != leftKeys.size()) {
+            throw new IllegalArgumentException("Matching sides and pairs must have equal size");
+        }
+        var usedLeft = new HashSet<String>();
+        var usedRight = new HashSet<String>();
+        for (MatchDraft pair : matching.correctMatches()) {
+            if (pair == null || !leftKeys.contains(pair.leftKey()) || !rightKeys.contains(pair.rightKey())
+                    || !usedLeft.add(pair.leftKey()) || !usedRight.add(pair.rightKey())) {
+                throw new IllegalArgumentException("Correct matches must use every left and right key exactly once");
+            }
+        }
+    }
+
+    private Set<String> validateMatchingSide(List<ItemDraft> items) {
+        if (items == null || items.size() < 2 || items.size() > 20) {
+            throw new IllegalArgumentException("Each matching side requires 2–20 items");
+        }
+        var keys = new HashSet<String>();
+        var labels = new HashSet<String>();
+        for (ItemDraft item : items) {
+            if (item == null || item.key() == null || item.key().isBlank() || item.key().length() > 64
+                    || item.text() == null || item.text().isBlank() || item.text().length() > 255
+                    || !keys.add(item.key()) || !labels.add(item.text().strip())) {
+                throw new IllegalArgumentException("Each side requires unique, nonblank item keys and texts");
+            }
+        }
+        return keys;
     }
 
     private void validateOrdering(OrderingDraft ordering) {
@@ -315,7 +391,7 @@ public class QuizService {
                 .stream()
                 .map(question -> {
                     // DTO conversion happens after this transaction, including when OSIV is disabled.
-                    if (question.getType() == QuestionType.ORDERING) {
+                    if (question.getType() == QuestionType.ORDERING || question.getType() == QuestionType.MATCHING) {
                         question.getItems();
                     }
                     return new QuestionWithOptions(question,

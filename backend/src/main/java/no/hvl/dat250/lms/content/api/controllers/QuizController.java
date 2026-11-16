@@ -18,6 +18,8 @@ import no.hvl.dat250.lms.content.service.QuizService;
 import no.hvl.dat250.lms.content.service.QuizService.OptionDraft;
 import no.hvl.dat250.lms.content.service.QuizService.ItemDraft;
 import no.hvl.dat250.lms.content.service.QuizService.OrderingDraft;
+import no.hvl.dat250.lms.content.service.QuizService.MatchingDraft;
+import no.hvl.dat250.lms.content.service.QuizService.MatchDraft;
 
 import no.hvl.dat250.lms.content.service.QuizQuestionConflictException;
 import no.hvl.dat250.lms.security.auth.annotations.IsTeacherInCourse;
@@ -76,7 +78,18 @@ public class QuizController {
             .toList();
 
         QuizQuestion question;
-        if (request.ordering() == null) {
+        if (request.matching() != null) {
+            if (request.ordering() != null) {
+                throw new IllegalArgumentException("Ordering and matching definitions cannot be combined");
+            }
+            MatchingDraft matching = new MatchingDraft(
+                request.matching().leftItems().stream().map(item -> new ItemDraft(item.key(), item.text())).toList(),
+                request.matching().rightItems().stream().map(item -> new ItemDraft(item.key(), item.text())).toList(),
+                request.matching().correctMatches().stream()
+                    .map(pair -> new MatchDraft(pair.leftKey(), pair.rightKey())).toList());
+            question = quizService.addQuestion(quizId, request.questionText(), request.position(),
+                request.hint(), options, request.type(), request.acceptedAnswers(), null, matching);
+        } else if (request.ordering() == null) {
             question = quizService.addQuestion(
                 quizId,
                 request.questionText(),

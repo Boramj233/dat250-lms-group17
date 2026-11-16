@@ -9,6 +9,7 @@ import no.hvl.dat250.lms.content.api.dto.QuizAttemptResponse;
 
 import no.hvl.dat250.lms.content.service.QuizAttemptService.AttemptResult;
 import no.hvl.dat250.lms.content.service.QuizAttemptService;
+import no.hvl.dat250.lms.content.service.QuizGrader.MatchIds;
 import no.hvl.dat250.lms.content.service.QuizSubmissionEvaluator.AnswerInput;
 
 import no.hvl.dat250.lms.security.AuthenticatedUser;
@@ -47,7 +48,9 @@ public class QuizAttemptController {
                 answer.questionId(),
                 answer.selectedOptionIds(),
                 answer.textAnswer(),
-                answer.orderedItemIds()
+                answer.orderedItemIds(),
+                answer.matches() == null ? null : answer.matches().stream()
+                    .map(pair -> new MatchIds(pair.leftItemId(), pair.rightItemId())).toList()
             ))
             .toList();
 
