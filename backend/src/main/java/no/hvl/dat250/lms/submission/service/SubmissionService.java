@@ -16,6 +16,7 @@ import no.hvl.dat250.lms.enrollment.service.StudentEnrollmentLookupService;
 
 import no.hvl.dat250.lms.submission.domain.Submission;
 import no.hvl.dat250.lms.submission.domain.SubmissionType;
+import no.hvl.dat250.lms.submission.domain.SubmissionFileMetadata;
 import no.hvl.dat250.lms.submission.repository.SubmissionRepository;
 
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -58,7 +59,7 @@ public class SubmissionService {
             );
         }
 
-        if (type == null
+        if (type == null || type == SubmissionType.FILE
                 || payload == null
                 || payload.isBlank()
                 || payload.length() > 10000) {
@@ -99,15 +100,7 @@ public class SubmissionService {
             .getId();
 
         // 5. Verify the student and obtain their Enrollment.
-        Enrollment enrollment;
-        try {
-            enrollment = enrollmentLookupService
-                .requireActiveStudentEnrollment(userId, courseId);
-        } catch (NoSuchElementException | IllegalStateException ex) {
-            // Only this enrollment operation uses these exceptions for missing,
-            // inactive or non-student membership. Do not catch other service work.
-            throw new AccessDeniedException("Active student enrollment required", ex);
-        }
+        Enrollment enrollment = requireStudentEnrollment(userId, courseId);
 
         // 6. Calculate lateness using the server clock.
         Instant now = clock.instant();
@@ -131,6 +124,97 @@ public class SubmissionService {
         );
 
         return submissionRepository.save(submission);
+    }
+
+    // Short preflight transaction; no SQL transaction remains open during upload.
+    @Transactional(readOnly = true)
+    public void validateFileSubmission(
+            Long contentId,
+            Long userId) {
+
+        Assignment assignment = requireFileAssignment(contentId, userId);
+        Long courseId = assignment.getModule().getCourse().getId();
+
+        requireStudentEnrollment(userId, courseId);
+        requireDeadlineAccepted(assignment, clock.instant());
+    }
+
+    // Joins the upload coordinator's transaction, which also handles commit rollback.
+    @Transactional
+    public Submission saveFileSubmission(
+            Long contentId,
+            Long userId,
+            SubmissionFileMetadata file) {
+
+        Assignment assignment = requireFileAssignment(contentId, userId);
+        Long courseId = assignment.getModule().getCourse().getId();
+        Enrollment enrollment = requireStudentEnrollment(userId, courseId);
+
+        Instant now = clock.instant();
+        boolean late = requireDeadlineAccepted(assignment, now);
+
+        Submission submission = Submission.file(
+            assignment,
+            enrollment,
+            file,
+            now,
+            late
+        );
+
+        return submissionRepository.save(submission);
+    }
+
+    private Assignment requireFileAssignment(
+            Long contentId,
+            Long userId) {
+
+        if (contentId == null || contentId <= 0
+                || userId == null || userId <= 0) {
+            throw new IllegalArgumentException(
+                "Content ID and User ID must be positive"
+            );
+        }
+
+        Content content = contentService.requireContent(contentId);
+
+        if (!(content instanceof Assignment assignment)) {
+            throw new IllegalArgumentException(
+                "File submissions require an Assignment"
+            );
+        }
+
+        return assignment;
+    }
+
+    private Enrollment requireStudentEnrollment(
+            Long userId,
+            Long courseId) {
+
+        try {
+            return enrollmentLookupService.requireActiveStudentEnrollment(
+                userId,
+                courseId
+            );
+        } catch (NoSuchElementException | IllegalStateException ex) {
+            throw new AccessDeniedException(
+                "Active student enrollment required",
+                ex
+            );
+        }
+    }
+
+    private boolean requireDeadlineAccepted(
+            Assignment assignment,
+            Instant now) {
+
+        Instant deadline = assignment.getDeadline();
+        boolean late = deadline != null && now.isAfter(deadline);
+
+        if (late && !assignment.isAllowLateSubmission()) {
+            throw new SubmissionDeadlinePassedException();
+        }
+
+        return late;
     }
 
     @Transactional(readOnly = true)

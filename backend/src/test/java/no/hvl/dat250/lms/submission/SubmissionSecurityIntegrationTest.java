@@ -215,4 +215,49 @@ class SubmissionSecurityIntegrationTest {
                 .content("{\"type\":\"TEXT\",\"payload\":\"Answer\"}"))
             .andExpect(status().isNotFound());
     }
+    @Test
+    void jsonEndpointRejectsFileTypeAndForgedStorageMetadata() throws Exception {
+        var f = fixture(null, false);
+        for (String body : new String[] {
+                """
+                {"type":"FILE","payload":"forged-key"}
+                """,
+                """
+                {"type":"FILE","payload":"forged-key",
+                 "file":{"bucket":"lms-submissions","objectKey":"someone-elses-file"}}
+                """
+        }) {
+            mvc.perform(post("/api/contents/{id}/submissions", f.assignment().getId())
+                    .header("Authorization", TestTokens.bearer(f.user()))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(body))
+                .andExpect(status().isBadRequest());
+        }
+        assertEquals(0, submissions.count());
+    }
+
+    @Test
+    void ownFileMetadataIsReadableWithoutLeakingStorageLocation() throws Exception {
+        var f = fixture(null, false);
+        var metadata = new no.hvl.dat250.lms.submission.domain.SubmissionFileMetadata(
+                "lms-submissions", "submissions/private-key", "report.pdf", "application/pdf", 123, "a".repeat(64));
+        var submission = save(Submission.file(f.assignment(), f.enrollment(), metadata, Instant.now(), false));
+        entities.clear();
+        mvc.perform(get("/api/submissions/{id}", submission.getId())
+                .header("Authorization", TestTokens.bearer(f.user())))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.type").value("FILE"))
+            .andExpect(jsonPath("$.payload").isEmpty())
+            .andExpect(jsonPath("$.file.name").value("report.pdf"))
+            .andExpect(jsonPath("$.file.mediaType").value("application/pdf"))
+            .andExpect(jsonPath("$.file.sizeBytes").value(123))
+            .andExpect(jsonPath("$.file.bucket").doesNotExist())
+            .andExpect(jsonPath("$.file.objectKey").doesNotExist())
+            .andExpect(jsonPath("$.file.sha256").doesNotExist());
+        User other = user();
+        mvc.perform(get("/api/submissions/{id}", submission.getId())
+                .header("Authorization", TestTokens.bearer(other)))
+            .andExpect(status().isNotFound());
+    }
+
 }

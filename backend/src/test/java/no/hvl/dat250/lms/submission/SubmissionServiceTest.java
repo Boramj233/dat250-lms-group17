@@ -358,4 +358,22 @@ class SubmissionServiceTest {
             () -> service.submitIndividual(30L, 5L, SubmissionType.TEXT, "Answer")));
     }
 
+    @Test
+    void fileSubmittedExactlyAtDeadlineIsOnTimeAndUsesServerClock() {
+        Assignment assignment = prepareAssignment();
+        when(assignment.getDeadline()).thenReturn(NOW);
+        Enrollment enrollment = prepareEnrollment();
+        mockSaving();
+        var metadata = new no.hvl.dat250.lms.submission.domain.SubmissionFileMetadata(
+                "lms-submissions", "submissions/unique", "report.pdf", "application/pdf", 123, "a".repeat(64));
+
+        Submission result = service.saveFileSubmission(30L, 5L, metadata);
+
+        assertSame(enrollment, result.getSubmittedBy());
+        assertEquals(NOW, result.getSubmittedAt());
+        assertFalse(result.isLate());
+        assertNull(result.getPayload());
+        assertSame(metadata, result.getFile());
+    }
+
 }

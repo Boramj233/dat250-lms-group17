@@ -29,7 +29,7 @@ public class Submission {
     @Column(name = "submission_type", nullable = false)
     private SubmissionType type;
 
-    @Column(nullable = false, length = 10000)
+    @Column(length = 10000)
     private String payload;
 
     @Column(name = "submitted_at", nullable = false)
@@ -38,8 +38,8 @@ public class Submission {
     @Column(nullable = false)
     private boolean late;
 
-    // @Column
-    // private GroupId groupId;
+    @Embedded
+    private SubmissionFileMetadata file;
 
     protected Submission() {
         // Required by JPA
@@ -50,6 +50,27 @@ public class Submission {
             Enrollment submittedBy,
             SubmissionType type,
             String payload,
+            Instant submittedAt,
+            boolean late) {
+
+        this(content, submittedBy, type, payload, null, submittedAt, late);
+    }
+
+    public static Submission file(
+            Assignment assignment,
+            Enrollment submittedBy,
+            SubmissionFileMetadata file,
+            Instant submittedAt,
+            boolean late) {
+        return new Submission(assignment, submittedBy, SubmissionType.FILE, null, file, submittedAt, late);
+    }
+
+    private Submission(
+            Content content,
+            Enrollment submittedBy,
+            SubmissionType type,
+            String payload,
+            SubmissionFileMetadata file,
             Instant submittedAt,
             boolean late) {
 
@@ -72,7 +93,11 @@ public class Submission {
             );
         }
 
-        if (payload == null || payload.isBlank()
+        if (type == SubmissionType.FILE) {
+            if (!(content instanceof Assignment) || file == null || payload != null) {
+                throw new IllegalArgumentException("FILE requires an Assignment and file metadata without a payload");
+            }
+        } else if (file != null || payload == null || payload.isBlank()
                 || payload.length() > 10000) {
             throw new IllegalArgumentException(
                 "Valid submission payload is required"
@@ -89,6 +114,7 @@ public class Submission {
         this.submittedBy = submittedBy;
         this.type = type;
         this.payload = payload;
+        this.file = file;
         this.submittedAt = submittedAt;
         this.late = late;
     }
@@ -111,6 +137,10 @@ public class Submission {
 
     public String getPayload() {
         return payload;
+    }
+
+    public SubmissionFileMetadata getFile() {
+        return file;
     }
 
     public Instant getSubmittedAt() {

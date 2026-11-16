@@ -18,6 +18,9 @@ repositories {
 }
 
 dependencies {
+    implementation(platform("software.amazon.awssdk:bom:2.59.1"))
+    implementation("software.amazon.awssdk:s3")
+    implementation("software.amazon.awssdk:url-connection-client")
 	implementation("org.springframework.boot:spring-boot-h2console")
 	implementation("org.springframework.boot:spring-boot-starter-data-jpa")
 	implementation("org.springframework.boot:spring-boot-starter-validation")
@@ -54,4 +57,23 @@ dependencies {
 
 tasks.withType<Test> {
 	useJUnitPlatform()
+}
+
+// Explicit opt-in: ordinary test/build tasks do not require Docker.
+val storageIntegrationTest by sourceSets.creating
+configurations[storageIntegrationTest.implementationConfigurationName].extendsFrom(configurations.testImplementation.get())
+configurations[storageIntegrationTest.runtimeOnlyConfigurationName].extendsFrom(configurations.testRuntimeOnly.get())
+dependencies {
+    add(storageIntegrationTest.implementationConfigurationName, sourceSets.main.get().output)
+    // Reuse the team test JWT signer/decoder and isolated test profile.
+    add(storageIntegrationTest.implementationConfigurationName, sourceSets.test.get().output)
+    add(storageIntegrationTest.implementationConfigurationName, "org.testcontainers:testcontainers:2.0.5")
+}
+tasks.register<Test>("storageIntegrationTest") {
+    description = "Tests the S3 adapter against a real, pinned SeaweedFS container (requires Docker)."
+    group = "verification"
+    testClassesDirs = storageIntegrationTest.output.classesDirs
+    classpath = storageIntegrationTest.runtimeClasspath
+    systemProperty("storage.init-script", rootProject.file("infra/seaweedfs/start.sh").absolutePath)
+    shouldRunAfter(tasks.test)
 }
