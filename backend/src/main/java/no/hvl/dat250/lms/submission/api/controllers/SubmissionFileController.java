@@ -65,14 +65,13 @@ public class SubmissionFileController {
             throw new IllegalArgumentException("Exactly one file part named file is required");
         }
 
-        if (request.getParameter("groupId") != null) {
-            throw new IllegalArgumentException("Group file submissions are not supported yet");
-        }
+        Long groupId = request.getParameter("groupId") == null ? null
+            : Long.valueOf(request.getParameter("groupId"));
 
         SubmissionResponse response = fileSubmissionService.submitFile(
             contentId,
             currentUser.userId(),
-            files.getFirst()
+            files.getFirst(), groupId
         );
 
         return ResponseEntity

@@ -14,7 +14,10 @@ public record SubmissionReviewResponse(
         String payload,
         Instant submittedAt,
         boolean late,
-        SubmissionFileResponse file) {
+        SubmissionFileResponse file,
+        Long groupId,
+        Long submittedByUserId,
+        java.util.List<SubmissionMemberResponse> members) {
 
     public static SubmissionReviewResponse from(Submission submission) {
         var metadata = submission.getFile();
@@ -25,6 +28,9 @@ public record SubmissionReviewResponse(
             submission.getId(), submission.getContent().getId(),
             submission.getSubmittedBy().getUser().getUserId(), submission.getSubmittedBy().getId(),
             submission.getType(), submission.getPayload(), submission.getSubmittedAt(),
-            submission.isLate(), file);
+            submission.isLate(), file,
+            submission.getGroup() == null ? null : submission.getGroup().getGroupId(),
+            submission.getSubmittedBy().getUser().getUserId(),
+            submission.getMembers().stream().map(SubmissionMemberResponse::from).toList());
     }
 }

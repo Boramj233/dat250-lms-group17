@@ -5,9 +5,6 @@ import java.time.Instant;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.UUID;
-import no.hvl.dat250.lms.submission.domain.SubmissionAccepted;
-import org.springframework.context.ApplicationEventPublisher;
-
 import no.hvl.dat250.lms.content.domain.Assignment;
 import no.hvl.dat250.lms.content.domain.CodingExercise;
 import no.hvl.dat250.lms.content.domain.Content;
@@ -15,14 +12,18 @@ import no.hvl.dat250.lms.content.service.ContentService;
 import no.hvl.dat250.lms.enrollment.domain.Enrollment;
 import no.hvl.dat250.lms.enrollment.service.EnrollmentService;
 import no.hvl.dat250.lms.enrollment.service.StudentEnrollmentLookupService;
+import no.hvl.dat250.lms.group.domain.Group;
+import no.hvl.dat250.lms.group.service.GroupService;
 import no.hvl.dat250.lms.submission.api.dto.SubmissionReviewResponse;
 import no.hvl.dat250.lms.submission.domain.Submission;
+import no.hvl.dat250.lms.submission.domain.SubmissionAccepted;
 import no.hvl.dat250.lms.submission.domain.SubmissionFileMetadata;
+import no.hvl.dat250.lms.submission.domain.SubmissionMember;
 import no.hvl.dat250.lms.submission.domain.SubmissionType;
 import no.hvl.dat250.lms.submission.repository.SubmissionRepository;
-
 import org.hibernate.Hibernate;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.security.access.AccessDeniedException;
@@ -32,7 +33,9 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class SubmissionService {
 
+    private final GroupService groups;
     private final ContentService contentService;
+
     private final StudentEnrollmentLookupService enrollmentLookupService;
     private final SubmissionRepository submissionRepository;
     private final Clock clock;
@@ -45,13 +48,15 @@ public class SubmissionService {
             SubmissionRepository submissionRepository,
             @Qualifier("submissionClock") Clock clock,
             EnrollmentService enrollmentService,
-            ApplicationEventPublisher events) {
+            ApplicationEventPublisher events,
+            GroupService groups) {
 
         this.contentService = contentService;
         this.enrollmentLookupService = enrollmentLookupService;
         this.submissionRepository = submissionRepository;
         this.clock = clock;
         this.events = events;
+        this.groups = groups;
         this.enrollmentService = enrollmentService;
     }
 
@@ -61,6 +66,11 @@ public class SubmissionService {
             Long userId,
             SubmissionType type,
             String payload) {
+        return submit(contentId, userId, type, payload, null);
+    }
+
+    @Transactional
+    public Submission submit(Long contentId, Long userId, SubmissionType type, String payload, Long groupId) {
 
         // 1. Validate input.
         if (contentId == null || contentId <= 0
@@ -80,6 +90,7 @@ public class SubmissionService {
         }
 
         // 2. Retrieve Content through its own feature Service.
+        var group = groupFor(contentId, userId, groupId, true);
         Content content = contentService.requireContent(contentId);
 
         if (!(content instanceof Assignment) && !(content instanceof CodingExercise)) {
@@ -133,6 +144,7 @@ public class SubmissionService {
             late
         );
 
+        snapshot(submission, group);
         Submission saved = submissionRepository.save(submission);
         events.publishEvent(new SubmissionAccepted(
             UUID.randomUUID(), saved.getId(), contentId, saved.getSubmittedAt(), saved.isLate()));
@@ -144,7 +156,13 @@ public class SubmissionService {
     public void validateFileSubmission(
             Long contentId,
             Long userId) {
+        validateFileSubmission(contentId, userId, null);
+    }
 
+    @Transactional(readOnly = true)
+    public void validateFileSubmission(Long contentId, Long userId, Long groupId) {
+
+        groupFor(contentId, userId, groupId, false);
         Assignment assignment = requireFileAssignment(contentId, userId);
         Long courseId = assignment.getModule().getCourse().getId();
 
@@ -158,7 +176,13 @@ public class SubmissionService {
             Long contentId,
             Long userId,
             SubmissionFileMetadata file) {
+        return saveFileSubmission(contentId, userId, file, null);
+    }
 
+    @Transactional
+    public Submission saveFileSubmission(Long contentId, Long userId, SubmissionFileMetadata file, Long groupId) {
+
+        var group = groupFor(contentId, userId, groupId, true);
         Assignment assignment = requireFileAssignment(contentId, userId);
         Long courseId = assignment.getModule().getCourse().getId();
         Enrollment enrollment = requireStudentEnrollment(userId, courseId);
@@ -178,6 +202,7 @@ public class SubmissionService {
             late
         );
 
+        snapshot(submission, group);
         Submission saved = submissionRepository.save(submission);
         events.publishEvent(new SubmissionAccepted(
             UUID.randomUUID(), saved.getId(), contentId, saved.getSubmittedAt(), saved.isLate()));
@@ -249,7 +274,7 @@ public class SubmissionService {
             );
         }
 
-        return submissionRepository
+        Submission owned = submissionRepository
             .findByIdAndSubmittedBy_User_UserId(
                 submissionId,
                 userId
@@ -257,6 +282,10 @@ public class SubmissionService {
             .orElseThrow(() -> new NoSuchElementException(
                 "Submission not found"
             ));
+        owned.getMembers();
+        Hibernate.initialize(owned.getGroup());
+        owned.getSubmittedBy().getUser().getUserId();
+        return owned;
     }
 
     @Transactional(readOnly = true)
@@ -280,11 +309,14 @@ public class SubmissionService {
             );
         }
 
-        return submissionRepository
-            .findByContent_IdAndSubmittedBy_User_UserIdOrderBySubmittedAtDescIdDesc(
-                contentId,
-                userId
-            );
+        List<Submission> history = submissionRepository
+            .findByContent_IdAndSubmittedBy_User_UserIdOrderBySubmittedAtDescIdDesc(contentId, userId);
+        history.forEach(submission -> {
+            submission.getMembers();
+            Hibernate.initialize(submission.getGroup());
+            submission.getSubmittedBy().getUser().getUserId();
+        });
+        return history;
     }
 
     @Transactional(readOnly = true)
@@ -340,15 +372,20 @@ public class SubmissionService {
             Long teacherUserId) {
         Submission submission = requireTeacherSubmission(submissionId, teacherUserId);
         return submissionRepository
-            .findByContent_IdAndSubmittedBy_IdOrderBySubmittedAtDescIdDesc(
-                submission.getContent().getId(), submission.getSubmittedBy().getId())
+            .findSequence(submission.getContent().getId(), submission.getSubmittedBy().getId(),
+                submission.getGroup() == null ? null : submission.getGroup().getGroupId())
             .stream().map(SubmissionReviewResponse::from).toList();
     }
 
     @Transactional
     public Submission lockTeacherSubmission(Long submissionId, Long teacherUserId) {
         Submission submission = requireTeacherSubmission(submissionId, teacherUserId);
-        enrollmentService.lockSubmissionOwner(submission.getSubmittedBy().getId());
+        if (submission.getGroup() == null) {
+            enrollmentService.lockSubmissionOwner(submission.getSubmittedBy().getId());
+        } else {
+            groups.lockGroup(submission.getContent().getModule().getCourse().getId(),
+                submission.getGroup().getGroupId());
+        }
         enrollmentService.lockActiveTeacher(teacherUserId,
             submission.getContent().getModule().getCourse().getId());
         return submission;
@@ -357,9 +394,36 @@ public class SubmissionService {
     @Transactional(readOnly = true)
     public boolean isLatestSubmission(Submission submission) {
         return submissionRepository
-            .findFirstByContent_IdAndSubmittedBy_IdOrderBySubmittedAtDescIdDesc(
-                submission.getContent().getId(), submission.getSubmittedBy().getId())
-            .map(latest -> latest.getId().equals(submission.getId())).orElse(false);
+            .findSequence(submission.getContent().getId(), submission.getSubmittedBy().getId(),
+                submission.getGroup() == null ? null : submission.getGroup().getGroupId())
+            .stream().findFirst().map(latest -> latest.getId().equals(submission.getId())).orElse(false);
+    }
+
+    private Group groupFor(Long contentId, Long userId, Long groupId, boolean lock) {
+        if (groupId == null) return null;
+        if (groupId <= 0) throw new IllegalArgumentException("Invalid group ID");
+        var content = contentService.requireContent(contentId);
+        var group = groups.submissionGroup(content.getModule().getCourse().getId(), groupId, userId, lock);
+        var memberEnrollments = group.getGroupMembers().stream()
+            .map(u -> requireStudentEnrollment(u.getUserId(), content.getModule().getCourse().getId()))
+            .sorted(java.util.Comparator.comparing(Enrollment::getId)).toList();
+        if (lock) {
+            for (var member : memberEnrollments) {
+                enrollmentService.lockActiveStudent(member.getUser().getUserId(),
+                    content.getModule().getCourse().getId());
+            }
+        }
+        return group;
+    }
+
+    private void snapshot(Submission submission, Group group) {
+        if (group == null) return;
+        Long courseId = submission.getContent().getModule().getCourse().getId();
+        submission.assignGroup(group, group.getGroupMembers().stream()
+            .map(u -> {
+                var e = requireStudentEnrollment(u.getUserId(), courseId);
+                return new SubmissionMember(u.getUserId(), e.getId());
+            }).toList());
     }
 
 }

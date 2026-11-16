@@ -13,7 +13,7 @@ import static org.mockito.Mockito.*;
 
 class SubmissionFileDomainTest {
     private final Assignment assignment = mock(Assignment.class);
-    private final Enrollment enrollment = mock(Enrollment.class);
+    private final Enrollment enrollment = mock(Enrollment.class, RETURNS_DEEP_STUBS);
     private final Instant now = Instant.parse("2026-11-16T12:00:00Z");
 
     private SubmissionFileMetadata metadata() {

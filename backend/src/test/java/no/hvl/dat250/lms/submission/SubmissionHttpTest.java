@@ -69,7 +69,7 @@ class SubmissionHttpTest {
     private Submission savedSubmission() {
 
         Content content = mock(Content.class);
-        Submission submission = mock(Submission.class);
+        Submission submission = mock(Submission.class, RETURNS_DEEP_STUBS);
 
         when(content.getId()).thenReturn(30L);
         when(submission.getContent()).thenReturn(content);

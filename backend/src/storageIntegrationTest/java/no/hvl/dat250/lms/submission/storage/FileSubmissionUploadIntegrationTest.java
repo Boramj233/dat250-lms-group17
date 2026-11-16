@@ -363,7 +363,7 @@ class FileSubmissionUploadIntegrationTest {
     }
 
     @Test
-    void malformedEmptyMultipleOrGroupFilesAreRejectedWithoutStorageWrites() throws Exception {
+    void malformedFilesAndUnknownGroupsAreRejectedWithoutStorageWrites() throws Exception {
         Fixture fixture = student();
         String path = "/api/contents/" + fixture.assignment().getId() + "/submissions/file";
         String token = TestTokens.bearer(fixture.user());
@@ -377,7 +377,7 @@ class FileSubmissionUploadIntegrationTest {
         mvc.perform(upload(fixture).file(pdf())).andExpect(status().isBadRequest());
         mvc.perform(upload(fixture).file(new MockMultipartFile("extra", "report.pdf", "application/pdf", PDF)))
             .andExpect(status().isBadRequest());
-        mvc.perform(upload(fixture).param("groupId", "123")).andExpect(status().isBadRequest());
+        mvc.perform(upload(fixture).param("groupId", Long.toString(Long.MAX_VALUE))).andExpect(status().isNotFound());
         verify(storage, never()).put(anyString(), any(), anyLong(), anyString());
     }
 
@@ -530,6 +530,37 @@ class FileSubmissionUploadIntegrationTest {
         mvc.perform(get(path).header("Authorization", TestTokens.bearer(fixture.user())))
             .andExpect(status().isForbidden());
         verify(storage, never()).get(any());
+    }
+
+    @Test
+    void groupFileSnapshotDownloadsFromRealStorageAfterMemberLeaves() throws Exception {
+        Fixture f = student();
+        record GroupFixture(Long id, User member) {}
+        var group = new TransactionTemplate(transactionManager).execute(status -> {
+            var course = entities.find(Enrollment.class, f.enrollment().getId()).getCourse();
+            var member = new User("group_" + UUID.randomUUID() + "@example.com", "Test", "Member");
+            entities.persist(member);
+            entities.persist(new Enrollment(member, course, CourseRole.STUDENT));
+            var entity = new no.hvl.dat250.lms.group.domain.Group(1, course);
+            entity.addGroupMember(entities.find(User.class, f.user().getUserId()));
+            entity.addGroupMember(member);
+            entities.persist(entity); entities.flush();
+            return new GroupFixture(entity.getGroupId(), member);
+        });
+        mvc.perform(upload(f).param("groupId", group.id().toString()))
+            .andExpect(status().isCreated()).andExpect(jsonPath("$.groupId").value(group.id()));
+        Long id = jdbc.queryForObject("SELECT MAX(id) FROM submissions WHERE content_id=?",
+            Long.class, f.assignment().getId());
+        new TransactionTemplate(transactionManager).executeWithoutResult(status -> {
+            entities.find(no.hvl.dat250.lms.group.domain.Group.class, group.id())
+                .removeGroupMember(entities.find(User.class, group.member().getUserId()));
+        });
+        mvc.perform(get("/api/submissions/{id}/file", id)
+            .header("Authorization", TestTokens.bearer(group.member())))
+            .andExpect(status().isOk()).andExpect(content().bytes(PDF));
+        mvc.perform(head("/api/submissions/{id}/file", id)
+            .header("Authorization", TestTokens.bearer(group.member())))
+            .andExpect(status().isOk()).andExpect(content().string(""));
     }
 
 }
