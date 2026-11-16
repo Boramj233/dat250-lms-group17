@@ -38,7 +38,7 @@ public class ContentCompletionService {
         }
     }
     /** userId is a trusted local User ID, never a client-supplied enrollment ID.
-     * Uses current quiz threshold; any historical released assignment pass counts.
+     * Uses current quiz threshold; any historical released assignment/coding pass counts.
      */
     @Transactional(readOnly = true)
     public boolean isCompleted(Long contentId, Long userId) {
@@ -46,7 +46,8 @@ public class ContentCompletionService {
         Enrollment student = student(content, userId);
         if (content instanceof StaticPage) return pages.existsByContent_IdAndEnrollment_Id(contentId, student.getId());
         if (content instanceof Quiz quiz) return attempts.countPassing(contentId, student.getId(), quiz.getPassingPercentage()) > 0;
-        if (content instanceof Assignment) return grades.hasReleasedPass(contentId, userId);
+        if (content instanceof Assignment || content instanceof CodingExercise)
+            return grades.hasReleasedPass(contentId, userId);
         return false;
     }
     public record Status(Long contentId, boolean requiredForModuleCompletion, boolean completed) {}

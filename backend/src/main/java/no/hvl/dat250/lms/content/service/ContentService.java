@@ -24,7 +24,16 @@ public class ContentService {
     @org.springframework.beans.factory.annotation.Autowired
     private ContentCompletionService completion;
 
-    /** Stable module-dependency integration point. Does not calculate module access. */
+    /**
+     * Completion evidence for one Content and a trusted local User ID (not Enrollment ID).
+     * Requires an active STUDENT enrollment in the Content's course. The required flag
+     * does not affect this result; Module callers filter required Content themselves.
+     * Pages use manual completion, quizzes any attempt passing the current threshold,
+     * assignments/coding exercises any historically owned released Grade with passed=true.
+     * Invalid IDs throw IllegalArgumentException; missing Content throws NoSuchElementException;
+     * absent/inactive/non-student enrollment throws AccessDeniedException.
+     * Does not aggregate Module completion or calculate dependency access.
+     */
     @Transactional(readOnly = true)
     public boolean isCompleted(Long contentId, Long studentUserId) {
         return completion.isCompleted(contentId, studentUserId);

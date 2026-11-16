@@ -36,6 +36,7 @@ class GroupSubmissionIntegrationTest {
     @Autowired SubmissionService submissions;
     @Autowired GroupService groups;
     @Autowired GradingService grades;
+    @Autowired no.hvl.dat250.lms.content.service.ContentService contents;
     @Autowired MockMvc mvc;
     @Autowired FileSubmissionService files;
     @org.springframework.test.context.bean.override.mockito.MockitoBean
@@ -88,8 +89,15 @@ class GroupSubmissionIntegrationTest {
         grades.release(first, f.teacher, grade.version());
         groups.removeGroupMember(f.course, f.group, f.b);
         groups.addGroupMember(f.course, f.group, f.c);
+        assertTrue(contents.isCompleted(f.content, f.a));
+        assertTrue(contents.isCompleted(f.content, f.b));
+        assertFalse(contents.isCompleted(f.content, f.c));
         tx(() -> { em.find(Enrollment.class, f.bEnrollment).deactivate(); return null; });
         Long second = submit(f, f.c);
+        assertTrue(contents.isCompleted(f.content, f.a));
+        assertFalse(contents.isCompleted(f.content, f.c));
+        assertThrows(org.springframework.security.access.AccessDeniedException.class,
+            () -> contents.isCompleted(f.content, f.b));
         for (Long owner : List.of(f.a, f.b)) {
             getAs("/api/submissions/"+first, owner, 200);
             getAs("/api/submissions/"+first+"/grade", owner, 200);

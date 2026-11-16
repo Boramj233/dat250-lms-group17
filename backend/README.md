@@ -384,7 +384,7 @@ nullable column; existing exercises retain null. The script is not run
 automatically and H2 DDL is not atomic. No development database was migrated.
 
 The 4A changes cover creation/read authorization and starter code only.
-Manual review/grading is described below; Coding Completion, global content
+Manual review/grading and Completion are described below; global content
 visibility and frontend integration remain outside these changes.
 
 ## CodingExercise 4B: manual review and grading
@@ -423,9 +423,9 @@ requires a separate design, including isolated execution and how automated resul
 relate to Grade's required teacher attribution; it must not execute student code in
 the LMS JVM. Manual grading does not fulfill the automatic-grading capability.
 
-CodingExercise Completion remains unsupported (isCompleted=false; required=true is
-rejected). No Entity/schema migration, frontend, automatic grading or hidden tests
-are added in 4B. Existing Assignment behavior and transaction/locking rules are retained.
+The later Completion integration below also supports manually graded CodingExercises.
+No Entity/schema migration, frontend, automatic grading or hidden tests are added in
+4B. Existing Assignment behavior and transaction/locking rules are retained.
 
 ## Content access control
 
@@ -452,3 +452,84 @@ Content/Assignment lookup services remain for trusted server callers; callers mu
 apply the authorization appropriate to their workflow (including historical submission
 ownership). This change does not add ordering, editing, visibility or Module unlocking,
 and does not require a database migration.
+
+## Content Completion: Service contract for Module integration
+
+```java
+public boolean isCompleted(Long contentId, Long studentUserId)
+```
+
+Call `ContentService.isCompleted` through the injected Spring service. The second
+argument is the trusted local User ID, not Enrollment ID or a client-supplied identity.
+The student must have an active STUDENT enrollment in the Content's actual course.
+The method is read-only and checks persisted completion evidence:
+
+| Content | Completed when |
+|---|---|
+| StaticPage | A manual completion record exists for this page and student Enrollment. |
+| Quiz | Any attempt passes the current passingPercentage (default 60); exact comparison, no rounding. |
+| Assignment | Any historically owned Submission has a released Grade with passed=true. |
+| CodingExercise | Same released-pass rule as Assignment, for individual or Group submissions. |
+
+Numeric scores alone do not establish Assignment/Coding completion. Unsubmitted,
+ungraded, undecided/Passed drafts and released Failed grades do not count.
+A historical released pass continues to count after an ungraded or failed resubmission.
+Individual ownership uses the submitter; Group ownership uses the immutable submission
+member snapshot. Former members retain old evidence, new members do not inherit it.
+Withdrawal retains history but prevents current Completion queries until the student
+again has an active STUDENT enrollment. Quiz threshold changes reinterpret old attempts.
+
+### Required configuration and Module responsibilities
+
+All four types can be configured through the existing teacher API:
+
+```http
+PATCH /api/contents/{contentId}/completion-settings
+Authorization: Bearer <access-token>
+Content-Type: application/json
+
+{"requiredForModuleCompletion":true}
+```
+
+This requires an active teacher in the Content's course. The flag defaults to false
+and is independent of the student's completed status. passingPercentage is optional
+and Quiz-only. CodingExercise cannot be marked complete manually through PUT completion.
+The existing student GET completion API reports the same rule for the caller only.
+
+Module code obtains the module's Content through ContentService (for example,
+`findContentsByModule(courseId, moduleId)`), filters `isRequiredForModuleCompletion()`,
+and requires every selected Content to satisfy `isCompleted`. No required Content
+means the completion condition is satisfied. The following illustrates aggregation;
+it is not an implemented Module endpoint:
+
+```java
+// Module caller validates its own authorization and the target student's
+// active course enrollment, including when the required set is empty.
+boolean requirementsSatisfied = contentService.findContentsByModule(courseId, moduleId)
+    .stream()
+    .filter(Content::isRequiredForModuleCompletion)
+    .allMatch(content -> contentService.isCompleted(content.getId(), studentUserId));
+```
+
+Module remains responsible for its completion aggregation, prerequisites, dependency
+graph validation and access/unlock decisions. Do not use mandatoryForExam as the
+required filter. isCompleted neither checks prerequisites nor enforces content
+visibility/deadlines. Do not inject ContentService back into the existing ModuleService:
+ContentService already depends on ModuleService; use a separate Module dependency
+orchestration service to avoid a circular dependency. Cross-feature repository access
+continues to go through owning services.
+
+### Errors and implementation boundary
+
+- Null/nonpositive IDs: IllegalArgumentException.
+- Missing Content: NoSuchElementException.
+- Absent, inactive or non-STUDENT course enrollment: AccessDeniedException.
+- Valid active student without completion evidence: false.
+
+These errors are not interchangeable with incomplete progress; the caller should not
+catch every exception and silently return false. Required and Completion status are
+separate, so optional Content is not automatically completed.
+
+Coding Completion reuses GradeCompletionService and the existing Grade query; no new
+table, grading model or migration is required. This phase does not implement Module
+Dependency, Frontend, ordering, automatic execution or GradingMode.
