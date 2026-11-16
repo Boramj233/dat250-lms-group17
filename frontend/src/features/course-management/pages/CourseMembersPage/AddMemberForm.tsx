@@ -6,6 +6,7 @@ import type { UserLookup } from '../../../users/types'
 import { useDebounced } from '../../../../shared/lib/useDebounced'
 import type { CourseId } from '../../../../shared/types'
 import { ROLE_LABEL } from '../../roleLabels'
+import RequiredMark from '../../../../shared/ui/RequiredMark'
 import '../../../../shared/styles/forms.css'
 
 type AddMemberFormProps = {
@@ -41,9 +42,10 @@ export default function AddMemberForm({ courseId, members }: AddMemberFormProps)
       <h2 id="add-member-title" className="teacher-panel-title">Add a member</h2>
       <form className="form" onSubmit={submit}>
         <div className="form-field">
-          <label htmlFor="member-search">Name or email</label>
+          <label htmlFor="member-search">Name or email<RequiredMark /></label>
           <input
             id="member-search"
+            aria-required="true"
             type="search"
             autoComplete="off"
             value={search}
@@ -83,8 +85,8 @@ export default function AddMemberForm({ courseId, members }: AddMemberFormProps)
               <span className="member-email">{selected.email}</span>
             </p>
             <div className="form-field">
-              <label htmlFor="member-role">Role</label>
-              <select id="member-role" value={role} onChange={event => setRole(event.target.value as CourseRole)}>
+              <label htmlFor="member-role">Role<RequiredMark /></label>
+              <select id="member-role" required value={role} onChange={event => setRole(event.target.value as CourseRole)}>
                 <option value="STUDENT">{ROLE_LABEL.STUDENT}</option>
                 <option value="TEACHER">{ROLE_LABEL.TEACHER}</option>
               </select>

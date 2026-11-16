@@ -16,6 +16,7 @@ import SubmissionAnswer from '../../components/SubmissionAnswer'
 import { useCourseView } from '../../courseContext'
 import { submissionKindLabel } from '../../submissionStats'
 import { usePeopleNames } from '../../usePeopleNames'
+import RequiredMark from '../../../../shared/ui/RequiredMark'
 import '../../../../shared/styles/forms.css'
 import '../ContentView/SubmittableContent.css'
 import './SubmissionGradingPage.css'
@@ -269,7 +270,7 @@ function GradeCard({ submission, contentId, courseId, grade, isLatest, newestId 
       <h2 id="grade-title" className="submittable-card-title">Grade and feedback</h2>
       <form className="form grading-form" onSubmit={handleSubmit}>
         <div className="form-field grading-score-field">
-          <label htmlFor="grading-score">Score (0–{MAX_SCORE})</label>
+          <label htmlFor="grading-score">Score (0–{MAX_SCORE})<RequiredMark /></label>
           <div className="grading-score-input">
             <input id="grading-score" type="number" inputMode="decimal" min={0} max={MAX_SCORE} step={0.01}
               value={score} onChange={event => setScore(event.target.value)} required />

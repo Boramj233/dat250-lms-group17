@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { useCreateModule } from '../../../modules/hooks'
 import type { CourseId } from '../../../../shared/types'
+import RequiredMark from '../../../../shared/ui/RequiredMark'
 import '../../../../shared/styles/forms.css'
 
 type AddModuleFormProps = {
@@ -27,7 +28,7 @@ export default function AddModuleForm({ courseId, position }: AddModuleFormProps
       <h2 id="add-module-title" className="teacher-panel-title">Add a module</h2>
       <form className="form" onSubmit={submit}>
         <div className="form-field">
-          <label htmlFor="module-title">Title</label>
+          <label htmlFor="module-title">Title<RequiredMark /></label>
           <input id="module-title" required maxLength={255} value={title}
             onChange={event => setTitle(event.target.value)} placeholder="e.g. Messaging" />
         </div>
