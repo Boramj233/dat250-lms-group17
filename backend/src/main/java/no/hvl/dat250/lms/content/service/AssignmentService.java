@@ -92,6 +92,12 @@ public class AssignmentService {
     }
 
     @Transactional(readOnly = true)
+    public Long courseId(Long assignmentId) {
+        return findAssignment(assignmentId).getModule().getCourse().getId();
+    }
+
+    /** Internal lookup; HTTP access is checked by AssignmentController. */
+    @Transactional(readOnly = true)
     public Assignment findAssignment(Long assignmentId) {
 
         Content content = contentRepository.findById(

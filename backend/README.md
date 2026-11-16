@@ -426,3 +426,29 @@ the LMS JVM. Manual grading does not fulfill the automatic-grading capability.
 CodingExercise Completion remains unsupported (isCompleted=false; required=true is
 rejected). No Entity/schema migration, frontend, automatic grading or hidden tests
 are added in 4B. Existing Assignment behavior and transaction/locking rules are retained.
+
+## Content access control
+
+The following existing APIs use course-scoped authorization:
+
+- `POST /api/courses/{courseId}/modules/{moduleId}/contents/pages`: active course TEACHER.
+- `GET /api/courses/{courseId}/modules/{moduleId}/contents`: active course enrollment.
+- `GET /api/contents/{contentId}`: active enrollment in the StaticPage's actual course.
+- `GET /api/assignments/{assignmentId}`: active enrollment in the Assignment's actual course.
+
+Reads allow both active students and teachers. Global access levels do not bypass
+course enrollment. The server derives the detail resource's course from stored data;
+clients cannot supply a user/enrollment ID or substitute a course to gain access.
+StaticPage detail remains page-only, not a generic detail endpoint for every Content type.
+
+Missing authentication returns 401; insufficient/inactive course enrollment returns
+403. Missing/wrong-type detail resources return 404. For course/module routes,
+course authorization is checked first; an authorized caller gets 404 if the module
+is missing or belongs to another course. An enrolled user can read an empty module
+as an empty list. Request and response shapes remain unchanged.
+
+These HTTP checks reuse CourseAccess and existing course-role annotations. Internal
+Content/Assignment lookup services remain for trusted server callers; callers must
+apply the authorization appropriate to their workflow (including historical submission
+ownership). This change does not add ordering, editing, visibility or Module unlocking,
+and does not require a database migration.

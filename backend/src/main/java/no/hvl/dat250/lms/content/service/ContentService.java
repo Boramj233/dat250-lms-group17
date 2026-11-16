@@ -142,13 +142,19 @@ public class ContentService {
         return content;
     }
 
+    @Transactional(readOnly = true)
+    public Long staticPageCourseId(Long contentId) {
+        return findStaticPageById(contentId).getModule().getCourse().getId();
+    }
+
+    // Internal lookup; HTTP access is checked by ContentController.
     // Find a Content item only if it is a StaticPage.
     @Transactional(readOnly = true)
     public StaticPage findStaticPageById(Long contentId) {
 
         Content content = requireContent(contentId);
 
-        if (!(content instanceof StaticPage page)) {
+        if (!(Hibernate.unproxy(content) instanceof StaticPage page)) {
             throw new NoSuchElementException(
                 "Static page not found: " + contentId
             );
