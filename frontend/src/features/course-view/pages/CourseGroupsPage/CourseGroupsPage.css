@@ -1,0 +1,117 @@
+.course-groups-filter {
+  align-self: flex-start;
+}
+
+.course-groups {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* One group: a bordered box; folded, only the header row shows. */
+.course-group {
+  border: var(--border-width-sm) solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+/* The fold button, and the Join/Leave/Delete button beside it. */
+.course-group-row {
+  display: flex;
+  align-items: center;
+}
+
+.course-group-header {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  font-size: var(--font-size-md);
+}
+
+.course-group-actions {
+  flex-shrink: 0;
+  padding: var(--space-2) var(--space-5) var(--space-2) 0;
+}
+
+/* "You are in …" / "You are not in a group yet" above the list. */
+.course-groups-status {
+  margin: 0;
+  padding: var(--space-3) var(--space-5);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  font-family: var(--font-ui);
+  font-size: var(--text-small);
+}
+
+.course-groups-create {
+  align-items: flex-end;
+}
+
+.course-groups-create > .form-field {
+  flex: 0 1 10rem;
+}
+
+/* The whole header row is the button: arrow, name, "Your group", member count. */
+.course-group-toggle {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  width: 100%;
+  min-height: var(--size-control-md);
+  padding: var(--space-3) var(--space-5);
+  border: none;
+  border-radius: var(--radius-md);
+  color: var(--color-text);
+  background: transparent;
+  font: inherit;
+  font-weight: var(--font-weight-bold);
+  text-align: left;
+  cursor: pointer;
+}
+
+.course-group-toggle:hover {
+  background: var(--color-surface);
+}
+
+.course-group-name {
+  overflow-wrap: anywhere;
+}
+
+/* Member count on the right edge. */
+.course-group-count {
+  margin-left: auto;
+  font-family: var(--font-ui);
+  font-size: var(--text-small);
+  font-weight: normal;
+}
+
+.course-group-body {
+  padding: var(--space-3) var(--space-5) var(--space-5);
+  border-top: var(--border-width-sm) solid var(--color-surface);
+}
+
+.course-group-body[hidden] {
+  display: none;
+}
+
+.course-group-members {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding-left: var(--space-7);
+}
+
+.course-group-you,
+.course-group-empty {
+  font-family: var(--font-ui);
+  font-size: var(--text-small);
+}
+
+.course-group-empty {
+  margin: 0;
+  font-style: italic;
+}

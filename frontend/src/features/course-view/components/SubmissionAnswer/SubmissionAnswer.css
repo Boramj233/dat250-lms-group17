@@ -1,0 +1,19 @@
+/* What was handed in: a box inside the submission card. */
+.submittable-answer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-5);
+  border: var(--border-width-sm) solid var(--color-surface);
+  border-left: 3px solid var(--color-primary);
+  border-radius: var(--radius-control);
+}
+
+/* A handed-in PDF: name and size, then the Download button. */
+.submittable-file {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3) var(--space-5);
+  overflow-wrap: anywhere;
+}

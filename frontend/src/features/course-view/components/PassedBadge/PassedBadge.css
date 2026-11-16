@@ -1,0 +1,25 @@
+/* A small pill: icon and text on a green (passed) or coral (not passed) background. */
+.passed-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-control);
+  color: var(--color-on-status);
+  font-family: var(--font-ui);
+  font-size: var(--text-small);
+  font-weight: var(--font-weight-bold);
+  white-space: nowrap;
+}
+
+.passed-badge svg {
+  flex-shrink: 0;
+}
+
+.passed-badge.is-passed {
+  background: var(--color-passed);
+}
+
+.passed-badge.is-not-passed {
+  background: var(--color-not-passed);
+}

@@ -1,0 +1,70 @@
+.topbar {
+  font-family: var(--font-ui);
+  min-height: var(--topbar-height);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-3) var(--space-7);
+  padding: var(--space-3) var(--spacing-content);
+  background: var(--color-surface);
+  border-bottom: var(--border-width-sm) solid var(--color-border);
+}
+
+.brand {
+  color: var(--color-text);
+  font-weight: var(--font-weight-bold);
+  text-decoration: none;
+}
+
+/* The user's name and the Log out button (button-secondary, as elsewhere). */
+.main-nav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3) var(--space-5);
+  margin-left: auto;
+}
+
+.current-user {
+  font-weight: var(--font-weight-bold);
+}
+
+.main-nav a {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--size-control-md);
+  padding: var(--space-3) var(--space-5);
+  border-radius: var(--radius-control);
+  color: var(--color-text);
+  text-decoration: none;
+}
+
+.main-nav a:hover {
+  text-decoration: underline;
+}
+
+.main-nav a.active {
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  font-weight: var(--font-weight-bold);
+}
+
+.sidebar-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--size-control-md);
+  min-height: var(--size-control-md);
+  padding: var(--space-3);
+  border: var(--border-width-sm) solid var(--color-border);
+  border-radius: var(--radius-control);
+  color: var(--color-text);
+  background: var(--color-background);
+  cursor: pointer;
+}
+
+.sidebar-toggle:hover {
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+}

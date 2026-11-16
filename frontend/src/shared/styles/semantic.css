@@ -1,0 +1,52 @@
+﻿/* Tokens named by purpose. */
+/* Mobile values by default. */
+:root {
+  --color-background: var(--white);
+  --color-surface: var(--hvl-blue-gray);
+  --color-text: var(--hvl-dark-blue);
+  --color-border: var(--hvl-gray);
+  --color-primary: var(--hvl-dark-blue);
+  --color-primary-hover: var(--hvl-dark-blue-shade);
+  --color-on-primary: var(--white);
+  --color-accent: var(--hvl-teal);
+  --color-on-accent: var(--hvl-dark-blue);
+  /* Passed / not passed on a graded submission. */
+  --color-passed: var(--hvl-green);
+  --color-not-passed: var(--hvl-coral);
+  --color-on-status: var(--hvl-dark-blue);
+  /* Destructive actions (delete, remove) and things that will be removed. */
+  --color-danger: var(--hvl-coral);
+  --color-on-danger: var(--hvl-dark-blue);
+
+  /* Typography */
+  --font-body: var(--font-family-serif);
+  --font-heading: var(--font-family-sans);
+  --font-ui: var(--font-family-sans);
+  --font-code: ui-monospace, 'Cascadia Mono', Consolas, monospace;
+  --text-body: var(--font-size-md);
+  --text-small: var(--font-size-sm);
+  --text-heading: var(--font-size-lg);
+  /* For text in capitals (labels, table headings). */
+  --letter-spacing-caps: 0.04em;
+
+  --spacing-content: var(--space-5);
+  --radius-control: var(--radius-sm);
+
+  /* Unsaved changes in a list or form: a coloured edge on the left (as box-shadow). */
+  --edge-unsaved: inset var(--space-2) 0 0 var(--color-accent);
+  --edge-removed: inset var(--space-2) 0 0 var(--color-danger);
+
+  /* Topbar */
+  --topbar-height-mobile: var(--size-14);
+  --topbar-height-desktop: var(--size-16);
+  --topbar-height: var(--topbar-height-mobile);
+}
+
+/* Larger screens: more spacing and larger headings. */
+@media (min-width: 48rem) {
+  :root {
+    --text-heading: var(--font-size-xl);
+    --spacing-content: var(--space-7);
+    --topbar-height: var(--topbar-height-desktop);
+  }
+}

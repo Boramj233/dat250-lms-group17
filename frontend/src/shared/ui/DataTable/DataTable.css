@@ -1,0 +1,80 @@
+/* The table scrolls sideways on narrow screens instead of squeezing the columns. */
+.data-table-scroll {
+  overflow-x: auto;
+}
+
+.data-table {
+  width: 100%;
+  border: var(--border-width-sm) solid var(--color-border);
+  border-radius: var(--radius-md);
+  border-collapse: separate;
+  border-spacing: 0;
+  overflow: hidden;
+}
+
+.data-table th,
+.data-table td {
+  padding: var(--space-3) var(--space-5);
+  text-align: left;
+  vertical-align: top;
+  overflow-wrap: anywhere;
+}
+
+.data-table th {
+  background: var(--color-surface);
+  font-family: var(--font-ui);
+  font-size: var(--text-small);
+  font-weight: var(--font-weight-bold);
+  text-transform: uppercase;
+  letter-spacing: var(--letter-spacing-caps);
+  white-space: nowrap;
+}
+
+.data-table tbody tr + tr td {
+  border-top: var(--border-width-sm) solid var(--color-surface);
+}
+
+.data-table tbody tr:hover td {
+  background: color-mix(in srgb, var(--color-surface) 40%, transparent);
+}
+
+.data-table a {
+  color: var(--color-text);
+}
+
+.data-table-empty {
+  font-style: italic;
+}
+
+/* Small helpers for cells (secondary text: .text-meta in global.css). */
+.data-table-strong {
+  font-weight: var(--font-weight-bold);
+}
+
+/* Text with line breaks, e.g. feedback from the teacher. */
+.data-table-text {
+  white-space: pre-wrap;
+  font-size: var(--text-small);
+}
+
+/* Done: a check mark in a circle before the text, e.g. a completed quiz. */
+.data-table-done {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  font-weight: var(--font-weight-bold);
+}
+
+.data-table-done svg {
+  flex-shrink: 0;
+  color: var(--color-accent);
+}
+
+.data-table-tag {
+  display: inline-block;
+  margin-left: var(--space-2);
+  font-family: var(--font-ui);
+  font-size: var(--text-small);
+  font-style: italic;
+}

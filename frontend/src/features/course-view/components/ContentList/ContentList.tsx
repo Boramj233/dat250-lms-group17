@@ -1,0 +1,35 @@
+import { Link } from 'react-router'
+import type { ContentSummary } from '@domain/content/types'
+import type { CourseModule } from '@domain/modules/types'
+import ContentTags from '../ContentTags'
+import './ContentList.css'
+
+export type ContentRow = {
+  item: ContentSummary
+  /** The item's page. */
+  to: string
+  /** Shown after the title, e.g. the type or the module it is in. */
+  meta?: string
+  /** The item's module, for "Visible to students from …" before its visible date. */
+  module?: CourseModule
+}
+
+/**
+ * Content items as links, one per row, with "Visible to students from …" for those
+ * students cannot see yet.
+ */
+export default function ContentList({ rows }: { rows: ContentRow[] }) {
+  return (
+    <ul className="content-list">
+      {rows.map(({ item, to, meta, module }) => (
+        <li key={item.id}>
+          <Link className="content-list-title" to={to}>
+            {item.title}
+          </Link>
+          <ContentTags item={item} module={module} className="content-list-hidden" />
+          {meta && <span className="content-list-meta">{meta}</span>}
+        </li>
+      ))}
+    </ul>
+  )
+}

@@ -1,0 +1,53 @@
+.manage-courses h1 {
+  margin: 0;
+}
+
+/* Title left, "Create new course" right; stacked on narrow screens. */
+.manage-courses-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-5);
+}
+
+.manage-courses-list {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border: var(--border-width-sm) solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.manage-courses-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3) var(--space-5);
+  padding: var(--space-5);
+  border-bottom: var(--border-width-sm) solid var(--color-border);
+}
+
+.manage-courses-item:last-child {
+  border-bottom: none;
+}
+
+.manage-courses-name {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.manage-courses-title {
+  font-weight: var(--font-weight-bold);
+  overflow-wrap: anywhere;
+}
+
+.manage-courses-term {
+  font-family: var(--font-ui);
+  font-size: var(--text-small);
+}
