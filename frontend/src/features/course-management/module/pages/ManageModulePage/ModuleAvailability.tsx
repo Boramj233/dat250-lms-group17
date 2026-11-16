@@ -2,7 +2,7 @@ import { canRequire } from '@domain/modules/prerequisites'
 import type { CourseModule } from '@domain/modules/types'
 import type { ModuleId } from '@shared/types'
 import type { AvailabilityDraft } from './availabilityDraft'
-import '@shared/styles/forms.css'
+import { Field } from '@shared/ui/Form'
 
 type ModuleAvailabilityProps = {
   module: CourseModule
@@ -31,7 +31,7 @@ export default function ModuleAvailability({
   const others = modules
     .map((m, index) => ({ module: m, number: index + 1 }))
     .filter(({ module: m }) => m.id !== module.id)
-  const changedClass = (changed: boolean) => `form-field${changed ? ' is-unsaved' : ''}`
+  const unsaved = (changed: boolean) => (changed ? 'is-unsaved' : undefined)
 
   function toggle(otherId: ModuleId, on: boolean) {
     const id = String(otherId)
@@ -48,31 +48,36 @@ export default function ModuleAvailability({
       </h2>
       <div className="form module-availability">
         <div className="form-row">
-          <div className={changedClass(value.availableFrom !== saved.availableFrom)}>
-            <label htmlFor="module-available-from">Available from</label>
-            <input
-              id="module-available-from"
-              type="datetime-local"
-              value={value.availableFrom}
-              disabled={disabled}
-              onChange={event => onChange({ ...value, availableFrom: event.target.value })}
-            />
-            <p className="form-hint">
-              Closed to students before this. Empty: no start date. Content without its own visible date is visible from
-              then.
-            </p>
-          </div>
-          <div className={changedClass(value.openToAllFrom !== saved.openToAllFrom)}>
-            <label htmlFor="module-open-to-all">Available for all from</label>
-            <input
-              id="module-open-to-all"
-              type="datetime-local"
-              value={value.openToAllFrom}
-              disabled={disabled}
-              onChange={event => onChange({ ...value, openToAllFrom: event.target.value })}
-            />
-            <p className="form-hint">Open to everyone, also those who have not completed the modules below.</p>
-          </div>
+          <Field
+            label="Available from"
+            className={unsaved(value.availableFrom !== saved.availableFrom)}
+            hint="Closed to students before this. Empty: no start date. Content without its own visible date is visible from then."
+          >
+            {props => (
+              <input
+                {...props}
+                type="datetime-local"
+                value={value.availableFrom}
+                disabled={disabled}
+                onChange={event => onChange({ ...value, availableFrom: event.target.value })}
+              />
+            )}
+          </Field>
+          <Field
+            label="Available for all from"
+            className={unsaved(value.openToAllFrom !== saved.openToAllFrom)}
+            hint="Open to everyone, also those who have not completed the modules below."
+          >
+            {props => (
+              <input
+                {...props}
+                type="datetime-local"
+                value={value.openToAllFrom}
+                disabled={disabled}
+                onChange={event => onChange({ ...value, openToAllFrom: event.target.value })}
+              />
+            )}
+          </Field>
         </div>
 
         {others.length === 0 ? (

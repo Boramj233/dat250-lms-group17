@@ -18,6 +18,7 @@ import { useCourseView } from '../../../courseContext'
 import { useCourseItem } from '../../../useCourseItems'
 import { studentsOf, submissionKindLabel, submissionStats } from '@domain/assignments/submissionStats'
 import { usePeopleNames } from '../../../usePeopleNames'
+import { FormError } from '@shared/ui/Form'
 import GradePublishing from './GradePublishing'
 import { fullName } from '@shared/lib/fullName'
 import './ContentSubmissionsPage.css'
@@ -119,11 +120,7 @@ export default function ContentSubmissionsPage() {
                       }).length
                 }
               />
-              {publishError && (
-                <p className="form-error" role="alert">
-                  {publishError}
-                </p>
-              )}
+              <FormError>{publishError}</FormError>
               <DataTable<ReviewSubmission>
                 caption={`Submissions for ${item?.title ?? 'this content'}`}
                 rows={all}

@@ -1,6 +1,6 @@
 import { formatDateTime, toDateTimeLocal } from '@shared/lib/dateFormat'
+import { Field } from '@shared/ui/Form'
 import type { CourseModule } from '@domain/modules/types'
-import '@shared/styles/forms.css'
 
 type VisibleFromFieldProps = {
   /** A datetime-local value; empty inherits the module's start date. */
@@ -18,23 +18,24 @@ type VisibleFromFieldProps = {
 export default function VisibleFromField({ value, onChange, module, problem }: VisibleFromFieldProps) {
   const moduleStart = module.availableFrom ? new Date(module.availableFrom) : null
   return (
-    <div className="form-field">
-      <label htmlFor="content-visible-from">Visible from</label>
-      <input
-        id="content-visible-from"
-        type="datetime-local"
-        value={value}
-        min={module.availableFrom ? toDateTimeLocal(module.availableFrom) : undefined}
-        aria-describedby="content-visible-from-hint"
-        aria-invalid={problem ? true : undefined}
-        onChange={event => onChange(event.target.value)}
-      />
-      <p id="content-visible-from-hint" className={problem ? 'form-error' : 'form-hint'}>
-        {problem ??
-          (moduleStart
-            ? `Empty: visible when the module is, ${formatDateTime(moduleStart)}. It cannot be earlier than that. Your local time.`
-            : 'Empty: visible as soon as the module is. Your local time.')}
-      </p>
-    </div>
+    <Field
+      label="Visible from"
+      error={problem}
+      hint={
+        moduleStart
+          ? `Empty: visible when the module is, ${formatDateTime(moduleStart)}. It cannot be earlier than that. Your local time.`
+          : 'Empty: visible as soon as the module is. Your local time.'
+      }
+    >
+      {props => (
+        <input
+          {...props}
+          type="datetime-local"
+          value={value}
+          min={module.availableFrom ? toDateTimeLocal(module.availableFrom) : undefined}
+          onChange={event => onChange(event.target.value)}
+        />
+      )}
+    </Field>
   )
 }

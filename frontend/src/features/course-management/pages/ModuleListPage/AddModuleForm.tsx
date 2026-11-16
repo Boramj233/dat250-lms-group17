@@ -1,8 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { useCreateModule } from '@domain/modules/hooks'
 import type { CourseId } from '@shared/types'
-import RequiredMark from '@shared/ui/RequiredMark'
-import '@shared/styles/forms.css'
+import { Field, FormError, Panel, SubmitButton } from '@shared/ui/Form'
 
 type AddModuleFormProps = {
   courseId: CourseId
@@ -21,36 +20,26 @@ export default function AddModuleForm({ courseId, position }: AddModuleFormProps
   }
 
   return (
-    <section className="teacher-panel" aria-labelledby="add-module-title">
-      <h2 id="add-module-title" className="teacher-panel-title">
-        Add a module
-      </h2>
+    <Panel title="Add a module">
       <form className="form" onSubmit={submit}>
-        <div className="form-field">
-          <label htmlFor="module-title">
-            Title
-            <RequiredMark />
-          </label>
-          <input
-            id="module-title"
-            required
-            maxLength={255}
-            value={title}
-            onChange={event => setTitle(event.target.value)}
-            placeholder="e.g. Messaging"
-          />
-        </div>
-        {createModule.error && (
-          <p className="form-error" role="alert">
-            Could not add the module. Try again.
-          </p>
-        )}
+        <Field label="Title" required>
+          {props => (
+            <input
+              {...props}
+              maxLength={255}
+              value={title}
+              onChange={event => setTitle(event.target.value)}
+              placeholder="e.g. Messaging"
+            />
+          )}
+        </Field>
+        <FormError>{createModule.error && 'Could not add the module. Try again.'}</FormError>
         <div className="form-actions">
-          <button type="submit" className="button-primary" disabled={createModule.isPending}>
-            {createModule.isPending ? 'Adding…' : 'Add module'}
-          </button>
+          <SubmitButton pending={createModule.isPending} pendingLabel="Adding…">
+            Add module
+          </SubmitButton>
         </div>
       </form>
-    </section>
+    </Panel>
   )
 }

@@ -4,7 +4,7 @@ import { safeHttpUrl } from '@shared/lib/safeUrl'
 import type { GroupId } from '@shared/types'
 import { useSubmitFile, useSubmitMySubmission } from '@domain/assignments/hooks'
 import type { AssignmentContent, CodingExerciseContent } from '@domain/content/types'
-import '@shared/styles/forms.css'
+import { Field, FormError, SubmitButton } from '@shared/ui/Form'
 
 /** The backend accepts PDF files up to this size (lms.submission.files.max-size). */
 const MAX_FILE_BYTES = 10 * 1024 * 1024
@@ -75,64 +75,48 @@ export default function SubmissionForm({ content, groupId, onDone, onCancel }: S
       )}
 
       {!isCode && kind === 'FILE' ? (
-        <div className="form-field">
-          <label htmlFor="submission-file">PDF file</label>
-          <p id="submission-file-hint" className="form-hint">
-            One PDF file, at most 10 MB.
-          </p>
-          <input
-            id="submission-file"
-            type="file"
-            accept="application/pdf,.pdf"
-            aria-describedby="submission-file-hint"
-            onChange={event => setFile(event.target.files?.[0] ?? null)}
-          />
-          {fileProblem && (
-            <p className="form-error" role="alert">
-              {fileProblem}
-            </p>
-          )}
-        </div>
-      ) : (
-        <div className="form-field">
-          <label htmlFor="submission-answer">{isCode ? 'Repository URL' : 'Your answer'}</label>
-          <p id="submission-hint" className="form-hint">
-            {isCode
-              ? 'A link to your Git repository, starting with https://, e.g. https://github.com/you/project.'
-              : 'Write your answer as text (at most 10 000 characters).'}
-          </p>
-          {isCode ? (
+        <Field label="PDF file" hint="One PDF file, at most 10 MB." hintAbove error={fileProblem}>
+          {props => (
             <input
-              id="submission-answer"
-              type="url"
-              value={value}
-              aria-describedby="submission-hint"
-              onChange={event => setValue(event.target.value)}
-              autoFocus
-            />
-          ) : (
-            <textarea
-              id="submission-answer"
-              rows={10}
-              maxLength={10000}
-              value={value}
-              aria-describedby="submission-hint"
-              onChange={event => setValue(event.target.value)}
-              autoFocus
+              {...props}
+              type="file"
+              accept="application/pdf,.pdf"
+              onChange={event => setFile(event.target.files?.[0] ?? null)}
             />
           )}
-        </div>
+        </Field>
+      ) : (
+        <Field
+          label={isCode ? 'Repository URL' : 'Your answer'}
+          hintAbove
+          hint={
+            isCode
+              ? 'A link to your Git repository, starting with https://, e.g. https://github.com/you/project.'
+              : 'Write your answer as text (at most 10 000 characters).'
+          }
+        >
+          {props =>
+            isCode ? (
+              <input {...props} type="url" value={value} onChange={event => setValue(event.target.value)} autoFocus />
+            ) : (
+              <textarea
+                {...props}
+                rows={10}
+                maxLength={10000}
+                value={value}
+                onChange={event => setValue(event.target.value)}
+                autoFocus
+              />
+            )
+          }
+        </Field>
       )}
 
-      {error && (
-        <p className="form-error" role="alert">
-          {submitError(error)}
-        </p>
-      )}
+      <FormError>{error && submitError(error)}</FormError>
       <div className="form-actions">
-        <button type="submit" className="button-primary" disabled={!valid || pending}>
-          {pending ? 'Submitting…' : 'Submit'}
-        </button>
+        <SubmitButton pending={pending} pendingLabel="Submitting…" disabled={!valid}>
+          Submit
+        </SubmitButton>
         <button type="button" className="button-secondary" onClick={onCancel} disabled={pending}>
           Cancel
         </button>

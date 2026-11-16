@@ -1,12 +1,13 @@
 import RequiredMark from '@shared/ui/RequiredMark'
 import type { ContentType } from '@domain/content/types'
-import type { ContentFormValues, SetValue } from './contentFormValues'
+import { Field, type SetFormValue } from '@shared/ui/Form'
+import type { ContentFormValues } from './contentFormValues'
 import { combineExtensions, FILE_TYPE_PRESETS, formatExtensions } from './fileTypes'
 import QuizQuestionsEditor from './QuizQuestionsEditor'
 
 type FieldsProps = {
   values: ContentFormValues
-  set: SetValue
+  set: SetFormValue<ContentFormValues>
 }
 
 /** Coding exercises: a starter repository, starter code, or both (required as a pair). */
@@ -20,27 +21,29 @@ export function StarterFields({ values, set }: FieldsProps) {
       <p id="starter-hint" className="form-hint">
         At least one: a starter repository, starter code, or both.
       </p>
-      <div className="form-field">
-        <label htmlFor="content-starter">Starter repository URL</label>
-        <input
-          id="content-starter"
-          type="url"
-          maxLength={2048}
-          value={values.starterUrl}
-          onChange={event => set('starterUrl')(event.target.value)}
-          placeholder="https://github.com/…"
-        />
-      </div>
-      <div className="form-field">
-        <label htmlFor="content-starter-code">Starter code</label>
-        <textarea
-          id="content-starter-code"
-          className="code-input"
-          spellCheck={false}
-          value={values.starterCode}
-          onChange={event => set('starterCode')(event.target.value)}
-        />
-      </div>
+      <Field label="Starter repository URL">
+        {props => (
+          <input
+            {...props}
+            type="url"
+            maxLength={2048}
+            value={values.starterUrl}
+            onChange={event => set('starterUrl')(event.target.value)}
+            placeholder="https://github.com/…"
+          />
+        )}
+      </Field>
+      <Field label="Starter code">
+        {props => (
+          <textarea
+            {...props}
+            className="code-input"
+            spellCheck={false}
+            value={values.starterCode}
+            onChange={event => set('starterCode')(event.target.value)}
+          />
+        )}
+      </Field>
     </fieldset>
   )
 }
@@ -52,16 +55,16 @@ export function StarterFields({ values, set }: FieldsProps) {
 export function SubmissionFields({ type, values, set }: FieldsProps & { type: ContentType }) {
   return (
     <>
-      <div className="form-field">
-        <label htmlFor="content-deadline">Deadline</label>
-        <input
-          id="content-deadline"
-          type="datetime-local"
-          value={values.deadline}
-          onChange={event => set('deadline')(event.target.value)}
-        />
-        <p className="form-hint">Leave empty for no deadline. Your local time.</p>
-      </div>
+      <Field label="Deadline" hint="Leave empty for no deadline. Your local time.">
+        {props => (
+          <input
+            {...props}
+            type="datetime-local"
+            value={values.deadline}
+            onChange={event => set('deadline')(event.target.value)}
+          />
+        )}
+      </Field>
       <label className="form-check">
         <input type="checkbox" checked={values.allowLate} onChange={event => set('allowLate')(event.target.checked)} />
         Allow late submissions
@@ -135,39 +138,40 @@ export function QuizFields({ values, set }: FieldsProps) {
   const count = values.questions.length
   return (
     <>
-      <div className="form-field">
-        <label htmlFor="quiz-attempts">
-          Attempts allowed
-          <RequiredMark />
-        </label>
-        <input
-          id="quiz-attempts"
-          type="number"
-          required
-          min={1}
-          value={values.maxAttempts}
-          onChange={event => set('maxAttempts')(Number(event.target.value))}
-        />
-      </div>
-      <div className="form-field">
-        <label htmlFor="quiz-required-correct">Correct answers to pass</label>
-        <input
-          id="quiz-required-correct"
-          type="number"
-          min={1}
-          max={count}
-          step={1}
-          inputMode="numeric"
-          value={values.requiredCorrect}
-          placeholder="No pass requirement"
-          aria-describedby="quiz-required-correct-hint"
-          onChange={event => set('requiredCorrect')(event.target.value)}
-        />
-        <p id="quiz-required-correct-hint" className="form-hint">
-          An attempt is passed automatically when at least this many of the {count}
-          {count === 1 ? ' question is' : ' questions are'} correct. Leave it empty for no pass requirement.
-        </p>
-      </div>
+      <Field label="Attempts allowed" required>
+        {props => (
+          <input
+            {...props}
+            type="number"
+            min={1}
+            value={values.maxAttempts}
+            onChange={event => set('maxAttempts')(Number(event.target.value))}
+          />
+        )}
+      </Field>
+      <Field
+        label="Correct answers to pass"
+        hint={
+          <>
+            An attempt is passed automatically when at least this many of the {count}
+            {count === 1 ? ' question is' : ' questions are'} correct. Leave it empty for no pass requirement.
+          </>
+        }
+      >
+        {props => (
+          <input
+            {...props}
+            type="number"
+            min={1}
+            max={count}
+            step={1}
+            inputMode="numeric"
+            value={values.requiredCorrect}
+            placeholder="No pass requirement"
+            onChange={event => set('requiredCorrect')(event.target.value)}
+          />
+        )}
+      </Field>
       <QuizQuestionsEditor questions={values.questions} onChange={set('questions')} />
     </>
   )

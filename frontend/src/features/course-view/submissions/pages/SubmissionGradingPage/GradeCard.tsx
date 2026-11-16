@@ -4,13 +4,12 @@ import { errorMessage } from '@shared/api/errorMessage'
 import { formatDateTime, fromDateTimeLocal, toDateTimeLocal } from '@shared/lib/dateFormat'
 import { paths } from '@shared/paths'
 import type { ContentId, CourseId } from '@shared/types'
-import RequiredMark from '@shared/ui/RequiredMark'
+import { Field, FormError, FormSuccess, SubmitButton } from '@shared/ui/Form'
 import { useReleaseGrade, useSaveGrade } from '@domain/assignments/hooks'
 import { formatScore, MAX_SCORE } from '@domain/assignments/scoreFormat'
 import type { GradeReview, ReviewSubmission } from '@domain/assignments/types'
 import { Card } from '../../../components/DetailLayout'
 import PassedBadge from '../../../components/PassedBadge'
-import '@shared/styles/forms.css'
 
 /** The passed / not passed choice in the grading form (proposed in the backend). */
 const PASSED_CHOICES: { value: boolean | null; label: string }[] = [
@@ -117,30 +116,28 @@ export default function GradeCard({ submission, contentId, courseId, grade, isLa
   return (
     <Card id="grade-title" title="Grade and feedback">
       <form className="form grading-form" onSubmit={handleSubmit}>
-        <div className="form-field grading-score-field">
-          <label htmlFor="grading-score">
-            Score (0–{MAX_SCORE})<RequiredMark />
-          </label>
-          <div className="grading-score-input">
-            <input
-              id="grading-score"
-              type="number"
-              inputMode="decimal"
-              min={0}
-              max={MAX_SCORE}
-              step={0.01}
-              value={score}
-              onChange={event => setScore(event.target.value)}
-              required
-            />
-            <span className="text-meta">/ {MAX_SCORE}</span>
-          </div>
-          {score.trim() !== '' && !scoreValid && (
-            <p className="form-error" role="alert">
-              A number from 0 to {MAX_SCORE}, with at most two decimals.
-            </p>
+        <Field
+          label={`Score (0–${MAX_SCORE})`}
+          required
+          className="grading-score-field"
+          error={score.trim() !== '' && !scoreValid && `A number from 0 to ${MAX_SCORE}, with at most two decimals.`}
+        >
+          {props => (
+            <div className="grading-score-input">
+              <input
+                {...props}
+                type="number"
+                inputMode="decimal"
+                min={0}
+                max={MAX_SCORE}
+                step={0.01}
+                value={score}
+                onChange={event => setScore(event.target.value)}
+              />
+              <span className="text-meta">/ {MAX_SCORE}</span>
+            </div>
           )}
-        </div>
+        </Field>
 
         <fieldset className="form-field grading-passed">
           <legend className="form-label">Passed</legend>
@@ -157,53 +154,48 @@ export default function GradeCard({ submission, contentId, courseId, grade, isLa
           ))}
         </fieldset>
 
-        <div className="form-field">
-          <label htmlFor="grading-feedback">Feedback to the student</label>
-          <textarea
-            id="grading-feedback"
-            rows={6}
-            maxLength={10000}
-            value={feedback}
-            onChange={event => setFeedback(event.target.value)}
-          />
-        </div>
+        <Field label="Feedback to the student">
+          {props => (
+            <textarea
+              {...props}
+              rows={6}
+              maxLength={10000}
+              value={feedback}
+              onChange={event => setFeedback(event.target.value)}
+            />
+          )}
+        </Field>
 
-        <div className="form-field">
-          <label htmlFor="grading-visible-from">Visible date</label>
-          <input
-            id="grading-visible-from"
-            type="datetime-local"
-            className="grading-visible-input"
-            value={visibleDate}
-            aria-describedby="grading-visible-from-hint"
-            onChange={event => setVisibleDate(event.target.value)}
-          />
-          <p id="grading-visible-from-hint" className={visibleInPast ? 'form-error' : 'form-hint'}>
-            {visibleInPast
-              ? 'Choose a time in the future, or use Save and publish now.'
-              : 'When the student sees this grade. Leave it empty to keep it hidden until you publish it.'}
-          </p>
-        </div>
+        <Field
+          label="Visible date"
+          hint="When the student sees this grade. Leave it empty to keep it hidden until you publish it."
+          error={visibleInPast && 'Choose a time in the future, or use Save and publish now.'}
+        >
+          {props => (
+            <input
+              {...props}
+              type="datetime-local"
+              className="grading-visible-input"
+              value={visibleDate}
+              onChange={event => setVisibleDate(event.target.value)}
+            />
+          )}
+        </Field>
 
-        {failed && (
-          <p className="form-error" role="alert">
-            {gradeError(failed)}
-          </p>
-        )}
-        {done && (
-          <p className="form-success" role="status">
-            {done === 'published'
+        <FormError>{failed && gradeError(failed)}</FormError>
+        <FormSuccess>
+          {done &&
+            (done === 'published'
               ? 'Saved and published to the student.'
               : visibleFrom
                 ? `Saved. The student sees it from ${formatDateTime(new Date(visibleFrom))}, or when you publish it.`
-                : 'Saved. The student cannot see it until you publish it.'}
-          </p>
-        )}
+                : 'Saved. The student cannot see it until you publish it.')}
+        </FormSuccess>
 
         <div className="form-actions">
-          <button type="submit" className="button-primary" disabled={busy || !scoreValid || visibleInPast}>
-            {save.isPending && !release.isPending ? 'Saving…' : 'Save'}
-          </button>
+          <SubmitButton pending={save.isPending && !release.isPending} disabled={busy || !scoreValid || visibleInPast}>
+            Save
+          </SubmitButton>
           <button
             type="button"
             className="button-secondary"

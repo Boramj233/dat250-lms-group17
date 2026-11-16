@@ -1,7 +1,6 @@
-import { useState, type FormEvent, type ReactNode } from 'react'
+import type { FormEvent, ReactNode } from 'react'
 import type { CreateCourseInput, Term } from '../../types'
-import RequiredMark from '@shared/ui/RequiredMark'
-import '@shared/styles/forms.css'
+import { Field, FormError, RequiredFieldsNote, SubmitButton, useFormValues } from '@shared/ui/Form'
 
 type CourseFormProps = {
   /** Values to start with, e.g. the course being edited. */
@@ -30,104 +29,56 @@ export default function CourseForm({
   actions,
   onChange,
 }: CourseFormProps) {
-  const [title, setTitle] = useState(initial.title)
-  const [description, setDescription] = useState(initial.description)
-  const [term, setTerm] = useState<Term>(initial.term)
-  const [year, setYear] = useState(initial.year)
-
-  // Tells the parent the values after a change (the setters run first, so pass the new value).
-  function report(change: Partial<CreateCourseInput>) {
-    onChange?.({ title, description, term, year, ...change })
-  }
+  const { values, set } = useFormValues(initial, onChange)
 
   function submit(event: FormEvent) {
     event.preventDefault()
-    onSubmit({ title: title.trim(), description: description.trim(), term, year })
+    onSubmit({ ...values, title: values.title.trim(), description: values.description.trim() })
   }
 
   return (
     <form className="form" onSubmit={submit}>
-      <p className="form-hint">
-        Fields marked <span className="form-required">*</span> are required.
-      </p>
-      <div className="form-field">
-        <label htmlFor="course-title">
-          Title
-          <RequiredMark />
-        </label>
-        <input
-          id="course-title"
-          required
-          maxLength={255}
-          value={title}
-          onChange={event => {
-            setTitle(event.target.value)
-            report({ title: event.target.value })
-          }}
-          placeholder="DAT250 Advanced Software Technologies"
-        />
-      </div>
-      <div className="form-field">
-        <label htmlFor="course-description">
-          Description
-          <RequiredMark />
-        </label>
-        <textarea
-          id="course-description"
-          required
-          value={description}
-          onChange={event => {
-            setDescription(event.target.value)
-            report({ description: event.target.value })
-          }}
-        />
-      </div>
-      <div className="form-row">
-        <div className="form-field">
-          <label htmlFor="course-term">
-            Term
-            <RequiredMark />
-          </label>
-          <select
-            id="course-term"
-            required
-            value={term}
-            onChange={event => {
-              setTerm(event.target.value as Term)
-              report({ term: event.target.value as Term })
-            }}
-          >
-            <option value="SPRING">Spring</option>
-            <option value="AUTUMN">Autumn</option>
-          </select>
-        </div>
-        <div className="form-field">
-          <label htmlFor="course-year">
-            Year
-            <RequiredMark />
-          </label>
+      <RequiredFieldsNote />
+      <Field label="Title" required>
+        {props => (
           <input
-            id="course-year"
-            type="number"
-            required
-            min={1}
-            value={year}
-            onChange={event => {
-              setYear(Number(event.target.value))
-              report({ year: Number(event.target.value) })
-            }}
+            {...props}
+            maxLength={255}
+            value={values.title}
+            onChange={event => set('title')(event.target.value)}
+            placeholder="DAT250 Advanced Software Technologies"
           />
-        </div>
+        )}
+      </Field>
+      <Field label="Description" required>
+        {props => (
+          <textarea {...props} value={values.description} onChange={event => set('description')(event.target.value)} />
+        )}
+      </Field>
+      <div className="form-row">
+        <Field label="Term" required>
+          {props => (
+            <select {...props} value={values.term} onChange={event => set('term')(event.target.value as Term)}>
+              <option value="SPRING">Spring</option>
+              <option value="AUTUMN">Autumn</option>
+            </select>
+          )}
+        </Field>
+        <Field label="Year" required>
+          {props => (
+            <input
+              {...props}
+              type="number"
+              min={1}
+              value={values.year}
+              onChange={event => set('year')(Number(event.target.value))}
+            />
+          )}
+        </Field>
       </div>
-      {error && (
-        <p className="form-error" role="alert">
-          {error}
-        </p>
-      )}
+      <FormError>{error}</FormError>
       <div className="form-actions">
-        <button type="submit" className="button-primary" disabled={saving}>
-          {saving ? 'Saving…' : submitLabel}
-        </button>
+        <SubmitButton pending={saving}>{submitLabel}</SubmitButton>
         {actions}
       </div>
     </form>

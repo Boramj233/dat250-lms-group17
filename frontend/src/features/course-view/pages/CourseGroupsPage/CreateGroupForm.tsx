@@ -1,9 +1,9 @@
-import { useState, type FormEvent } from 'react'
+import { useId, useState, type FormEvent } from 'react'
 import { errorMessage } from '@shared/api/errorMessage'
 import type { CourseId } from '@shared/types'
 import { nextGroupNumber, useCreateGroup } from '@domain/groups/hooks'
 import type { CourseGroup } from '@domain/groups/types'
-import '@shared/styles/forms.css'
+import { Field, FormError, FormSuccess, Panel, SubmitButton } from '@shared/ui/Form'
 
 type CreateGroupFormProps = {
   courseId: CourseId
@@ -17,6 +17,7 @@ export default function CreateGroupForm({ courseId, groups }: CreateGroupFormPro
   const [number, setNumber] = useState('')
   const [created, setCreated] = useState<string | null>(null)
   const create = useCreateGroup(courseId)
+  const hintId = useId()
   const suggested = nextGroupNumber(groups)
   const groupNumber = number === '' ? suggested : Number(number)
   const taken = groups.some(group => group.groupNumber === groupNumber)
@@ -34,55 +35,46 @@ export default function CreateGroupForm({ courseId, groups }: CreateGroupFormPro
   }
 
   return (
-    <section className="teacher-panel" aria-labelledby="create-group-title">
-      <h2 id="create-group-title" className="teacher-panel-title">
-        Create a group
-      </h2>
+    <Panel title="Create a group">
       <form className="form" onSubmit={submit} noValidate>
         <div className="form-row course-groups-create">
-          <div className="form-field">
-            <label htmlFor="group-number">Group number</label>
-            <input
-              id="group-number"
-              type="number"
-              min={1}
-              step={1}
-              inputMode="numeric"
-              value={number}
-              placeholder={String(suggested)}
-              aria-describedby="group-number-hint"
-              onChange={event => {
-                setNumber(event.target.value)
-                setCreated(null)
-                create.reset()
-              }}
-            />
-          </div>
+          <Field label="Group number">
+            {props => (
+              <input
+                {...props}
+                type="number"
+                min={1}
+                step={1}
+                inputMode="numeric"
+                value={number}
+                placeholder={String(suggested)}
+                aria-describedby={hintId}
+                onChange={event => {
+                  setNumber(event.target.value)
+                  setCreated(null)
+                  create.reset()
+                }}
+              />
+            )}
+          </Field>
           <div className="form-actions">
-            <button type="submit" className="button-primary" disabled={create.isPending || invalid || taken}>
-              {create.isPending ? 'Creating…' : 'Create group'}
-            </button>
+            <SubmitButton pending={create.isPending} pendingLabel="Creating…" disabled={invalid || taken}>
+              Create group
+            </SubmitButton>
           </div>
         </div>
-        <p id="group-number-hint" className="form-hint">
+        {/* Below the row with the button, so the field and the button line up. */}
+        <p id={hintId} className="form-hint">
           {invalid
             ? 'The number must be a whole number of 1 or more.'
             : taken
               ? `Group ${groupNumber} already exists.`
               : 'The group starts empty; students join it themselves, one group each.'}
         </p>
-        {create.error && (
-          <p className="form-error" role="alert">
-            {createError(create.error, groupNumber)}
-          </p>
-        )}
-        {created && (
-          <p className="form-success" role="status">
-            {created}
-          </p>
-        )}
+        <FormError>{create.error && createError(create.error, groupNumber)}</FormError>
+        <FormSuccess>{created}</FormSuccess>
       </form>
-    </section>
+    </Panel>
   )
 }
 

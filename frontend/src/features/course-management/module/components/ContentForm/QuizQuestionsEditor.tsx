@@ -1,4 +1,5 @@
 import type { NewQuizQuestion } from '@domain/content/types'
+import { Field } from '@shared/ui/Form'
 import RequiredMark from '@shared/ui/RequiredMark'
 import { emptyQuestion } from './quizQuestions'
 
@@ -18,26 +19,27 @@ export default function QuizQuestionsEditor({ questions, onChange }: QuizQuestio
       {questions.map((question, index) => (
         <fieldset key={index} className="quiz-question-editor">
           <legend className="form-label">Question {index + 1}</legend>
-          <div className="form-field">
-            <label htmlFor={`q-${index}-text`}>
-              Question
-              <RequiredMark />
-            </label>
-            <input
-              id={`q-${index}-text`}
-              value={question.questionText}
-              aria-required="true"
-              onChange={event => update(index, { questionText: event.target.value })}
-            />
-          </div>
-          <div className="form-field">
-            <label htmlFor={`q-${index}-hint`}>Hint (optional)</label>
-            <input
-              id={`q-${index}-hint`}
-              value={question.hint ?? ''}
-              onChange={event => update(index, { hint: event.target.value })}
-            />
-          </div>
+          <Field label="Question" required>
+            {props => (
+              <input
+                {...props}
+                // Checked when the form is sent, with a message naming the question.
+                required={undefined}
+                aria-required="true"
+                value={question.questionText}
+                onChange={event => update(index, { questionText: event.target.value })}
+              />
+            )}
+          </Field>
+          <Field label="Hint (optional)">
+            {props => (
+              <input
+                {...props}
+                value={question.hint ?? ''}
+                onChange={event => update(index, { hint: event.target.value })}
+              />
+            )}
+          </Field>
           <p className="form-label">
             Answers
             <RequiredMark />

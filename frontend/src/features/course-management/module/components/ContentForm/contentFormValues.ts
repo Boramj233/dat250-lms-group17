@@ -27,9 +27,6 @@ export type ContentFormValues = {
   questions: NewQuizQuestion[]
 }
 
-/** Changes one value: `set('title')('New title')`. */
-export type SetValue = <K extends keyof ContentFormValues>(key: K) => (value: ContentFormValues[K]) => void
-
 /** The form's starting values: empty for a new item, otherwise the saved item's. */
 export function initialValues(content: Content | undefined): ContentFormValues {
   const files = content?.type === 'ASSIGNMENT' ? splitExtensions(content.acceptedFileTypes ?? []) : undefined

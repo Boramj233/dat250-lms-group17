@@ -6,9 +6,8 @@ import type { UserLookup } from '@domain/users/types'
 import { useDebounced } from '@shared/lib/useDebounced'
 import type { CourseId } from '@shared/types'
 import { ROLE_LABEL } from '@domain/courses/members'
-import RequiredMark from '@shared/ui/RequiredMark'
 import { fullName } from '@shared/lib/fullName'
-import '@shared/styles/forms.css'
+import { Field, FormError, FormSuccess, Panel, SubmitButton } from '@shared/ui/Form'
 
 type AddMemberFormProps = {
   courseId: CourseId
@@ -42,30 +41,27 @@ export default function AddMemberForm({ courseId, members }: AddMemberFormProps)
   }
 
   return (
-    <section className="teacher-panel" aria-labelledby="add-member-title">
-      <h2 id="add-member-title" className="teacher-panel-title">
-        Add a member
-      </h2>
+    <Panel title="Add a member">
       <form className="form" onSubmit={submit}>
-        <div className="form-field">
-          <label htmlFor="member-search">
-            Name or email
-            <RequiredMark />
-          </label>
-          <input
-            id="member-search"
-            aria-required="true"
-            type="search"
-            autoComplete="off"
-            value={search}
-            onChange={event => {
-              setSearch(event.target.value)
-              setSelected(null)
-              setAdded(null)
-            }}
-            placeholder="Search for a user"
-          />
-        </div>
+        <Field label="Name or email" required>
+          {props => (
+            <input
+              {...props}
+              // Not required for the browser: the button stays off until a user is chosen.
+              required={undefined}
+              aria-required="true"
+              type="search"
+              autoComplete="off"
+              value={search}
+              onChange={event => {
+                setSearch(event.target.value)
+                setSelected(null)
+                setAdded(null)
+              }}
+              placeholder="Search for a user"
+            />
+          )}
+        </Field>
 
         {!selected && search.trim().length >= 2 && (
           <div className="member-results" aria-live="polite">
@@ -104,40 +100,25 @@ export default function AddMemberForm({ courseId, members }: AddMemberFormProps)
               <span className="member-full-name">{fullName(selected)}</span>
               <span className="member-email">{selected.email}</span>
             </p>
-            <div className="form-field">
-              <label htmlFor="member-role">
-                Role
-                <RequiredMark />
-              </label>
-              <select
-                id="member-role"
-                required
-                value={role}
-                onChange={event => setRole(event.target.value as CourseRole)}
-              >
-                <option value="STUDENT">{ROLE_LABEL.STUDENT}</option>
-                <option value="TEACHER">{ROLE_LABEL.TEACHER}</option>
-              </select>
-            </div>
+            <Field label="Role" required>
+              {props => (
+                <select {...props} value={role} onChange={event => setRole(event.target.value as CourseRole)}>
+                  <option value="STUDENT">{ROLE_LABEL.STUDENT}</option>
+                  <option value="TEACHER">{ROLE_LABEL.TEACHER}</option>
+                </select>
+              )}
+            </Field>
           </div>
         )}
 
-        {enroll.error && (
-          <p className="form-error" role="alert">
-            Could not add the member. Try again.
-          </p>
-        )}
-        {added && (
-          <p className="form-success" role="status">
-            {added}
-          </p>
-        )}
+        <FormError>{enroll.error && 'Could not add the member. Try again.'}</FormError>
+        <FormSuccess>{added}</FormSuccess>
         <div className="form-actions">
-          <button type="submit" className="button-primary" disabled={!selected || enroll.isPending}>
-            {enroll.isPending ? 'Adding…' : 'Add to course'}
-          </button>
+          <SubmitButton pending={enroll.isPending} pendingLabel="Adding…" disabled={!selected}>
+            Add to course
+          </SubmitButton>
         </div>
       </form>
-    </section>
+    </Panel>
   )
 }

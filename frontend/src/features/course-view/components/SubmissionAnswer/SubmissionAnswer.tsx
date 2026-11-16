@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { apiDownload } from '@shared/api/apiClient'
 import { formatDateTime } from '@shared/lib/dateFormat'
 import { safeHttpUrl } from '@shared/lib/safeUrl'
+import { FormError } from '@shared/ui/Form'
 import type { MySubmission } from '@domain/assignments/types'
 import './SubmissionAnswer.css'
 
@@ -50,11 +51,7 @@ export default function SubmissionAnswer({ submission }: { submission: MySubmiss
           <button type="button" className="button-secondary" onClick={() => void download()} disabled={downloading}>
             {downloading ? 'Downloading…' : 'Download'}
           </button>
-          {failed && (
-            <p className="form-error" role="alert">
-              Could not download the file. Try again.
-            </p>
-          )}
+          <FormError>{failed && 'Could not download the file. Try again.'}</FormError>
         </div>
       )}
       {submission.type === 'GIT_URL' &&

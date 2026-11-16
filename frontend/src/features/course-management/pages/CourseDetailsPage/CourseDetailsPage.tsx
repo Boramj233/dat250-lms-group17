@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useUpdateCourse } from '@domain/courses/hooks'
 import CourseForm from '@domain/courses/components/CourseForm'
 import type { CreateCourseInput } from '@domain/courses/types'
+import { FormSuccess } from '@shared/ui/Form'
 import { useLeaveGuard } from '@shared/ui/SaveBar'
 import { useManageCourse } from '../../manageCourseContext'
 
@@ -68,11 +69,7 @@ export default function CourseDetailsPage() {
           )
         }}
       />
-      {saved && (
-        <p className="form-success" role="status">
-          The course was saved.
-        </p>
-      )}
+      <FormSuccess>{saved && 'The course was saved.'}</FormSuccess>
       {leaveDialog}
     </>
   )

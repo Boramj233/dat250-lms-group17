@@ -2,7 +2,7 @@ import { useState } from 'react'
 import type { ContentId } from '@shared/types'
 import { useConfirm } from '@shared/ui/ConfirmDialog'
 import { useReleaseAllGrades } from '@domain/assignments/hooks'
-import '@shared/styles/forms.css'
+import { FormError, FormSuccess } from '@shared/ui/Form'
 
 type GradePublishingProps = {
   contentId: ContentId
@@ -63,16 +63,8 @@ export default function GradePublishing({ contentId, unpublished }: GradePublish
               : `${unpublished} saved ${unpublished === 1 ? 'grade is' : 'grades are'} not visible to the students yet.`}
         </span>
       </div>
-      {releaseAll.error && (
-        <p className="form-error" role="alert">
-          Could not publish the grades. Try again.
-        </p>
-      )}
-      {published && (
-        <p className="form-success" role="status">
-          {published}
-        </p>
-      )}
+      <FormError>{releaseAll.error && 'Could not publish the grades. Try again.'}</FormError>
+      <FormSuccess>{published}</FormSuccess>
       {confirmDialog}
     </section>
   )

@@ -20,7 +20,8 @@ src/
 │   ├── lib/              dateFormat, fullName, safeUrl, useDebounced, moveItem
 │   ├── navigation/       breadcrumbs (Trail)
 │   ├── styles/           tokens, global styles, forms.css
-│   ├── ui/               QueryState, PageHeader, DataTable, Tabs, ActionMenu (the "⋯" menu), icons,
+│   ├── ui/               Form (Field, SubmitButton, FormError, Panel, useFormValues, …), QueryState,
+│   │                     PageHeader, DataTable, Tabs, ActionMenu (the "⋯" menu), icons,
 │   │                     ConfirmDialog, SaveBar, RequiredMark, NotFoundPage
 │   ├── paths.ts          URL patterns and link builders
 │   └── types.ts          id types (CourseId, ModuleId, ...)
@@ -109,6 +110,10 @@ the two in sync).
   contexts or `useParams`. This keeps them reusable.
 - **Loading, error and empty states** go through `QueryState`, page titles through
   `PageHeader`.
+- **Forms are built from `shared/ui/Form`**: `Field` for each field (label, `*`, hint and
+  error, linked for screen readers), `SubmitButton`, `FormError` / `FormSuccess`, and
+  `Panel` for a small form in a box. `useFormValues` keeps a form's values in one object.
+  Only groups of checkboxes or radios are a `<fieldset>` with a `<legend>`.
 - **Cache invalidation belongs in a domain's `hooks.ts`**: a mutation hook refreshes
   everything it changes, so pages never call `queryClient` themselves.
 - **One folder per component**, with the component, its CSS and an `index.ts`

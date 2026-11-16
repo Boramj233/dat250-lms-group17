@@ -3,6 +3,7 @@ import type { QuizContent, QuizContentQuestion } from '@domain/content/types'
 import { useSubmitQuizAnswers } from '@domain/quizzes/hooks'
 import type { QuizAttemptScore } from '@domain/quizzes/types'
 import { typeOf } from './questionType'
+import { FormError, SubmitButton } from '@shared/ui/Form'
 import QuizQuestion from './QuizQuestion'
 
 type QuizFormProps = {
@@ -68,16 +69,12 @@ export default function QuizForm({ quizId, questions, preview, onSubmitted, onCa
           Answered {answered} of {questions.length}
           {!preview && answered < questions.length && ' · unanswered questions count as wrong'}
         </p>
-        {submit.error && (
-          <p className="form-error" role="alert">
-            Could not submit the quiz. Try again.
-          </p>
-        )}
+        <FormError>{submit.error && 'Could not submit the quiz. Try again.'}</FormError>
         <div className="quiz-form-actions">
           {!preview && (
-            <button type="submit" className="button-primary" disabled={submit.isPending}>
-              {submit.isPending ? 'Submitting…' : 'Submit quiz'}
-            </button>
+            <SubmitButton pending={submit.isPending} pendingLabel="Submitting…">
+              Submit quiz
+            </SubmitButton>
           )}
           <button type="button" className="button-secondary" onClick={onCancel} disabled={submit.isPending}>
             {preview ? 'Close preview' : 'Cancel'}
