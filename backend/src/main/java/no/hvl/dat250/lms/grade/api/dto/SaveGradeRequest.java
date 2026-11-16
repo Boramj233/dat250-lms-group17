@@ -7,4 +7,8 @@ import jakarta.validation.constraints.*;
 public record SaveGradeRequest(
         @NotNull @DecimalMin("0") @DecimalMax("100") @Digits(integer = 3, fraction = 2) BigDecimal score,
         @Size(max = 10000) String feedback,
-        @PositiveOrZero Long version) {}
+        @PositiveOrZero Long version, Boolean passed) {
+    public SaveGradeRequest(BigDecimal score, String feedback, Long version) {
+        this(score, feedback, version, null);
+    }
+}

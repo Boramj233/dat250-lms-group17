@@ -13,6 +13,7 @@ public record QuizDetailResponse(
     String title,
     int position,
     int maxAttempts,
+    int passingPercentage,
     List<QuestionResponse> questions
 ) {
 
@@ -57,6 +58,7 @@ public record QuizDetailResponse(
             quiz.getTitle(),
             quiz.getPosition(),
             quiz.getMaxAttempts(),
+            quiz.getPassingPercentage(),
             questions
         );
     }

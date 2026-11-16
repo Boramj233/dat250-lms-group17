@@ -33,6 +33,12 @@ public class GradingService {
     @Transactional
     public GradeReviewResponse save(Long submissionId, Long teacherUserId,
                                     BigDecimal score, String feedback, Long version) {
+        return save(submissionId, teacherUserId, score, feedback, version, null);
+    }
+
+    @Transactional
+    public GradeReviewResponse save(Long submissionId, Long teacherUserId,
+                                    BigDecimal score, String feedback, Long version, Boolean passed) {
         Submission submission = submissions.lockTeacherSubmission(submissionId, teacherUserId);
         requireLatest(submission);
         Enrollment teacher = teacher(submission, teacherUserId);
@@ -49,6 +55,7 @@ public class GradingService {
             requireVersion(grade, version);
             grade.revise(score, feedback, teacher, clock.instant().truncatedTo(java.time.temporal.ChronoUnit.MICROS));
         }
+        grade.decidePassed(passed);
         return GradeReviewResponse.from(grades.saveAndFlush(grade));
     }
 
