@@ -1,7 +1,7 @@
 import { Link } from 'react-router'
 import type { ContentSummary } from '@domain/content/types'
 import type { CourseModule } from '@domain/modules/types'
-import VisibleFromTag from '../VisibleFromTag'
+import ContentTags from '../ContentTags'
 import './ContentList.css'
 
 export type ContentRow = {
@@ -26,8 +26,7 @@ export default function ContentList({ rows }: { rows: ContentRow[] }) {
           <Link className="content-list-title" to={to}>
             {item.title}
           </Link>
-          {item.active === false && <span className="content-list-hidden">Hidden from students</span>}
-          {module && <VisibleFromTag item={item} module={module} className="content-list-hidden" />}
+          <ContentTags item={item} module={module} className="content-list-hidden" />
           {meta && <span className="content-list-meta">{meta}</span>}
         </li>
       ))}

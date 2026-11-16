@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { useLeaveGuard } from './useLeaveGuard'
+import { formatCount } from '@shared/lib/formatCount'
 import '../../styles/forms.css'
 import './SaveBar.css'
 
@@ -47,10 +48,7 @@ export default function SaveBar({
               </span>
             ) : changes > 0 ? (
               <>
-                <strong>
-                  {changes} unsaved {changes === 1 ? 'change' : 'changes'}
-                </strong>{' '}
-                · save them or cancel
+                <strong>{formatCount(changes, 'unsaved change')}</strong> · save them or cancel
               </>
             ) : (
               <span className="save-bar-saved">{saved}</span>

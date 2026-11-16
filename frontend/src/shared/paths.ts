@@ -55,3 +55,30 @@ export const paths = {
   manageContent: (courseId: CourseId, moduleId: ModuleId, contentId: ContentId) =>
     `/manage-courses/${id(courseId)}/modules/${id(moduleId)}/content/${id(contentId)}`,
 } as const
+
+const course = paths.courseRoute
+const manage = paths.manageCourseRoute
+
+/**
+ * URL patterns for useMatch, e.g. to know which part of a course is open. Built from the
+ * same route patterns as above, so a changed URL changes them too; keep the nested
+ * segments in line with routes.tsx.
+ */
+export const routePatterns = {
+  /** A course page with a section, also its items: /courses/1/assignments, …/assignments/101. */
+  courseSection: `${course}/:section/*`,
+  /** An item opened from a course list: /courses/1/assignments/101. */
+  courseSectionItem: `${course}/:section/:contentId`,
+  /** Teachers: one submission to grade, /courses/1/submissions/101/7. */
+  courseSubmission: `${course}/submissions/:contentId/:submissionId`,
+  /** Anything in one module: /courses/1/modules/2, …/modules/2/quizzes/13. */
+  inModule: `${course}/modules/:moduleId/*`,
+  /** A section of a module, also its items: /courses/1/modules/2/quizzes, …/quizzes/13. */
+  moduleSection: `${course}/modules/:moduleId/:section/*`,
+  /** An item in its module: /courses/1/modules/2/quizzes/13. */
+  moduleItem: `${course}/modules/:moduleId/:section/:contentId`,
+  /** Managing one module, also its content: /manage-courses/1/modules/2, …. */
+  manageModule: `${manage}/modules/:moduleId/*`,
+  manageContent: `${manage}/modules/:moduleId/content/:contentId/*`,
+  manageNewContent: `${manage}/modules/:moduleId/new/:type`,
+} as const

@@ -5,7 +5,7 @@ import { contentTypeLabel } from '@domain/content/contentTypes'
 import { useContent } from '@domain/content/hooks'
 import type { Content, ContentSummary } from '@domain/content/types'
 import type { CourseModule } from '@domain/modules/types'
-import VisibleFromTag from '../../components/VisibleFromTag'
+import ContentTags from '../../components/ContentTags'
 import QuizView from '../QuizView'
 import SubmittableContent from '../SubmittableContent'
 import './ContentView.css'
@@ -32,10 +32,7 @@ export default function ContentView({ summary, isTeacher, context, module }: Con
     <article className="content-view">
       <PageHeader title={summary.title} kicker={contentTypeLabel(summary.type)}>
         {context && <p className="content-view-context">{context}</p>}
-        {summary.active === false && <p className="content-view-hidden">Hidden from students</p>}
-        {module && (
-          <VisibleFromTag item={summary} module={module} className="content-view-hidden content-view-visible-from" />
-        )}
+        <ContentTags item={summary} module={module} className="content-view-hidden" block />
       </PageHeader>
       <QueryState query={content} loading="Loading…" error="Could not load this content. Try again later.">
         {data => <ContentBody content={data} isTeacher={isTeacher} />}

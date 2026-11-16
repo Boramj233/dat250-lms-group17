@@ -17,9 +17,7 @@ import {
 } from './api'
 import { submissionKeys } from './queryKeys'
 import type { MySubmission, SubmissionId } from './types'
-
-const newestFirst = <T extends { submittedAt: string }>(submissions: T[]) =>
-  [...submissions].sort((a, b) => Date.parse(b.submittedAt) - Date.parse(a.submittedAt))
+import { newestFirst } from '@shared/lib/newestFirst'
 
 // --- Students -------------------------------------------------------------------------
 

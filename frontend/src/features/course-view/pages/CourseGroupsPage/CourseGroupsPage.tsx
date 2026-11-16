@@ -20,6 +20,7 @@ import CreateGroupForm from './CreateGroupForm'
 import GroupBox from './GroupBox'
 import { deleteError, joinError, leaveError, switchError } from './groupErrors'
 import { fullName } from '@shared/lib/fullName'
+import { formatCount } from '@shared/lib/formatCount'
 import '@shared/styles/forms.css'
 import './CourseGroupsPage.css'
 
@@ -125,7 +126,7 @@ export default function CourseGroupsPage() {
 
   async function deleteGroup(group: CourseGroup) {
     const count = group.memberIds.length
-    const members = count === 0 ? '' : `Its ${count} ${count === 1 ? 'member' : 'members'} will be without a group. `
+    const members = count === 0 ? '' : `Its ${formatCount(count, 'member')} will be without a group. `
     const confirmed = await confirm({
       title: `Delete ${groupName(group)}?`,
       message: `${members}This cannot be undone.`,

@@ -2,6 +2,7 @@ import type { DragEvent } from 'react'
 import { Link } from 'react-router'
 import { DragHandleIcon } from '@shared/ui/icons'
 import type { CourseModule } from '@domain/modules/types'
+import { formatCount } from '@shared/lib/formatCount'
 
 type ModuleRowProps = {
   module: CourseModule
@@ -55,7 +56,7 @@ export default function ModuleRow(props: ModuleRowProps) {
         </span>
         <span className="manage-module-title">{module.title}</span>
         <span className="manage-module-count">
-          {itemCount === undefined ? '…' : `${itemCount} ${itemCount === 1 ? 'item' : 'items'}`}
+          {itemCount === undefined ? '…' : formatCount(itemCount, 'item')}
           {' · '}
           {availability}
         </span>

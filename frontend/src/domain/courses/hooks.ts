@@ -12,8 +12,10 @@ import {
   updateCourse,
   updateCourseRole,
 } from './api'
+import { useCourseModules } from '@domain/modules/hooks'
+import type { CourseModule } from '@domain/modules/types'
 import { courseKeys } from './queryKeys'
-import type { CourseRole } from './types'
+import type { Course, CourseRole } from './types'
 
 // Fetches and caches a specific course by its ID.
 export function useCourse(courseId: CourseId) {
@@ -82,4 +84,23 @@ export function useUpdateCourse() {
 // Changes a user's course role.
 export function useUpdateCourseRole() {
   return useInvalidatingMutation(updateCourseRole, membershipKeys)
+}
+
+export type CourseWithModules =
+  | { status: 'pending' }
+  | { status: 'error'; message: string }
+  | { status: 'ready'; course: Course; modules: CourseModule[]; isTeacher: boolean }
+
+/**
+ * Everything a course's pages share, loaded at once: the course, its modules (by
+ * position) and whether the user teaches it. For the layouts of one course.
+ */
+export function useCourseWithModules(courseId: CourseId): CourseWithModules {
+  const course = useCourse(courseId)
+  const modules = useCourseModules(courseId)
+  const role = useCourseRole(courseId)
+  if (course.isPending || modules.isPending || role.isPending) return { status: 'pending' }
+  if (course.error) return { status: 'error', message: 'Could not load the course.' }
+  if (modules.error) return { status: 'error', message: 'Could not load the modules of this course.' }
+  return { status: 'ready', course: course.data, modules: modules.data, isTeacher: role.role === 'TEACHER' }
 }

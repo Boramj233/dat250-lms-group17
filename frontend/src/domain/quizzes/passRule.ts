@@ -31,3 +31,11 @@ export function quizPassed(
 export function passRequirementText(requiredCorrectAnswers: number, totalQuestions: number): string {
   return `${requiredCorrectAnswers} of ${totalQuestions} correct`
 }
+
+/** The attempt with the most correct answers (the earliest in the list on a tie); undefined without attempts. */
+export function bestAttempt<T extends QuizAttemptScore>(attempts: T[]): T | undefined {
+  return attempts.reduce<T | undefined>(
+    (top, attempt) => (!top || attempt.correctCount > top.correctCount ? attempt : top),
+    undefined,
+  )
+}

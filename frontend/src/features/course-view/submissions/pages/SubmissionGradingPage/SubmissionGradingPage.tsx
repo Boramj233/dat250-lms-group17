@@ -26,7 +26,7 @@ import './SubmissionGradingPage.css'
  */
 export default function SubmissionGradingPage() {
   const { contentId = '', submissionId = '' } = useParams()
-  const { course, isTeacher } = useCourseView()
+  const { course } = useCourseView()
   const item = useCourseItem(contentId).found?.item
   const details = useContent(item?.type, contentId)
   const submission = useReviewSubmission(submissionId)
@@ -35,8 +35,6 @@ export default function SubmissionGradingPage() {
   // The latest submissions of the item, for Previous / Next.
   const latest = useReviewSubmissions(contentId)
   const people = usePeopleNames(course.id)
-
-  if (!isTeacher) return <p role="alert">Only teachers of {course.title} can grade its submissions.</p>
 
   const studentName = submission.data ? people.nameOf(submission.data.studentUserId) : '…'
   const crumbs = [

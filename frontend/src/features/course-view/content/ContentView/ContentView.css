@@ -27,8 +27,3 @@
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
-
-/* "Visible to students from …" under the title, on its own line like "Hidden from students". */
-.content-view-visible-from {
-  display: block;
-}

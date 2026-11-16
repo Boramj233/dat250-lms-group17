@@ -1,5 +1,3 @@
-import { formatDateTime } from '@shared/lib/dateFormat'
-import { TrailLink } from '@shared/navigation/Trail'
 import { paths, type CourseSection } from '@shared/paths'
 import type { CourseId } from '@shared/types'
 import { contentSection, isSubmittable, isSubmittableType } from '@domain/content/contentTypes'
@@ -11,12 +9,13 @@ import type { GradeEntry } from '@domain/grades/types'
 import type { CourseModule } from '@domain/modules/types'
 import { useMyQuizAttemptsFor } from '@domain/quizzes/hooks'
 import type { QuizAttemptScore } from '@domain/quizzes/types'
-import { quizPassed } from '@domain/quizzes/passRule'
+import { bestAttempt, quizPassed } from '@domain/quizzes/passRule'
 import DataTable, { type Column } from '@shared/ui/DataTable'
 import MandatoryLabel from '../../components/MandatoryLabel'
 import PassedBadge from '../../components/PassedBadge'
-import VisibleFromTag from '../../components/VisibleFromTag'
+import { deadlineColumn, moduleColumn, titleColumn } from '../../components/contentColumns'
 import { CheckCircleIcon } from '@shared/ui/icons'
+import { formatCount } from '@shared/lib/formatCount'
 
 export type ContentTypeRow = { item: ContentSummary; module: CourseModule }
 
@@ -78,41 +77,18 @@ export default function ContentTypeTable({
   }))
 
   const columns: Column<Row>[] = [
-    {
-      header: 'Title',
-      cell: ({ item, module }) => (
-        <>
-          <TrailLink
-            to={
-              courseSection
-                ? paths.courseSectionContent(courseId, courseSection, item.id)
-                : paths.courseContent(courseId, module.id, contentSection(item.type), item.id)
-            }
-          >
-            {item.title}
-          </TrailLink>
-          {item.active === false && <span className="data-table-tag">Hidden from students</span>}
-          <VisibleFromTag item={item} module={module} className="data-table-tag" />
-        </>
-      ),
-    },
-    // The module the item is in, as a link to it.
-    ...(showModule
-      ? [
-          {
-            header: 'Module',
-            cell: ({ module }: Row) => (
-              <TrailLink to={paths.courseModule(courseId, module.id)}>{module.title}</TrailLink>
-            ),
-          },
-        ]
-      : []),
+    titleColumn(({ item, module }) =>
+      courseSection
+        ? paths.courseSectionContent(courseId, courseSection, item.id)
+        : paths.courseContent(courseId, module.id, contentSection(item.type), item.id),
+    ),
+    ...(showModule ? [moduleColumn<Row>(courseId)] : []),
   ]
   if (submittable) {
-    columns.push(
-      { header: 'Deadline', cell: ({ details }) => <Deadline content={details} /> },
-      { header: 'Late submissions', cell: ({ details }) => <LateSubmissions content={details} /> },
-    )
+    columns.push(deadlineColumn(), {
+      header: 'Late submissions',
+      cell: ({ details }) => <LateSubmissions content={details} />,
+    })
     // First, to the left of the title.
     if (type === 'ASSIGNMENT')
       columns.unshift({ header: 'Mandatory', cell: ({ details }) => <MandatoryLabel content={details} /> })
@@ -162,12 +138,6 @@ export default function ContentTypeTable({
   )
 }
 
-function Deadline({ content }: { content?: Content }) {
-  if (!content) return '…'
-  if (!isSubmittable(content)) return '–'
-  return content.deadline ? formatDateTime(new Date(content.deadline)) : 'No deadline'
-}
-
 function LateSubmissions({ content }: { content?: Content }) {
   if (!content) return '…'
   if (!isSubmittable(content)) return '–'
@@ -191,7 +161,7 @@ function QuizStatus({
 }) {
   if (!attempts) return loading ? '…' : <span className="text-meta">–</span>
   if (attempts.length === 0) return <span className="text-meta">Not started</span>
-  const best = attempts.reduce((top, attempt) => (attempt.correctCount > top.correctCount ? attempt : top))
+  const best = bestAttempt(attempts)!
   const bestText = (
     <span className="text-meta">
       {' '}
@@ -207,10 +177,7 @@ function QuizStatus({
       <span>
         <span className="data-table-strong">Not passed yet</span>
         {bestText}
-        <span className="text-meta">
-          {' '}
-          · {left} {left === 1 ? 'attempt' : 'attempts'} left
-        </span>
+        <span className="text-meta"> · {formatCount(left, 'attempt')} left</span>
       </span>
     ) : (
       <span>

@@ -8,6 +8,7 @@ import type { CourseEnrollment } from '@domain/courses/types'
 import DataTable from '@shared/ui/DataTable'
 import { useCourseView } from '../../courseContext'
 import { fullName } from '@shared/lib/fullName'
+import { formatCount } from '@shared/lib/formatCount'
 import './CoursePeoplePage.css'
 
 /** Everyone enrolled in the course in a table: name, email and role. */
@@ -45,9 +46,7 @@ export default function CoursePeoplePage() {
                 },
               ]}
             />
-            <p className="course-people-count">
-              {all.length} {all.length === 1 ? 'member' : 'members'}
-            </p>
+            <p className="course-people-count">{formatCount(all.length, 'member')}</p>
           </>
         )}
       </QueryState>

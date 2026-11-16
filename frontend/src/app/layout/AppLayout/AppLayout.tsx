@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Outlet, useLocation } from 'react-router'
 import { paths } from '@shared/paths'
+import ErrorBoundary from '@shared/ui/ErrorBoundary'
 import Sidebar from '../Sidebar'
 import Topbar from '../Topbar'
 import './AppLayout.css'
@@ -25,7 +26,10 @@ export default function AppLayout() {
       <div className="app-body">
         <Sidebar isOpen={sidebarOpen} onNavigate={() => setSidebarOpen(false)} />
         <main className="page-content">
-          <Outlet />
+          {/* A bug on one page shows a message there; the top bar and menu keep working. */}
+          <ErrorBoundary resetKey={location.pathname}>
+            <Outlet />
+          </ErrorBoundary>
         </main>
       </div>
     </div>

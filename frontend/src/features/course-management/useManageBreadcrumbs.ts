@@ -1,5 +1,5 @@
 import { useMatch } from 'react-router'
-import { paths } from '@shared/paths'
+import { paths, routePatterns } from '@shared/paths'
 import { useModuleContent } from '@domain/content/hooks'
 import type { Course } from '@domain/courses/types'
 import type { CourseModule } from '@domain/modules/types'
@@ -12,9 +12,9 @@ import { contentTypeBySlug } from '@domain/content/contentTypes'
  * The last one is the current page.
  */
 export function useManageBreadcrumbs(course: Course, modules: CourseModule[]): BreadcrumbItem[] {
-  const moduleMatch = useMatch('/manage-courses/:courseId/modules/:moduleId/*')
-  const contentMatch = useMatch('/manage-courses/:courseId/modules/:moduleId/content/:contentId/*')
-  const newMatch = useMatch('/manage-courses/:courseId/modules/:moduleId/new/:type')
+  const moduleMatch = useMatch(routePatterns.manageModule)
+  const contentMatch = useMatch(routePatterns.manageContent)
+  const newMatch = useMatch(routePatterns.manageNewContent)
   const moduleIndex = modules.findIndex(m => String(m.id) === moduleMatch?.params.moduleId)
   const module = moduleIndex >= 0 ? modules[moduleIndex] : undefined
   // Same query as ManageModuleLayout, so this is read from the cache.

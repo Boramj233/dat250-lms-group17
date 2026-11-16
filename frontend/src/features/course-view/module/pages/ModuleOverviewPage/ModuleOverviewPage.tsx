@@ -1,12 +1,14 @@
-import { TrailLink } from '@shared/navigation/Trail'
 import { paths } from '@shared/paths'
 import PageHeader from '@shared/ui/PageHeader'
-import { contentSection, contentTypeLabel } from '@domain/content/contentTypes'
-import type { ContentSummary } from '@domain/content/types'
 import DataTable from '@shared/ui/DataTable'
-import VisibleFromTag from '../../../components/VisibleFromTag'
+import { contentSection } from '@domain/content/contentTypes'
+import type { ContentSummary } from '@domain/content/types'
+import type { CourseModule } from '@domain/modules/types'
+import { titleColumn, typeColumn } from '../../../components/contentColumns'
 import { useCourseView } from '../../../courseContext'
 import { useModuleView } from '../../moduleContext'
+
+type Row = { item: ContentSummary; module: CourseModule }
 
 /** The module's start page: all its content in order, as a table with the type of each. */
 export default function ModuleOverviewPage() {
@@ -15,25 +17,14 @@ export default function ModuleOverviewPage() {
   return (
     <>
       <PageHeader title={module.title} />
-      <DataTable<ContentSummary>
+      <DataTable<Row>
         caption={`Content in ${module.title}`}
-        rows={items}
-        rowKey={item => String(item.id)}
+        rows={items.map(item => ({ item, module }))}
+        rowKey={({ item }) => String(item.id)}
         empty="This module has no content yet."
         columns={[
-          {
-            header: 'Title',
-            cell: item => (
-              <>
-                <TrailLink to={paths.courseContent(course.id, module.id, contentSection(item.type), item.id)}>
-                  {item.title}
-                </TrailLink>
-                {item.active === false && <span className="data-table-tag">Hidden from students</span>}
-                <VisibleFromTag item={item} module={module} className="data-table-tag" />
-              </>
-            ),
-          },
-          { header: 'Type', cell: item => <span className="text-meta">{contentTypeLabel(item.type)}</span> },
+          titleColumn(({ item }) => paths.courseContent(course.id, module.id, contentSection(item.type), item.id)),
+          typeColumn(),
         ]}
       />
     </>

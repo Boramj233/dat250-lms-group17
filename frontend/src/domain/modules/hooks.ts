@@ -4,11 +4,12 @@ import type { CourseId } from '@shared/types'
 import { createModule, getCourseModules, reorderModules, updateModule } from './api'
 import { moduleKeys } from './queryKeys'
 
-// Fetches and caches the modules belonging to a specific course.
+// Fetches and caches the modules belonging to a specific course, sorted by position.
 export function useCourseModules(courseId: CourseId) {
   return useQuery({
     queryKey: moduleKeys.courseModules(courseId),
     queryFn: () => getCourseModules(courseId),
+    select: modules => [...modules].sort((a, b) => a.position - b.position),
   })
 }
 

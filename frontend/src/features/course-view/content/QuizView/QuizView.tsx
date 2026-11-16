@@ -1,12 +1,13 @@
 import { useState } from 'react'
 import type { QuizContent } from '@domain/content/types'
 import { useMyQuizAttempts } from '@domain/quizzes/hooks'
-import { attemptPassed, passRequirementText, quizPassed } from '@domain/quizzes/passRule'
+import { attemptPassed, bestAttempt, passRequirementText, quizPassed } from '@domain/quizzes/passRule'
 import type { QuizAttemptScore } from '@domain/quizzes/types'
 import DetailLayout, { Card, DeadlineFact } from '../../components/DetailLayout'
 import PassedBadge from '../../components/PassedBadge'
 import { AttemptList, AttemptReview } from './QuizAttempts'
 import QuizForm from './QuizForm'
+import { formatCount } from '@shared/lib/formatCount'
 import '@shared/styles/forms.css'
 import './QuizView.css'
 
@@ -38,10 +39,7 @@ export default function QuizView({ content, isTeacher }: QuizViewProps) {
   const questions = [...(content.questions ?? [])].sort((a, b) => a.position - b.position)
   const deadline = content.deadline ? new Date(content.deadline) : null
   const used = attempts.data?.length ?? 0
-  const best = attempts.data?.reduce<QuizAttemptScore | undefined>(
-    (top, attempt) => (!top || attempt.correctCount > top.correctCount ? attempt : top),
-    undefined,
-  )
+  const best = attempts.data && bestAttempt(attempts.data)
   const required = content.requiredCorrectAnswers ?? null
   const passed = attempts.data ? quizPassed(attempts.data, required) : null
   const attemptsLeft = Math.max(0, content.maxAttempts - used)
@@ -99,10 +97,7 @@ export default function QuizView({ content, isTeacher }: QuizViewProps) {
                   attemptsLeft > 0 ? (
                     <>
                       <strong>Not passed yet</strong>
-                      <span className="text-meta">
-                        {' '}
-                        · {attemptsLeft} {attemptsLeft === 1 ? 'attempt' : 'attempts'} left
-                      </span>
+                      <span className="text-meta"> · {formatCount(attemptsLeft, 'attempt')} left</span>
                     </>
                   ) : (
                     <>
@@ -197,7 +192,7 @@ export default function QuizView({ content, isTeacher }: QuizViewProps) {
             <p className="text-meta">
               You needed {passRequirementText(required ?? 0, mode.score.totalQuestions)} to pass.
               {attemptsLeft > 0
-                ? ` You have ${attemptsLeft} ${attemptsLeft === 1 ? 'attempt' : 'attempts'} left.`
+                ? ` You have ${formatCount(attemptsLeft, 'attempt')} left.`
                 : ' You have no attempts left.'}
             </p>
           )}

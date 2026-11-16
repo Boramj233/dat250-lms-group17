@@ -3,6 +3,7 @@ import type { CourseId, GroupId, UserId } from '@shared/types'
 import { addGroupMember, createGroup, deleteGroup, getCourseGroups, removeGroupMember } from './api'
 import { groupKeys } from './queryKeys'
 import type { CourseGroup } from './types'
+import { switchGroup } from './switchGroup'
 
 // Fetches and caches a course's groups, sorted by group number.
 export function useCourseGroups(courseId: CourseId) {
@@ -58,39 +59,19 @@ export function useJoinGroup(courseId: CourseId) {
 }
 
 /**
- * Thrown by useSwitchGroup when the student left their old group but could not join the
- * new one. `backInOldGroup`: they were put back in the old group.
- */
-export class SwitchGroupError extends Error {
-  readonly backInOldGroup: boolean
-
-  constructor(cause: unknown, backInOldGroup: boolean) {
-    super('Could not join the new group', { cause })
-    this.backInOldGroup = backInOldGroup
-  }
-}
-
-/**
- * Students: move from one group to another (one group at a time). The backend has no
- * single call for this, so it leaves `fromGroupId` and then joins `toGroupId`; if joining
- * fails, it tries to rejoin the old group and throws SwitchGroupError. If leaving fails,
- * that error is thrown as it is and nothing has changed.
+ * Students: move from one group to another (one group at a time); see switchGroup for what
+ * happens when a step fails (it throws SwitchGroupError when joining failed).
  */
 export function useSwitchGroup(courseId: CourseId) {
   return useGroupMutation(
     courseId,
-    async ({ fromGroupId, toGroupId, userId }: { fromGroupId: GroupId; toGroupId: GroupId; userId: UserId }) => {
-      await removeGroupMember(courseId, fromGroupId, userId)
-      try {
-        return await addGroupMember(courseId, toGroupId, userId)
-      } catch (error) {
-        const backInOldGroup = await addGroupMember(courseId, fromGroupId, userId).then(
-          () => true,
-          () => false,
-        )
-        throw new SwitchGroupError(error, backInOldGroup)
-      }
-    },
+    ({ fromGroupId, toGroupId, userId }: { fromGroupId: GroupId; toGroupId: GroupId; userId: UserId }) =>
+      switchGroup({
+        from: fromGroupId,
+        to: toGroupId,
+        leave: groupId => removeGroupMember(courseId, groupId, userId),
+        join: groupId => addGroupMember(courseId, groupId, userId),
+      }),
   )
 }
 

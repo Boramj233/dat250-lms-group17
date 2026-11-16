@@ -3,6 +3,7 @@ import type { ContentId } from '@shared/types'
 import { useConfirm } from '@shared/ui/ConfirmDialog'
 import { useReleaseAllGrades } from '@domain/assignments/hooks'
 import { FormError, FormSuccess } from '@shared/ui/Form'
+import { formatCount } from '@shared/lib/formatCount'
 
 type GradePublishingProps = {
   contentId: ContentId
@@ -22,7 +23,7 @@ export default function GradePublishing({ contentId, unpublished }: GradePublish
   async function publishAll() {
     if (!unpublished) return
     const confirmed = await confirm({
-      title: `Publish ${unpublished} ${unpublished === 1 ? 'grade' : 'grades'}?`,
+      title: `Publish ${formatCount(unpublished, 'grade')}?`,
       message:
         'The students see their score and feedback right away, also for grades with a later visible date. A published grade cannot be changed.',
       confirmLabel: 'Publish all',

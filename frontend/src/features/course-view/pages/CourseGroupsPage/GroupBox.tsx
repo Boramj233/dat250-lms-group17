@@ -2,6 +2,7 @@ import type { UserId } from '@shared/types'
 import { groupName } from '@domain/groups/hooks'
 import type { CourseGroup } from '@domain/groups/types'
 import { ChevronRightIcon } from '@shared/ui/icons'
+import { formatCount } from '@shared/lib/formatCount'
 
 type GroupBoxProps = {
   group: CourseGroup
@@ -51,9 +52,7 @@ export default function GroupBox({
             <ChevronRightIcon className="disclosure-chevron" size={18} />
             <span className="course-group-name">{label}</span>
             {mine && <span className="tag">Your group</span>}
-            <span className="course-group-count">
-              {count} {count === 1 ? 'member' : 'members'}
-            </span>
+            <span className="course-group-count">{formatCount(count, 'member')}</span>
           </button>
         </h2>
         <GroupAction

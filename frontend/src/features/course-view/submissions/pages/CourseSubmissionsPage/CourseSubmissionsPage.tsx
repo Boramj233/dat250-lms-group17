@@ -1,16 +1,14 @@
-import { formatDateTime } from '@shared/lib/dateFormat'
-import { TrailLink } from '@shared/navigation/Trail'
 import { paths } from '@shared/paths'
 import PageHeader from '@shared/ui/PageHeader'
 import { useGradeReviewsFor, useReviewSubmissionsFor } from '@domain/assignments/hooks'
-import { contentTypeLabel, isSubmittable } from '@domain/content/contentTypes'
+import { isSubmittable } from '@domain/content/contentTypes'
 import { useContents } from '@domain/content/hooks'
 import type { Content, ContentSummary } from '@domain/content/types'
 import { useCourseEnrollments } from '@domain/courses/hooks'
 import type { CourseModule } from '@domain/modules/types'
 import DataTable from '@shared/ui/DataTable'
 import MandatoryLabel from '../../../components/MandatoryLabel'
-import VisibleFromTag from '../../../components/VisibleFromTag'
+import { deadlineColumn, moduleColumn, titleColumn, typeColumn } from '../../../components/contentColumns'
 import { useCourseView } from '../../../courseContext'
 import { useCourseItems } from '../../../useCourseItems'
 import { submissionStats, type SubmissionStats } from '@domain/assignments/submissionStats'
@@ -30,16 +28,14 @@ type Row = {
  * them are graded and published, and whether it is mandatory. A row opens its submissions.
  */
 export default function CourseSubmissionsPage() {
-  const { course, isTeacher } = useCourseView()
-  const content = useCourseItems({ enabled: isTeacher, filter: item => isSubmittable(item) })
+  const { course } = useCourseView()
+  const content = useCourseItems({ filter: item => isSubmittable(item) })
   const { items } = content
   const details = useContents(items.map(({ item }) => ({ type: item.type, id: item.id })))
   const submissions = useReviewSubmissionsFor(items.map(({ item }) => item.id))
   const allSubmissions = [...submissions.byContent.values()].flat()
   const grades = useGradeReviewsFor(allSubmissions.map(submission => submission.id))
   const members = useCourseEnrollments(course.id)
-
-  if (!isTeacher) return <p role="alert">Only teachers of {course.title} can see its submissions.</p>
 
   const rows: Row[] = items.map(row => {
     const list = submissions.byContent.get(String(row.item.id))
@@ -64,22 +60,10 @@ export default function CourseSubmissionsPage() {
           rowKey={({ item }) => String(item.id)}
           empty="Nothing in this course is handed in: there are no assignments or code exercises yet."
           columns={[
-            {
-              header: 'Title',
-              cell: ({ item, module }) => (
-                <>
-                  <TrailLink to={paths.courseSectionContent(course.id, 'submissions', item.id)}>{item.title}</TrailLink>
-                  {item.active === false && <span className="data-table-tag">Hidden from students</span>}
-                  <VisibleFromTag item={item} module={module} className="data-table-tag" />
-                </>
-              ),
-            },
-            {
-              header: 'Module',
-              cell: ({ module }) => <TrailLink to={paths.courseModule(course.id, module.id)}>{module.title}</TrailLink>,
-            },
-            { header: 'Type', cell: ({ item }) => <span className="text-meta">{contentTypeLabel(item.type)}</span> },
-            { header: 'Deadline', cell: ({ details }) => <Deadline content={details} /> },
+            titleColumn(({ item }) => paths.courseSectionContent(course.id, 'submissions', item.id)),
+            moduleColumn(course.id),
+            typeColumn(),
+            deadlineColumn(),
             {
               header: 'Answered',
               cell: row =>
@@ -119,10 +103,4 @@ export default function CourseSubmissionsPage() {
       </p>
     </>
   )
-}
-
-function Deadline({ content }: { content?: Content }) {
-  if (!content) return '…'
-  if (!isSubmittable(content)) return '–'
-  return content.deadline ? formatDateTime(new Date(content.deadline)) : 'No deadline'
 }

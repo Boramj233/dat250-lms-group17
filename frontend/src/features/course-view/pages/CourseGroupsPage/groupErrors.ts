@@ -1,5 +1,6 @@
 import { errorMessage } from '@shared/api/errorMessage'
-import { groupName, SwitchGroupError } from '@domain/groups/hooks'
+import { groupName } from '@domain/groups/hooks'
+import { SwitchGroupError } from '@domain/groups/switchGroup'
 import type { CourseGroup } from '@domain/groups/types'
 
 // Messages for the group actions that failed, from the backend's status code.

@@ -22,6 +22,7 @@ import {
   type MemberDraft,
 } from './memberDraft'
 import MemberRow from './MemberRow'
+import { formatCount } from '@shared/lib/formatCount'
 import '@shared/styles/forms.css'
 import './CourseMembersPage.css'
 
@@ -102,8 +103,7 @@ export default function CourseMembersPage() {
 
       <h2 className="section-title">
         In this course
-        {enrollments.data &&
-          ` · ${teacherCount} ${teacherCount === 1 ? 'teacher' : 'teachers'}, ${members.length - teacherCount} students`}
+        {enrollments.data && ` · ${formatCount(teacherCount, 'teacher')}, ${members.length - teacherCount} students`}
       </h2>
       <QueryState query={enrollments} loading="Loading members…" error="Could not load the members of this course.">
         {() => (

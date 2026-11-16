@@ -21,6 +21,7 @@ import { usePeopleNames } from '../../../usePeopleNames'
 import { FormError } from '@shared/ui/Form'
 import GradePublishing from './GradePublishing'
 import { fullName } from '@shared/lib/fullName'
+import { formatCount } from '@shared/lib/formatCount'
 import './ContentSubmissionsPage.css'
 
 /**
@@ -31,7 +32,7 @@ import './ContentSubmissionsPage.css'
  */
 export default function ContentSubmissionsPage() {
   const { contentId = '' } = useParams()
-  const { course, isTeacher } = useCourseView()
+  const { course } = useCourseView()
   const item = useCourseItem(contentId).found?.item
   const details = useContent(item?.type, contentId)
   const submissions = useReviewSubmissions(contentId)
@@ -40,8 +41,6 @@ export default function ContentSubmissionsPage() {
   const release = useReleaseGrade()
   const [confirm, confirmDialog] = useConfirm()
   const [publishError, setPublishError] = useState<string | null>(null)
-
-  if (!isTeacher) return <p role="alert">Only teachers of {course.title} can see its submissions.</p>
 
   const crumbs = [
     { label: course.title, to: paths.course(course.id) },
@@ -105,7 +104,7 @@ export default function ContentSubmissionsPage() {
                 </strong>{' '}
                 students have answered
                 {' · '}
-                {stats.submissions} {stats.submissions === 1 ? 'submission' : 'submissions'}
+                {formatCount(stats.submissions, 'submission')}
                 {' · '}
                 {stats.graded} graded, {stats.released} published
               </p>

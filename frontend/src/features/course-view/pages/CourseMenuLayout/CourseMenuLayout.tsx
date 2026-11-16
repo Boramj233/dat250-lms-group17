@@ -1,5 +1,5 @@
 import { Link, NavLink, Outlet, useMatch } from 'react-router'
-import { paths, type CourseSection } from '@shared/paths'
+import { paths, routePatterns, type CourseSection } from '@shared/paths'
 import { isSubmittable } from '@domain/content/contentTypes'
 import { formatTerm } from '@domain/courses/courseFormat'
 import CourseMenuHeading from '../../components/CourseMenuHeading'
@@ -19,7 +19,7 @@ type SubItem = { key: string; label: string; to: string }
 export default function CourseMenuLayout() {
   const { course, modules, isTeacher, menuOpen, toggleMenu } = useCourseView()
   // The section, also on its content pages (/courses/1/assignments/101).
-  const current = useMatch('/courses/:courseId/:section/*')?.params.section
+  const current = useMatch(routePatterns.courseSection)?.params.section
   const contentSection = CONTENT_SECTIONS.find(s => s.section === current)
   const onSubmissions = current === 'submissions' && isTeacher
   // The same queries as the content pages, so this is read from the cache. Only

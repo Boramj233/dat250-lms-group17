@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link, NavLink, Outlet, useMatch, useParams } from 'react-router'
 import { Breadcrumbs, type BreadcrumbItem } from '@shared/navigation/Trail'
-import { paths } from '@shared/paths'
+import { paths, routePatterns } from '@shared/paths'
 import { useModuleContent } from '@domain/content/hooks'
 import { formatTerm } from '@domain/courses/courseFormat'
 import CourseMenuHeading from '../../../components/CourseMenuHeading'
@@ -24,8 +24,8 @@ export default function ModuleLayout() {
   const module = modules.find(m => String(m.id) === moduleId)
   const content = useModuleContent(course.id, module?.id)
   // A section (…/modules/2/quizzes) or a content item in it (…/modules/2/quizzes/13).
-  const sectionMatch = useMatch('/courses/:courseId/modules/:moduleId/:section/*')
-  const contentId = useMatch('/courses/:courseId/modules/:moduleId/:section/:contentId')?.params.contentId
+  const sectionMatch = useMatch(routePatterns.moduleSection)
+  const contentId = useMatch(routePatterns.moduleItem)?.params.contentId
   // Folded at first; kept while moving between the module's pages.
   const [courseMenuOpen, setCourseMenuOpen] = useState(false)
 

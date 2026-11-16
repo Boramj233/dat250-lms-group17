@@ -3,13 +3,14 @@ import { useQueriesById } from '@shared/api/useQueriesById'
 import { getMyQuizAttempt, getMyQuizAttempts, submitQuizAnswers } from './api'
 import { quizKeys } from './queryKeys'
 import type { QuizAttemptId, QuizAttemptScore, QuizId } from './types'
+import { newestFirst } from '@shared/lib/newestFirst'
 
 // The logged-in user's attempts at a quiz, newest first (proposed endpoint).
 export function useMyQuizAttempts(quizId: QuizId) {
   return useQuery({
     queryKey: quizKeys.myAttempts(quizId),
     queryFn: () => getMyQuizAttempts(quizId),
-    select: attempts => [...attempts].sort((a, b) => Date.parse(b.submittedAt) - Date.parse(a.submittedAt)),
+    select: newestFirst,
   })
 }
 

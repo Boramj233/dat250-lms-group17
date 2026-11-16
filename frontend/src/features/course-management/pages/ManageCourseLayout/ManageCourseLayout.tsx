@@ -1,6 +1,5 @@
 import { Outlet, useParams } from 'react-router'
-import { useCourse, useCourseRole } from '@domain/courses/hooks'
-import { useCourseModules } from '@domain/modules/hooks'
+import { useCourseWithModules } from '@domain/courses/hooks'
 import { Breadcrumbs } from '@shared/navigation/Trail'
 import { ManageCourseContext, useManageCourse } from '../../manageCourseContext'
 import { useManageBreadcrumbs } from '../../useManageBreadcrumbs'
@@ -13,20 +12,15 @@ import { useManageBreadcrumbs } from '../../useManageBreadcrumbs'
  */
 export default function ManageCourseLayout() {
   const { courseId = '' } = useParams()
-  const course = useCourse(courseId)
-  const modules = useCourseModules(courseId)
-  const role = useCourseRole(courseId)
+  const loaded = useCourseWithModules(courseId)
 
-  if (course.isPending || modules.isPending || role.isPending) return <p role="status">Loading course…</p>
-  if (course.error) return <p role="alert">Could not load the course.</p>
-  if (modules.error) return <p role="alert">Could not load the modules of this course.</p>
-  if (role.role !== 'TEACHER') {
-    return <p role="alert">Only teachers of {course.data.title} can manage it.</p>
-  }
+  if (loaded.status === 'pending') return <p role="status">Loading course…</p>
+  if (loaded.status === 'error') return <p role="alert">{loaded.message}</p>
+  const { course, modules, isTeacher } = loaded
+  if (!isTeacher) return <p role="alert">Only teachers of {course.title} can manage it.</p>
 
-  const sortedModules = [...modules.data].sort((a, b) => a.position - b.position)
   return (
-    <ManageCourseContext value={{ course: course.data, modules: sortedModules }}>
+    <ManageCourseContext value={{ course, modules }}>
       <ManageBreadcrumbs />
       <Outlet />
     </ManageCourseContext>

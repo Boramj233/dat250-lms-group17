@@ -17,13 +17,14 @@ src/
 ├── shared/               knows nothing about courses, modules or content
 │   ├── api/              apiClient (adds the Bearer token to every call)
 │   ├── auth/             login session and current user: auth, access, useAuth
-│   ├── lib/              dateFormat, fullName, safeUrl, useDebounced, moveItem
+│   ├── lib/              dateFormat, formatCount, fullName, newestFirst, safeUrl, useDebounced, moveItem
 │   ├── navigation/       breadcrumbs (Trail)
 │   ├── styles/           tokens, global styles, forms.css
-│   ├── ui/               Form (Field, SubmitButton, FormError, Panel, useFormValues, …), QueryState,
+│   ├── ui/               Form (Field, SubmitButton, FormError, Panel, useFormValues, …), ErrorBoundary,
+│   │                     QueryState,
 │   │                     PageHeader, DataTable, Tabs, ActionMenu (the "⋯" menu), icons,
 │   │                     ConfirmDialog, SaveBar, RequiredMark, NotFoundPage
-│   ├── paths.ts          URL patterns and link builders
+│   ├── paths.ts          link builders (paths) and URL patterns for useMatch (routePatterns)
 │   └── types.ts          id types (CourseId, ModuleId, ...)
 ├── domain/
 │   ├── <domain>/         one folder per data domain, with as much of this as it needs:
@@ -39,9 +40,10 @@ src/
 │   ├── deadlines/        + DeadlineList
 │   ├── modules/          + prerequisites, moduleFormat
 │   ├── content/          + contentTypes, visibility
-│   ├── quizzes/          + passRule
+│   ├── quizzes/          + passRule (also bestAttempt)
 │   ├── assignments/      + scoreFormat, submissionStats
-│   └── grades/, groups/, users/
+│   ├── groups/           + switchGroup (leave one group, join another, roll back)
+│   └── grades/, users/
 └── features/
     ├── dashboard/        DashboardPage (student and course manager variants)
     ├── my-courses/       CoursesPage (all my courses by term)
@@ -55,11 +57,13 @@ src/
     │   ├── content/      one content item, wherever it is opened (not routed):
     │   │                 ContentView picks QuizView or SubmittableContent (assignments and
     │   │                 coding exercises); ContentTypeTable lists the items of one type
-    │   ├── submissions/  teachers: pages/ CourseSubmissions, ContentSubmissions, SubmissionGrading
+    │   ├── submissions/  teachers: pages/ CourseSubmissions, ContentSubmissions, SubmissionGrading,
+    │                 behind pages/RequireCourseTeacher (route guard in routes.tsx)
     │   ├── module/       ModuleLayout (module menu: Files, Pages, Assignments, Quizzes,
     │   │                 Code Exercises), the module overview and one content item
     │   └── components/   DetailLayout (cards + details panel of an item's page), SideMenuLayout,
-    │                     PassedBadge, VisibleFromTag, SubmissionAnswer, ...
+    │                     ContentTags (hidden / not yet visible), contentColumns (shared table
+    │                     columns), PassedBadge, SubmissionAnswer, ...
     └── course-management/  course managers (/manage-courses)
         ├── manageCourseContext.ts, useManageBreadcrumbs.ts
         ├── pages/        ManageCourses, NewCourse, ManageCourseLayout (breadcrumbs),
