@@ -710,6 +710,27 @@ const routes: MockHandler[] = [
     },
   },
   {
+    // Proposed: { moduleIds } – every module of the course once, first to last. Sets the
+    // positions 0, 1, 2, … and answers with the modules in that order.
+    method: 'PUT',
+    path: '/api/courses/:courseId/modules/order',
+    handle: ({ user, params, body }) => {
+      if (!isTeacher(user, params.courseId)) return forbidden()
+      const ids = ((body as { moduleIds?: (number | string)[] } | undefined)?.moduleIds ?? []).map(Number)
+      const courseModules = modules.filter(m => String(m.courseId) === params.courseId)
+      const sameSet = ids.length === courseModules.length && new Set(ids).size === ids.length
+        && courseModules.every(m => ids.includes(Number(m.id)))
+      if (!sameSet) return badRequest('moduleIds must list every module of the course exactly once')
+      ids.forEach((id, position) => { courseModules.find(m => Number(m.id) === id)!.position = position })
+      return ok([...courseModules]
+        .sort((a, b) => a.position - b.position)
+        .map(({ id, courseId, title, position, prerequisiteModuleIds, availableFrom, openToAllFrom }) => ({
+          id, courseId, title, position, prerequisiteModuleIds: prerequisiteModuleIds ?? [],
+          availableFrom: availableFrom ?? null, openToAllFrom: openToAllFrom ?? null,
+        })))
+    },
+  },
+  {
     // Proposed (data/modules/README.md): title, position and/or prerequisiteModuleIds.
     // Prerequisites must be other modules in the same course, without cycles.
     method: 'PATCH',

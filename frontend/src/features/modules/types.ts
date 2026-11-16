@@ -26,6 +26,15 @@ export interface CreateModuleInput {
   prerequisiteModuleIds?: ModuleId[];
 }
 
+/**
+ * Proposed: the course's modules in their new order (rank), first to last. Every module
+ * of the course, each once; the backend sets positions 0, 1, 2, … from it.
+ */
+export interface ReorderModulesInput {
+  courseId: CourseId;
+  moduleIds: ModuleId[];
+}
+
 export interface UpdateModuleInput {
   courseId: CourseId;
   moduleId: ModuleId;

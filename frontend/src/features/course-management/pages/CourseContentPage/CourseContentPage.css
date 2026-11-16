@@ -45,3 +45,75 @@
   font-weight: var(--font-weight-bold);
   overflow-wrap: anywhere;
 }
+
+.manage-module-help {
+  margin: 0 0 var(--space-3);
+}
+
+/* Handle, rank, then the name taking the room, then the buttons. */
+.manage-module-row {
+  justify-content: flex-start;
+  background: var(--color-background);
+}
+
+.manage-module-name {
+  flex: 1 1 14rem;
+}
+
+.manage-module-handle {
+  display: inline-flex;
+  color: var(--color-border);
+  cursor: grab;
+}
+
+.manage-module-row:hover .manage-module-handle {
+  color: var(--color-text);
+}
+
+/* The rank: a round number badge. */
+.manage-module-rank {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  color: var(--color-on-primary);
+  background: var(--color-primary);
+  font-family: var(--font-ui);
+  font-weight: var(--font-weight-bold);
+}
+
+.manage-module-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.manage-module-move {
+  min-width: var(--size-control-md);
+  padding-inline: var(--space-3);
+}
+
+/* A module in a new, unsaved place: accent edge and "Was 3". */
+.manage-module-row.is-moved {
+  box-shadow: inset var(--space-2) 0 0 var(--color-accent);
+}
+
+.manage-module-moved {
+  margin-left: var(--space-3);
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  font-weight: var(--font-weight-bold);
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+/* The row being dragged: lifted out of the list. */
+.manage-module-row.is-dragging {
+  opacity: 0.5;
+  outline: var(--border-width-sm) dashed var(--color-primary);
+  outline-offset: calc(-1 * var(--space-2));
+}
