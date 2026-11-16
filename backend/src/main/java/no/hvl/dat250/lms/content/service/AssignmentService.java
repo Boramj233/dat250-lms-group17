@@ -40,6 +40,7 @@ public class AssignmentService {
             String instructions,
             Instant deadline,
             boolean allowLateSubmission,
+            boolean mandatoryForExam,
             Long teacherUserId) {
 
         enrollmentService.requireActiveTeacher(teacherUserId, courseId);
@@ -72,6 +73,8 @@ public class AssignmentService {
             deadline,
             allowLateSubmission
         );
+
+        assignment.setMandatoryForExam(mandatoryForExam);
 
         return contentRepository.save(assignment);
     }

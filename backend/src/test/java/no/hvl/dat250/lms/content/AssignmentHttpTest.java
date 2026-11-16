@@ -93,6 +93,7 @@ class AssignmentHttpTest {
             throws Exception {
 
         Assignment assignment = savedAssignment();
+        when(assignment.isMandatoryForExam()).thenReturn(true);
 
         Instant deadline =
             Instant.parse("2026-11-20T23:00:00Z");
@@ -105,6 +106,7 @@ class AssignmentHttpTest {
             eq("Write a report"),
             eq(deadline),
             eq(false),
+            eq(true),
             eq(5L)
         )).thenReturn(assignment);
 
@@ -117,13 +119,15 @@ class AssignmentHttpTest {
                       "position": 2,
                       "instructions": "Write a report",
                       "deadline": "2026-11-20T23:00:00Z",
-                      "allowLateSubmission": false
+                      "allowLateSubmission": false,
+                      "mandatoryForExam": true
                     }
                     """)
         )
         .andExpect(status().isCreated())
         .andExpect(jsonPath("$.id").value(42))
         .andExpect(jsonPath("$.moduleId").value(10))
+        .andExpect(jsonPath("$.mandatoryForExam").value(true))
         .andExpect(
             jsonPath("$.title").value("JPA Assignment")
         )

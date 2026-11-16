@@ -62,6 +62,7 @@ class AssignmentServiceTest {
             "Implement JPA entities",
             deadline,
             false,
+            true,
             5L
         );
 
@@ -74,6 +75,7 @@ class AssignmentServiceTest {
         assertEquals(2, result.getPosition());
         assertEquals(deadline, result.getDeadline());
         assertFalse(result.isAllowLateSubmission());
+        assertTrue(result.isMandatoryForExam());
 
         verify(enrollmentService).requireActiveTeacher(5L, 1L);
         verify(contentRepository).save(result);
@@ -95,6 +97,7 @@ class AssignmentServiceTest {
                 "Implement JPA entities",
                 null,
                 false,
+                false,
                 5L
             )
         );
@@ -114,6 +117,7 @@ class AssignmentServiceTest {
                 2,
                 "Implement JPA entities",
                 null,
+                false,
                 false,
                 5L
             )

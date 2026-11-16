@@ -23,6 +23,8 @@ public record CreateAssignmentRequest(
 
     Instant deadline,
 
-    boolean allowLateSubmission
+    boolean allowLateSubmission,
+
+    Boolean mandatoryForExam
 
 ) {}
