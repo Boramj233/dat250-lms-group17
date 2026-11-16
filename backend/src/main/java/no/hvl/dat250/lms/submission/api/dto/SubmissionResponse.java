@@ -12,7 +12,10 @@ public record SubmissionResponse(
         String payload,
         Instant submittedAt,
         boolean late,
-        SubmissionFileResponse file
+        SubmissionFileResponse file,
+        Long groupId,
+        Long submittedByUserId,
+        java.util.List<SubmissionMemberResponse> members
 ) {
 
     public static SubmissionResponse from(
@@ -28,7 +31,10 @@ public record SubmissionResponse(
             SubmissionFileResponse.from(
                 submission.getFile(),
                 submission.getId()
-            )
+            ),
+            submission.getGroup() == null ? null : submission.getGroup().getGroupId(),
+            submission.getSubmittedBy().getUser().getUserId(),
+            submission.getMembers().stream().map(SubmissionMemberResponse::from).toList()
         );
     }
 }

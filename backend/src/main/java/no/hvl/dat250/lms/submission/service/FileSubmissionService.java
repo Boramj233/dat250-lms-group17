@@ -65,8 +65,14 @@ public class FileSubmissionService {
             Long contentId,
             Long userId,
             MultipartFile file) {
+        return submitFile(contentId, userId, file, null);
+    }
 
-        submissionService.validateFileSubmission(contentId, userId);
+    @Transactional(propagation = Propagation.NEVER)
+    public SubmissionResponse submitFile(Long contentId, Long userId, MultipartFile file, Long groupId) {
+
+        if (groupId == null) submissionService.validateFileSubmission(contentId, userId);
+        else submissionService.validateFileSubmission(contentId, userId, groupId);
 
         SubmissionObjectStorage storage = storageProvider.getIfAvailable();
 
@@ -126,11 +132,9 @@ public class FileSubmissionService {
                 // Rechecking must read current Enrollment and deadline, not a cached entity.
                 entityManager.clear();
 
-                Submission saved = submissionService.saveFileSubmission(
-                    contentId,
-                    userId,
-                    metadata
-                );
+                Submission saved = groupId == null
+                    ? submissionService.saveFileSubmission(contentId, userId, metadata)
+                    : submissionService.saveFileSubmission(contentId, userId, metadata, groupId);
 
                 // Map lazy Content fields before the short SQL transaction closes.
                 return SubmissionResponse.from(saved);

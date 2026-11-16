@@ -50,7 +50,7 @@ class FileSubmissionServiceTest {
     private void saveSucceeds() {
         when(submissions.saveFileSubmission(eq(1L), eq(2L), any())).thenAnswer(invocation -> {
             SubmissionFileMetadata metadata = invocation.getArgument(2);
-            return Submission.file(mock(Assignment.class), mock(Enrollment.class), metadata,
+            return Submission.file(mock(Assignment.class), mock(Enrollment.class, RETURNS_DEEP_STUBS), metadata,
                     java.time.Instant.parse("2026-11-16T12:00:00Z"), false);
         });
     }
@@ -155,7 +155,7 @@ class FileSubmissionServiceTest {
 
     @Test
     void downloadChecksOwnershipBeforeStorageAndDoesNotRequireCurrentEnrollment() {
-        Submission submission = Submission.file(mock(Assignment.class), mock(Enrollment.class),
+        Submission submission = Submission.file(mock(Assignment.class), mock(Enrollment.class, RETURNS_DEEP_STUBS),
                 new SubmissionFileMetadata("lms-submissions", "submissions/owned", "report.pdf",
                         "application/pdf", 123, "a".repeat(64)), java.time.Instant.now(), false);
         when(submissions.findOwnSubmission(1L, 2L)).thenReturn(submission);
@@ -178,7 +178,7 @@ class FileSubmissionServiceTest {
         verifyNoInteractions(storage);
 
         doReturn(new Submission(
-                mock(Assignment.class), mock(Enrollment.class),
+                mock(Assignment.class), mock(Enrollment.class, RETURNS_DEEP_STUBS),
                 no.hvl.dat250.lms.submission.domain.SubmissionType.TEXT, "answer", java.time.Instant.now(), false))
                 .when(submissions).findOwnSubmission(1L, 2L);
         assertThrows(java.util.NoSuchElementException.class, () -> service.findOwnFile(1L, 2L));

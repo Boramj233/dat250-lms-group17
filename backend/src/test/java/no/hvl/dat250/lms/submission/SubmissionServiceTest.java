@@ -66,7 +66,8 @@ class SubmissionServiceTest {
             submissionRepository,
             fixedClock,
             mock(no.hvl.dat250.lms.enrollment.service.EnrollmentService.class),
-            mock(org.springframework.context.ApplicationEventPublisher.class)
+            mock(org.springframework.context.ApplicationEventPublisher.class),
+            mock(no.hvl.dat250.lms.group.service.GroupService.class)
         );
     }
 

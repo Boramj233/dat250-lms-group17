@@ -1,13 +1,12 @@
 package no.hvl.dat250.lms.submission.domain;
 
-import java.time.Instant;
-
 import jakarta.persistence.*;
-
+import java.time.Instant;
 import no.hvl.dat250.lms.content.domain.Assignment;
 import no.hvl.dat250.lms.content.domain.CodingExercise;
 import no.hvl.dat250.lms.content.domain.Content;
 import no.hvl.dat250.lms.enrollment.domain.Enrollment;
+import no.hvl.dat250.lms.group.domain.Group;
 
 @Entity
 @Table(name = "submissions")
@@ -40,6 +39,28 @@ public class Submission {
 
     @Embedded
     private SubmissionFileMetadata file;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "group_id")
+    private Group group;
+
+    @ElementCollection
+    @CollectionTable(name = "submission_members", joinColumns = @JoinColumn(name = "submission_id"),
+        uniqueConstraints = @UniqueConstraint(columnNames = {"submission_id", "user_id"}))
+    private java.util.List<SubmissionMember> members = new java.util.ArrayList<>();
+
+    public Group getGroup() { return group; }
+    public java.util.List<SubmissionMember> getMembers() { return java.util.List.copyOf(members); }
+
+    public void assignGroup(Group group,
+                            java.util.List<SubmissionMember> snapshot) {
+        if (this.group != null || id != null || group == null || snapshot.isEmpty()
+            || snapshot.stream().noneMatch(m -> m.getUserId().equals(submittedBy.getUser().getUserId()))) {
+            throw new IllegalArgumentException("Valid group snapshot required before saving");
+        }
+        this.group = group;
+        this.members.addAll(snapshot);
+    }
 
     protected Submission() {
         // Required by JPA

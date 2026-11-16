@@ -37,12 +37,9 @@ public class SubmissionController {
 
         Long userId = currentUser.userId();
 
-        Submission saved = submissionService.submitIndividual(
-            contentId,
-            userId,
-            request.type(),
-            request.payload()
-        );
+        Submission saved = request.groupId() == null
+            ? submissionService.submitIndividual(contentId, userId, request.type(), request.payload())
+            : submissionService.submit(contentId, userId, request.type(), request.payload(), request.groupId());
 
         return ResponseEntity
             .status(HttpStatus.CREATED)

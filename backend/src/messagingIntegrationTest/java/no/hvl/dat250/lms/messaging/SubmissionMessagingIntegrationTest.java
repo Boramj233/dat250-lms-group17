@@ -204,4 +204,23 @@ class SubmissionMessagingIntegrationTest {
         assertNull(rabbit.receive(probe, 500));
         verifyNoInteractions(listener);
     }
+    @Test
+    void groupSubmissionUsesExistingCommitEventAndRollbackPublishesNothing() {
+        var f = fixture(false);
+        Long groupId = new TransactionTemplate(transactions).execute(status -> {
+            var content = entities.find(Assignment.class, f.contentId());
+            var group = new no.hvl.dat250.lms.group.domain.Group(1, content.getModule().getCourse());
+            group.addGroupMember(entities.find(User.class, f.userId()));
+            entities.persist(group); entities.flush();
+            return group.getGroupId();
+        });
+        Long id = submissions.submit(f.contentId(), f.userId(), SubmissionType.TEXT, "Group", groupId).getId();
+        event(id, f.contentId());
+        new TransactionTemplate(transactions).executeWithoutResult(status -> {
+            submissions.submit(f.contentId(), f.userId(), SubmissionType.GIT_URL, "https://example.com/group.git", groupId);
+            status.setRollbackOnly();
+        });
+        assertNull(rabbit.receive(probe, 300));
+    }
+
 }

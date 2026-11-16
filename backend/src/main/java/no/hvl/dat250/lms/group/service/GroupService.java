@@ -1,25 +1,50 @@
 package no.hvl.dat250.lms.group.service;
 
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.LockModeType;
+import java.util.List;
 import no.hvl.dat250.lms.course.domain.Course;
 import no.hvl.dat250.lms.course.service.CourseService;
+import no.hvl.dat250.lms.enrollment.service.EnrollmentService;
 import no.hvl.dat250.lms.group.api.dto.GroupDTO;
 import no.hvl.dat250.lms.group.domain.Group;
 import no.hvl.dat250.lms.group.repository.GroupRepository;
 import no.hvl.dat250.lms.user.domain.User;
-
 import no.hvl.dat250.lms.user.service.UserService;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
-import org.springframework.web.server.ResponseStatusException;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.List;
+import org.springframework.web.server.ResponseStatusException;
 
 @Service
 @Transactional
 public class GroupService {
 
-    // TODO: As of now there is no check if a user is enrolled in a course
+    private final EntityManager entities;
+    private final EnrollmentService enrollments;
+
+    // All group writes and group submission/grade acceptance share this row lock.
+    @Transactional(propagation = Propagation.MANDATORY)
+    public Group lockGroup(Long courseId, Long groupId) {
+        Group group = findGroupByGroupIdAndCourseId(groupId, courseId);
+        entities.refresh(group, LockModeType.PESSIMISTIC_WRITE);
+        // Refresh the collection as well, including when preflight loaded it.
+        org.hibernate.Hibernate.initialize(group.getGroupMembers());
+        return group;
+    }
+
+    public Group submissionGroup(Long courseId, Long groupId, Long userId, boolean lock) {
+        Group group = lock ? lockGroup(courseId, groupId)
+            : findGroupByGroupIdAndCourseId(groupId, courseId);
+        if (group.getGroupMembers().stream().noneMatch(u -> u.getUserId().equals(userId))) {
+            throw new AccessDeniedException("Group membership required");
+        }
+        return group;
+    }
+
 
     private final GroupRepository groupRepository;
     private final CourseService courseService;
@@ -28,11 +53,15 @@ public class GroupService {
     public GroupService(
             GroupRepository groupRepository,
             CourseService courseService,
-            UserService userService
+            UserService userService,
+            EntityManager entities,
+            EnrollmentService enrollments
     ) {
         this.groupRepository = groupRepository;
         this.courseService = courseService;
         this.userService = userService;
+        this.entities = entities;
+        this.enrollments = enrollments;
     }
 
     @Transactional(readOnly = true)
@@ -75,13 +104,19 @@ public class GroupService {
     }
 
     public void deleteGroup(Long courseId, Long groupId) {
-        Group group = findGroupByGroupIdAndCourseId(groupId, courseId);
-        groupRepository.delete(group);
+        Group group = lockGroup(courseId, groupId);
+        try {
+            groupRepository.delete(group);
+            groupRepository.flush();
+        } catch (DataIntegrityViolationException ex) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Group has retained history", ex);
+        }
     }
 
     public GroupDTO addGroupMember(Long courseId, Long groupId, Long userId) {
-        Group group = findGroupByGroupIdAndCourseId(groupId, courseId);
+        Group group = lockGroup(courseId, groupId);
         User user = findByUserId(userId);
+        enrollments.lockActiveStudent(userId, courseId);
 
         if (group.getGroupMembers().contains(user)) {
             throw new ResponseStatusException(
@@ -104,7 +139,7 @@ public class GroupService {
 
 
     public void removeGroupMember(Long courseId, Long groupId, Long userId) {
-        Group group = findGroupByGroupIdAndCourseId(groupId, courseId);
+        Group group = lockGroup(courseId, groupId);
         User user = findByUserId(userId);
 
         if (!group.getGroupMembers().remove(user)) { // <- .remove depends on User.equals() + User.hashCode()
