@@ -29,6 +29,18 @@ public class Quiz extends Content {
         this.maxAttempts = maxAttempts;
     }
 
+    @Column(name = "passing_percentage", nullable = false)
+    private int passingPercentage = 60;
+
+    public int getPassingPercentage() { return passingPercentage; }
+
+    public void setPassingPercentage(int percentage) {
+        if (percentage < 1 || percentage > 100) {
+            throw new IllegalArgumentException("Passing percentage must be between 1 and 100");
+        }
+        passingPercentage = percentage;
+    }
+
     protected Quiz(){}
 
     public int getMaxAttempts(){

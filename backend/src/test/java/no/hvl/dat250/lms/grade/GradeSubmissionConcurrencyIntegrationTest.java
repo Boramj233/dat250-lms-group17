@@ -70,7 +70,7 @@ class GradeSubmissionConcurrencyIntegrationTest {
         });
     }
     private GradeReviewResponse draft(Fixture f) {
-        return grading.save(f.submissionId(), f.teacher().getUserId(), new BigDecimal("85.50"), "Good reasoning", null);
+        return grading.save(f.submissionId(), f.teacher().getUserId(), new BigDecimal("85.50"), "Good reasoning", null, true);
     }
 
     @org.springframework.test.context.bean.override.mockito.MockitoSpyBean

@@ -21,6 +21,15 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class ContentService {
 
+    @org.springframework.beans.factory.annotation.Autowired
+    private ContentCompletionService completion;
+
+    /** Stable module-dependency integration point. Does not calculate module access. */
+    @Transactional(readOnly = true)
+    public boolean isCompleted(Long contentId, Long studentUserId) {
+        return completion.isCompleted(contentId, studentUserId);
+    }
+
     private final ContentRepository contentRepository;
 
     @PersistenceContext

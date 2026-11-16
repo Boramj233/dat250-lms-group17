@@ -92,6 +92,7 @@ class GradeH2UpgradeIntegrationTest {
             Submission submission = session.find(Submission.class, submissionId);
             assertEquals("submissions/test", submission.getFile().getObjectKey());
             Grade grade = new Grade(submission, new BigDecimal("100.00"), "Preserved feedback", session.find(Enrollment.class, teacherId), releasedAt);
+            grade.decidePassed(true);
             grade.release(session.find(Enrollment.class, teacherId), releasedAt);
             session.persist(grade);
             tx.commit();

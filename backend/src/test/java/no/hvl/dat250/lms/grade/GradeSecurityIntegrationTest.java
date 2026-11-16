@@ -70,7 +70,38 @@ class GradeSecurityIntegrationTest {
         });
     }
     private GradeReviewResponse draft(Fixture f) {
-        return grading.save(f.submissionId(), f.teacher().getUserId(), new BigDecimal("85.50"), "Good reasoning", null);
+        return grading.save(f.submissionId(), f.teacher().getUserId(), new BigDecimal("85.50"), "Good reasoning", null, true);
+    }
+
+    @Test
+    void undecidedDraftCannotReleaseAndBothDecisionsCanRelease() throws Exception {
+        for (boolean passed : new boolean[]{true, false}) {
+            var f = fixture();
+            String base = "/api/submissions/" + f.submissionId() + "/grade";
+            String token = TestTokens.bearer(f.teacher());
+            mvc.perform(put(base).header("Authorization", token)
+                    .contentType(MediaType.APPLICATION_JSON).content("{\"score\":100}"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.passed").isEmpty());
+            mvc.perform(post(base + "/release").header("Authorization", token)
+                    .contentType(MediaType.APPLICATION_JSON).content("{\"version\":0}"))
+                .andExpect(status().isBadRequest());
+            var unchanged = grading.review(f.submissionId(), f.teacher().getUserId());
+            assertNull(unchanged.releasedAt());
+            assertNull(unchanged.passed());
+            assertEquals(0L, unchanged.version());
+            mvc.perform(get(base).header("Authorization", TestTokens.bearer(f.owner())))
+                .andExpect(status().isNotFound());
+            mvc.perform(put(base).header("Authorization", token)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("{\"score\":100,\"version\":0,\"passed\":" + passed + "}"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.passed").value(passed));
+            mvc.perform(post(base + "/release").header("Authorization", token)
+                    .contentType(MediaType.APPLICATION_JSON).content("{\"version\":1}"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.passed").value(passed))
+                .andExpect(jsonPath("$.releasedAt").isNotEmpty());
+            mvc.perform(get(base).header("Authorization", TestTokens.bearer(f.owner())))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.passed").value(passed));
+        }
     }
 
     @Test
@@ -90,7 +121,7 @@ class GradeSecurityIntegrationTest {
         mvc.perform(get("/api/contents/{id}/submissions/me", f.contentId()).header("Authorization", TestTokens.bearer(f.owner())))
             .andExpect(status().isOk()).andExpect(jsonPath("$[0].feedback").doesNotExist());
         mvc.perform(put(base).header("Authorization", TestTokens.bearer(f.teacher()))
-                .contentType(MediaType.APPLICATION_JSON).content("{\"score\":90,\"feedback\":\"Final\",\"version\":0}"))
+                .contentType(MediaType.APPLICATION_JSON).content("{\"score\":90,\"feedback\":\"Final\",\"version\":0,\"passed\":true}"))
             .andExpect(status().isOk()).andExpect(jsonPath("$.version").value(1));
         mvc.perform(post(base + "/release").header("Authorization", TestTokens.bearer(f.teacher()))
                 .contentType(MediaType.APPLICATION_JSON).content("{\"version\":1}"))

@@ -5,6 +5,7 @@ CREATE TABLE IF NOT EXISTS grades (
     submission_id BIGINT NOT NULL UNIQUE REFERENCES submissions(id),
     score NUMERIC(5, 2) NOT NULL CHECK (score >= 0 AND score <= 100),
     feedback VARCHAR(10000),
+    passed BOOLEAN, -- NULL: no explicit teacher decision; never inferred from score
     graded_by_id BIGINT NOT NULL REFERENCES enrollments(id),
     graded_at TIMESTAMP(6) WITH TIME ZONE NOT NULL,
     released_by_id BIGINT REFERENCES enrollments(id),

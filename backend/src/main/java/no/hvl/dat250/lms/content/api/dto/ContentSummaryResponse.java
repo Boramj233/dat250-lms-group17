@@ -10,7 +10,8 @@ public record ContentSummaryResponse(
     Long id,
     String type,
     String title,
-    int position
+    int position,
+    boolean requiredForModuleCompletion
 ) {
 
     public static ContentSummaryResponse from(Content content) {
@@ -20,7 +21,8 @@ public record ContentSummaryResponse(
                 content.getId(),
                 "STATIC_PAGE",
                 content.getTitle(),
-                content.getPosition()
+                content.getPosition(),
+                content.isRequiredForModuleCompletion()
             );
         }
 
@@ -29,7 +31,8 @@ public record ContentSummaryResponse(
                 content.getId(),
                 "QUIZ",
                 content.getTitle(),
-                content.getPosition()
+                content.getPosition(),
+                content.isRequiredForModuleCompletion()
             );
         }
 
@@ -38,7 +41,8 @@ public record ContentSummaryResponse(
                 content.getId(),
                 "Assignment",
                 content.getTitle(),
-                content.getPosition()
+                content.getPosition(),
+                content.isRequiredForModuleCompletion()
             );
         }
 
@@ -47,7 +51,8 @@ public record ContentSummaryResponse(
                 content.getId(),
                 "CODING_EXERCISE",
                 content.getTitle(),
-                content.getPosition()
+                content.getPosition(),
+                content.isRequiredForModuleCompletion()
             );
         }
 
