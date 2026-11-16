@@ -10,6 +10,7 @@ import { CONTENT_SECTIONS } from '../../../contentSections'
 import { courseMenuItems, courseMenuPath } from '../../../courseMenu'
 import { useCourseView, visibleContent } from '../../../courseContext'
 import { ModuleViewContext } from '../../moduleContext'
+import { ChevronLeftIcon, ChevronRightIcon } from '@shared/ui/icons'
 
 /**
  * One module of a course with the module menu in place of the course menu: the course
@@ -77,21 +78,7 @@ export default function ModuleLayout() {
               aria-controls="module-course-menu"
               onClick={() => setCourseMenuOpen(!courseMenuOpen)}
             >
-              <svg
-                className="disclosure-chevron"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden="true"
-                focusable="false"
-              >
-                <path d="M9 6l6 6-6 6" />
-              </svg>
+              <ChevronRightIcon className="disclosure-chevron" />
               Course menu
             </button>
             <div id="module-course-menu" className="side-menu-disclosure-body" hidden={!courseMenuOpen}>
@@ -112,20 +99,7 @@ export default function ModuleLayout() {
             </div>
           </div>
           <Link className="side-menu-back" to={paths.courseSection(course.id, 'modules')}>
-            <svg
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
-              focusable="false"
-            >
-              <path d="M15 6l-6 6 6 6" />
-            </svg>
+            <ChevronLeftIcon />
             All modules
           </Link>
           <NavLink className="side-menu-heading" to={paths.courseModule(course.id, module.id)} end>

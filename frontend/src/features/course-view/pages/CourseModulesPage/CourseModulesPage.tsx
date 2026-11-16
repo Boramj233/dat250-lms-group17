@@ -10,6 +10,7 @@ import type { CourseModule } from '@domain/modules/types'
 import ContentList from '../../components/ContentList'
 import { useCourseView, visibleContent } from '../../courseContext'
 import './CourseModulesPage.css'
+import { ChevronRightIcon } from '@shared/ui/icons'
 
 /**
  * Every module of the course. The arrow folds a module's content in and out; the title
@@ -83,21 +84,7 @@ function ModuleBox({ courseId, module, items, loading, open, onToggle }: ModuleB
           aria-label={`${open ? 'Hide' : 'Show'} the content of ${module.title}`}
           onClick={onToggle}
         >
-          <svg
-            className="disclosure-chevron"
-            width="18"
-            height="18"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden="true"
-            focusable="false"
-          >
-            <path d="M9 6l6 6-6 6" />
-          </svg>
+          <ChevronRightIcon className="disclosure-chevron" size={18} />
         </button>
         <Link className="course-module-title" to={paths.courseModule(courseId, module.id)}>
           {module.title}

@@ -1,26 +1,29 @@
 import { useState } from 'react'
 import { useCurrentUser } from '@shared/auth/useAuth'
 import { useCourseEnrollments, useRemoveCourseEnrollment, useUpdateCourseRole } from '@domain/courses/hooks'
-import type { CourseEnrollment, CourseRole } from '@domain/courses/types'
 import QueryState from '@shared/ui/QueryState'
 import { useConfirm } from '@shared/ui/ConfirmDialog'
 import SaveBar from '@shared/ui/SaveBar'
 import { useManageCourse } from '../../manageCourseContext'
-import { ROLE_LABEL } from '../../roleLabels'
+import { fullName } from '@shared/lib/fullName'
+import { byRoleThenName } from '@domain/courses/members'
 import AddMemberForm from './AddMemberForm'
+import {
+  EMPTY_DRAFT,
+  isLastTeacher,
+  isRemoved,
+  isRoleChanged,
+  memberChanges,
+  roleAfter,
+  withoutSavedRemoval,
+  withoutSavedRole,
+  withRemoved,
+  withRole,
+  type MemberDraft,
+} from './memberDraft'
+import MemberRow from './MemberRow'
 import '@shared/styles/forms.css'
 import './CourseMembersPage.css'
-
-/** Teachers first, then by last name. */
-function sortMembers(members: CourseEnrollment[]): CourseEnrollment[] {
-  return [...members].sort((a, b) =>
-    a.role === b.role ? a.lastName.localeCompare(b.lastName) : a.role === 'TEACHER' ? -1 : 1,
-  )
-}
-
-/** Unsaved role changes and removals, by user id (as a string). */
-type Draft = { roles: Record<string, CourseRole>; removals: string[] }
-const EMPTY_DRAFT: Draft = { roles: {}, removals: [] }
 
 /**
  * The Members tab: who is in the course, their roles, and adding or removing members.
@@ -34,43 +37,23 @@ export default function CourseMembersPage() {
   const updateRole = useUpdateCourseRole()
   const remove = useRemoveCourseEnrollment()
   const [confirm, confirmDialog] = useConfirm()
-  const [draft, setDraft] = useState<Draft>(EMPTY_DRAFT)
+  const [draft, setDraft] = useState<MemberDraft>(EMPTY_DRAFT)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [saved, setSaved] = useState<string | null>(null)
 
-  const members = sortMembers(enrollments.data ?? [])
+  const members = [...(enrollments.data ?? [])].sort(byRoleThenName)
   const teacherCount = members.filter(member => member.role === 'TEACHER').length
-  const changes = Object.keys(draft.roles).length + draft.removals.length
-  const fullName = (member: CourseEnrollment) => `${member.firstName} ${member.lastName}`
-  const roleOf = (member: CourseEnrollment) => draft.roles[String(member.userId)] ?? member.role
-  const removed = (member: CourseEnrollment) => draft.removals.includes(String(member.userId))
-  // Teachers left after the unsaved changes: the course must keep at least one.
-  const teachersAfter = members.filter(member => !removed(member) && roleOf(member) === 'TEACHER').length
 
-  function change(update: (draft: Draft) => Draft) {
+  /** Changes the draft, and clears the last save's message. */
+  function change(update: (draft: MemberDraft) => MemberDraft) {
     setDraft(update)
     setSaved(null)
     setError(null)
   }
 
-  function setRole(member: CourseEnrollment, role: CourseRole) {
-    const id = String(member.userId)
-    change(d => {
-      const roles = { ...d.roles }
-      if (role === member.role) delete roles[id]
-      else roles[id] = role
-      return { ...d, roles }
-    })
-  }
-
-  function setRemoved(member: CourseEnrollment, on: boolean) {
-    const id = String(member.userId)
-    change(d => ({ ...d, removals: on ? [...d.removals, id] : d.removals.filter(other => other !== id) }))
-  }
-
   async function save() {
-    const removing = members.filter(removed)
+    const removing = members.filter(member => isRemoved(draft, member))
     if (removing.length > 0) {
       const confirmed = await confirm({
         title: `Remove ${removing.length === 1 ? fullName(removing[0]) : `${removing.length} members`}?`,
@@ -99,11 +82,11 @@ export default function CourseMembersPage() {
     try {
       for (const [id, role] of Object.entries(draft.roles)) {
         if (!draft.removals.includes(id)) await updateRole.mutateAsync({ courseId: course.id, userId: id, role })
-        setDraft(d => ({ ...d, roles: Object.fromEntries(Object.entries(d.roles).filter(([key]) => key !== id)) }))
+        setDraft(d => withoutSavedRole(d, id))
       }
       for (const id of draft.removals) {
         await remove.mutateAsync({ courseId: course.id, userId: id })
-        setDraft(d => ({ ...d, removals: d.removals.filter(other => other !== id) }))
+        setDraft(d => withoutSavedRemoval(d, id))
       }
       setSaved('All changes are saved.')
     } catch {
@@ -125,70 +108,25 @@ export default function CourseMembersPage() {
       <QueryState query={enrollments} loading="Loading members…" error="Could not load the members of this course.">
         {() => (
           <ul className="member-list">
-            {members.map(member => {
-              const isMe = String(member.userId) === String(me.userId)
-              const isRemoved = removed(member)
-              const roleChanged = String(member.userId) in draft.roles
-              // Keep at least one teacher, so the course can still be managed.
-              const lastTeacher = !isRemoved && roleOf(member) === 'TEACHER' && teachersAfter === 1
-              const rowClass = ['member-row', isRemoved ? 'is-removed' : roleChanged ? 'is-changed' : '']
-                .filter(Boolean)
-                .join(' ')
-              return (
-                <li key={member.userId} className={rowClass}>
-                  <div className="member-name">
-                    <span className="member-full-name">
-                      {fullName(member)}
-                      {isMe && ' (you)'}
-                      {isRemoved && <span className="tag tag-danger member-change">Will be removed</span>}
-                      {!isRemoved && roleChanged && (
-                        <span className="tag member-change">Becomes {ROLE_LABEL[roleOf(member)].toLowerCase()}</span>
-                      )}
-                    </span>
-                    <span className="member-email">{member.email}</span>
-                  </div>
-                  <label className="visually-hidden" htmlFor={`role-${member.userId}`}>
-                    Role of {fullName(member)}
-                  </label>
-                  <select
-                    id={`role-${member.userId}`}
-                    className="member-role"
-                    value={roleOf(member)}
-                    disabled={lastTeacher || isRemoved || saving}
-                    title={lastTeacher ? 'A course needs at least one teacher' : undefined}
-                    onChange={event => setRole(member, event.target.value as CourseRole)}
-                  >
-                    <option value="STUDENT">{ROLE_LABEL.STUDENT}</option>
-                    <option value="TEACHER">{ROLE_LABEL.TEACHER}</option>
-                  </select>
-                  {isRemoved ? (
-                    <button
-                      type="button"
-                      className="button-secondary"
-                      disabled={saving}
-                      onClick={() => setRemoved(member, false)}
-                    >
-                      Undo<span className="visually-hidden"> removing {fullName(member)}</span>
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      className="button-secondary"
-                      disabled={lastTeacher || saving}
-                      title={lastTeacher ? 'A course needs at least one teacher' : undefined}
-                      onClick={() => setRemoved(member, true)}
-                    >
-                      Remove<span className="visually-hidden"> {fullName(member)}</span>
-                    </button>
-                  )}
-                </li>
-              )
-            })}
+            {members.map(member => (
+              <MemberRow
+                key={member.userId}
+                member={member}
+                isMe={String(member.userId) === String(me.userId)}
+                role={roleAfter(draft, member)}
+                roleChanged={isRoleChanged(draft, member)}
+                removed={isRemoved(draft, member)}
+                lastTeacher={isLastTeacher(draft, member, members)}
+                saving={saving}
+                onRoleChange={role => change(d => withRole(d, member, role))}
+                onRemovedChange={removed => change(d => withRemoved(d, member, removed))}
+              />
+            ))}
           </ul>
         )}
       </QueryState>
       <SaveBar
-        changes={changes}
+        changes={memberChanges(draft)}
         saving={saving}
         error={error}
         saved={saved}

@@ -19,6 +19,7 @@ import { useCourseItem } from '../../../useCourseItems'
 import { studentsOf, submissionKindLabel, submissionStats } from '@domain/assignments/submissionStats'
 import { usePeopleNames } from '../../../usePeopleNames'
 import GradePublishing from './GradePublishing'
+import { fullName } from '@shared/lib/fullName'
 import './ContentSubmissionsPage.css'
 
 /**
@@ -227,9 +228,7 @@ export default function ContentSubmissionsPage() {
                   ) : (
                     <ul>
                       {missing.map(student => (
-                        <li key={student.userId}>
-                          {student.firstName} {student.lastName}
-                        </li>
+                        <li key={student.userId}>{fullName(student)}</li>
                       ))}
                     </ul>
                   )}

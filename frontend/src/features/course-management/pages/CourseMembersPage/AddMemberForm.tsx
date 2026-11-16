@@ -5,8 +5,9 @@ import { useUserSearch } from '@domain/users/hooks'
 import type { UserLookup } from '@domain/users/types'
 import { useDebounced } from '@shared/lib/useDebounced'
 import type { CourseId } from '@shared/types'
-import { ROLE_LABEL } from '../../roleLabels'
+import { ROLE_LABEL } from '@domain/courses/members'
 import RequiredMark from '@shared/ui/RequiredMark'
+import { fullName } from '@shared/lib/fullName'
 import '@shared/styles/forms.css'
 
 type AddMemberFormProps = {
@@ -32,7 +33,7 @@ export default function AddMemberForm({ courseId, members }: AddMemberFormProps)
       { courseId, userId: selected.userId, role },
       {
         onSuccess: () => {
-          setAdded(`${selected.firstName} ${selected.lastName} was added as ${ROLE_LABEL[role].toLowerCase()}.`)
+          setAdded(`${fullName(selected)} was added as ${ROLE_LABEL[role].toLowerCase()}.`)
           setSelected(null)
           setSearch('')
         },
@@ -83,9 +84,7 @@ export default function AddMemberForm({ courseId, members }: AddMemberFormProps)
                         disabled={enrolled}
                         onClick={() => setSelected(user)}
                       >
-                        <span className="member-full-name">
-                          {user.firstName} {user.lastName}
-                        </span>
+                        <span className="member-full-name">{fullName(user)}</span>
                         <span className="member-email">
                           {user.email}
                           {enrolled && ' · already in the course'}
@@ -102,9 +101,7 @@ export default function AddMemberForm({ courseId, members }: AddMemberFormProps)
         {selected && (
           <div className="form-row">
             <p className="member-selected">
-              <span className="member-full-name">
-                {selected.firstName} {selected.lastName}
-              </span>
+              <span className="member-full-name">{fullName(selected)}</span>
               <span className="member-email">{selected.email}</span>
             </p>
             <div className="form-field">

@@ -2,8 +2,10 @@ import { Link } from 'react-router'
 import { paths } from '@shared/paths'
 import { logout } from '@shared/auth/auth'
 import { useCurrentUser } from '@shared/auth/useAuth'
+import { fullName } from '@shared/lib/fullName'
 import '@shared/styles/forms.css'
 import './Topbar.css'
+import { CloseIcon, MenuIcon } from '@shared/ui/icons'
 
 type TopbarProps = {
   sidebarOpen: boolean
@@ -22,19 +24,7 @@ export default function Topbar({ sidebarOpen, onToggleSidebar }: TopbarProps) {
         aria-controls="sidebar-navigation"
         onClick={onToggleSidebar}
       >
-        <svg
-          width="24"
-          height="24"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          aria-hidden="true"
-          focusable="false"
-        >
-          {sidebarOpen ? <path d="M6 6l12 12M6 18L18 6" /> : <path d="M4 6h16M4 12h16M4 18h16" />}
-        </svg>
+        {sidebarOpen ? <CloseIcon size={24} /> : <MenuIcon size={24} />}
       </button>
       <Link className="brand" to={paths.home}>
         DAT250 LMS
@@ -42,9 +32,7 @@ export default function Topbar({ sidebarOpen, onToggleSidebar }: TopbarProps) {
       <nav className="main-nav" aria-label="Main navigation">
         {currentUser.data && (
           <>
-            <span className="current-user">
-              {currentUser.data.firstName} {currentUser.data.lastName}
-            </span>
+            <span className="current-user">{fullName(currentUser.data)}</span>
             <button type="button" className="button-secondary" onClick={logout}>
               Log out
             </button>

@@ -10,7 +10,7 @@
     "lint": "oxlint",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "test": "node --experimental-strip-types --test test/*.test.mjs",
+    "test": "node --experimental-strip-types --import ./test/setup/register.mjs --test test/*.test.mjs",
     "preview": "vite preview"
   },
   "dependencies": {

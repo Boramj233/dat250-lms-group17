@@ -19,6 +19,7 @@ import { useCourseView } from '../../courseContext'
 import CreateGroupForm from './CreateGroupForm'
 import GroupBox from './GroupBox'
 import { deleteError, joinError, leaveError, switchError } from './groupErrors'
+import { fullName } from '@shared/lib/fullName'
 import '@shared/styles/forms.css'
 import './CourseGroupsPage.css'
 
@@ -66,7 +67,7 @@ export default function CourseGroupsPage() {
     const member =
       group.members?.find(m => String(m.userId) === String(userId)) ??
       enrollments.data?.find(m => String(m.userId) === String(userId))
-    return member ? `${member.firstName} ${member.lastName}` : `User #${userId}`
+    return member ? fullName(member) : `User #${userId}`
   }
 
   function joinGroup(group: CourseGroup, myGroup: CourseGroup | undefined) {

@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import '@shared/styles/forms.css'
 import './SideMenuLayout.css'
+import { MenuIcon } from '@shared/ui/icons'
 
 type SideMenuLayoutProps = {
   /** "Course menu" or "Module menu": the menu's name for screen readers. */
@@ -39,19 +40,7 @@ export default function SideMenuLayout({ label, id, open, onToggle, heading, men
             title={action}
             onClick={onToggle}
           >
-            <svg
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              aria-hidden="true"
-              focusable="false"
-            >
-              <path d="M4 6h16M4 12h16M4 18h16" />
-            </svg>
+            <MenuIcon size={20} />
           </button>
         </div>
         <div id={id} className="side-menu-body" hidden={!open}>

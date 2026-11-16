@@ -6,7 +6,7 @@ import { contentTypeBySlug } from '@domain/content/contentTypes'
 import { useCreateContent } from '@domain/content/hooks'
 import type { CreateContentInput } from '@domain/content/types'
 import { useManageCourse } from '../../../manageCourseContext'
-import ContentForm from '../../ContentForm'
+import ContentForm from '../../components/ContentForm'
 import { useManageModule } from '../../manageModuleContext'
 
 /**

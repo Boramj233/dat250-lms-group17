@@ -1,6 +1,10 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { combineExtensions, formatExtensions, parseExtensions } from '../src/features/course-management/fileTypes.ts'
+import {
+  combineExtensions,
+  formatExtensions,
+  parseExtensions,
+} from '../src/features/course-management/module/components/ContentForm/fileTypes.ts'
 
 test('typed extensions get a dot, lower case and no duplicates', () => {
   assert.deepEqual(parseExtensions('py, .Java  ipynb;PY'), ['.py', '.java', '.ipynb'])
@@ -23,7 +27,8 @@ test('an empty list means any file type', () => {
 })
 
 test('saved extensions are split back into presets and typed text', async () => {
-  const { splitExtensions } = await import('../src/features/course-management/fileTypes.ts')
+  const { splitExtensions } =
+    await import('../src/features/course-management/module/components/ContentForm/fileTypes.ts')
   assert.deepEqual(splitExtensions(['.pdf', '.zip', '.py']), { presetLabels: ['PDF', 'ZIP'], other: '.py' })
   // Text needs both .txt and .md; only one of them stays typed.
   assert.deepEqual(splitExtensions(['.txt']), { presetLabels: [], other: '.txt' })

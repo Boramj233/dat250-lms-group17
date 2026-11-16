@@ -1,35 +1,33 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router'
-import { formatDateTime, fromDateTimeLocal } from '@shared/lib/dateFormat'
+import { useNavigate } from 'react-router'
+import { fromDateTimeLocal } from '@shared/lib/dateFormat'
 import { paths } from '@shared/paths'
 import type { ContentId, ModuleId } from '@shared/types'
 import { useCourseContent, useDeleteContent, useMoveContent, useUpdateContent } from '@domain/content/hooks'
 import type { ContentSummary } from '@domain/content/types'
-import ActionMenu, { type ActionMenuItem } from '@shared/ui/ActionMenu'
+import type { ActionMenuItem } from '@shared/ui/ActionMenu'
 import { useConfirm } from '@shared/ui/ConfirmDialog'
 import PageHeader from '@shared/ui/PageHeader'
 import SaveBar from '@shared/ui/SaveBar'
-import { CONTENT_TYPES, contentTypeLabel } from '@domain/content/contentTypes'
-import { checkModuleStartAgainstContent, isPublished } from '@domain/content/visibility'
+import { checkModuleStartAgainstContent } from '@domain/content/visibility'
 import { useUpdateModule } from '@domain/modules/hooks'
 import { checkAvailabilityDates } from '@domain/modules/prerequisites'
 import { useManageCourse } from '../../../manageCourseContext'
 import { useManageModule } from '../../manageModuleContext'
 import { availabilityChanges, savedAvailability, type AvailabilityDraft } from './availabilityDraft'
+import {
+  contentChanges,
+  EMPTY_DRAFT,
+  withDeleted,
+  withMove,
+  withoutSaved,
+  withRequired,
+  type ContentDraft,
+} from './contentDraft'
 import ModuleAvailability from './ModuleAvailability'
+import ModuleContentTable from './ModuleContentTable'
+import NewContentLinks from './NewContentLinks'
 import './ManageModulePage.css'
-
-/**
- * Changes to the module's content that are not saved yet, by content id (as a string):
- * "required for module completion" switched, moves to another module, and deletions.
- */
-type Draft = {
-  required: Record<string, boolean>
-  moves: Record<string, ModuleId>
-  deletes: string[]
-}
-
-const EMPTY_DRAFT: Draft = { required: {}, moves: {}, deletes: [] }
 
 /**
  * One module: a button per content type to create new content, and a table of the
@@ -53,7 +51,7 @@ export default function ManageModulePage() {
   )
   const [confirm, confirmDialog] = useConfirm()
   const [now] = useState(() => Date.now())
-  const [draft, setDraft] = useState<Draft>(EMPTY_DRAFT)
+  const [draft, setDraft] = useState<ContentDraft>(EMPTY_DRAFT)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [saved, setSaved] = useState<string | null>(null)
@@ -61,18 +59,14 @@ export default function ManageModulePage() {
   const savedDates = savedAvailability(module)
   const [availability, setAvailability] = useState<AvailabilityDraft>(savedDates)
 
-  const changes =
-    Object.keys(draft.required).length +
-    Object.keys(draft.moves).length +
-    draft.deletes.length +
-    availabilityChanges(availability, savedDates)
+  const changes = contentChanges(draft) + availabilityChanges(availability, savedDates)
   const moduleLabel = (id: ModuleId) => {
     const index = modules.findIndex(m => String(m.id) === String(id))
     return index >= 0 ? `Module ${index + 1}: ${modules[index].title}` : 'another module'
   }
 
   /** Changes the draft, and clears the last save's message. */
-  function change(update: (draft: Draft) => Draft) {
+  function change(update: (draft: ContentDraft) => ContentDraft) {
     setDraft(update)
     setSaved(null)
     setError(null)
@@ -89,37 +83,9 @@ export default function ManageModulePage() {
     setAvailability(savedDates)
   }
 
-  function setRequired(item: ContentSummary, required: boolean) {
-    change(d => {
-      const next = { ...d.required }
-      // Back to the saved value: no longer a change.
-      if (required === (item.requiredForCompletion ?? false)) delete next[String(item.id)]
-      else next[String(item.id)] = required
-      return { ...d, required: next }
-    })
-  }
-
-  function setMove(item: ContentSummary, target: ModuleId | null) {
-    change(d => {
-      const next = { ...d.moves }
-      if (target === null) delete next[String(item.id)]
-      else next[String(item.id)] = target
-      return { ...d, moves: next }
-    })
-  }
-
-  function setDeleted(item: ContentSummary, deleted: boolean) {
-    const id = String(item.id)
-    change(d => ({ ...d, deletes: deleted ? [...d.deletes, id] : d.deletes.filter(other => other !== id) }))
-  }
-
   /** Removes one applied change from the draft, so a failed save can be tried again. */
-  function done(kind: keyof Draft, id: ContentId) {
-    setDraft(d =>
-      kind === 'deletes'
-        ? { ...d, deletes: d.deletes.filter(other => other !== String(id)) }
-        : { ...d, [kind]: Object.fromEntries(Object.entries(d[kind]).filter(([key]) => key !== String(id))) },
-    )
+  function done(kind: keyof ContentDraft, id: ContentId) {
+    setDraft(d => withoutSaved(d, kind, id))
   }
 
   async function save() {
@@ -238,18 +204,20 @@ export default function ManageModulePage() {
         label: 'Move to',
         disabled: otherModules.length === 0 || deleted,
         items: [
-          ...(movedTo !== undefined ? [{ label: 'Keep in this module', onSelect: () => setMove(item, null) }] : []),
+          ...(movedTo !== undefined
+            ? [{ label: 'Keep in this module', onSelect: () => change(d => withMove(d, item, null)) }]
+            : []),
           ...otherModules
             .filter(({ module: target }) => String(target.id) !== String(movedTo))
             .map(({ module: target, number: targetNumber }) => ({
               label: `${targetNumber}. ${target.title}`,
-              onSelect: () => setMove(item, target.id),
+              onSelect: () => change(d => withMove(d, item, target.id)),
             })),
         ],
       },
       deleted
-        ? { label: 'Undo delete', onSelect: () => setDeleted(item, false) }
-        : { label: 'Delete', danger: true, onSelect: () => setDeleted(item, true) },
+        ? { label: 'Undo delete', onSelect: () => change(d => withDeleted(d, item, false)) }
+        : { label: 'Delete', danger: true, onSelect: () => change(d => withDeleted(d, item, true)) },
     ]
   }
 
@@ -257,21 +225,7 @@ export default function ManageModulePage() {
     <>
       <PageHeader title={module.title} kicker={`Module ${number} of ${modules.length}`} />
 
-      <section aria-labelledby="new-content-title">
-        <h2 id="new-content-title" className="section-title">
-          Create
-        </h2>
-        <ul className="new-content-types">
-          {CONTENT_TYPES.map(info => (
-            <li key={info.type}>
-              <Link className="new-content-type" to={paths.manageNewContent(course.id, module.id, info.slug)}>
-                <span className="new-content-type-label">+ {info.label}</span>
-                <span className="new-content-type-description">{info.description}</span>
-              </Link>
-            </li>
-          ))}
-        </ul>
-      </section>
+      <NewContentLinks courseId={course.id} moduleId={module.id} />
 
       <section aria-labelledby="module-content-title">
         <h2 id="module-content-title" className="section-title">
@@ -280,78 +234,17 @@ export default function ManageModulePage() {
         {content.length === 0 ? (
           <p>No content yet. Create the first one above.</p>
         ) : (
-          <div className="manage-content-table-wrap">
-            <table className="manage-content-table">
-              <thead>
-                <tr>
-                  <th scope="col">Title</th>
-                  <th scope="col">Type</th>
-                  <th scope="col">Visible from</th>
-                  <th scope="col">Status</th>
-                  <th scope="col" className="is-center">
-                    Required for module completion
-                  </th>
-                  <th scope="col">
-                    <span className="visually-hidden">Actions</span>
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {content.map(item => {
-                  const id = String(item.id)
-                  const deleted = draft.deletes.includes(id)
-                  const movedTo = draft.moves[id]
-                  const requiredChanged = id in draft.required
-                  const required = requiredChanged ? draft.required[id] : (item.requiredForCompletion ?? false)
-                  const rowClass = [
-                    item.active === false ? 'is-inactive' : '',
-                    deleted ? 'is-deleted' : movedTo !== undefined || requiredChanged ? 'is-changed' : '',
-                  ]
-                    .filter(Boolean)
-                    .join(' ')
-                  return (
-                    <tr key={item.id} className={rowClass || undefined}>
-                      <th scope="row">
-                        <Link className="manage-content-title" to={paths.manageContent(course.id, module.id, item.id)}>
-                          {item.title}
-                        </Link>
-                        {deleted && <span className="tag tag-strong tag-danger manage-change">Will be deleted</span>}
-                        {!deleted && movedTo !== undefined && (
-                          <span className="tag tag-strong manage-change">Moves to {moduleLabel(movedTo)}</span>
-                        )}
-                      </th>
-                      <td className="manage-content-type">{contentTypeLabel(item.type)}</td>
-                      <td className="manage-content-type">
-                        {item.visibleFrom ? (
-                          formatDateTime(new Date(item.visibleFrom))
-                        ) : module.availableFrom ? (
-                          <>With the module · {formatDateTime(new Date(module.availableFrom))}</>
-                        ) : (
-                          'With the module'
-                        )}
-                      </td>
-                      <td>
-                        <PublishStatus published={isPublished(item, module, now)} />
-                      </td>
-                      <td className={`is-center${requiredChanged ? ' is-changed-cell' : ''}`}>
-                        <input
-                          type="checkbox"
-                          className="manage-content-check"
-                          aria-label={`${item.title} is required for module completion${requiredChanged ? ' (not saved)' : ''}`}
-                          checked={required}
-                          disabled={saving || deleted}
-                          onChange={event => setRequired(item, event.target.checked)}
-                        />
-                      </td>
-                      <td className="is-end">
-                        <ActionMenu label={`Actions for ${item.title}`} items={actionsFor(item)} />
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
+          <ModuleContentTable
+            courseId={course.id}
+            module={module}
+            content={content}
+            draft={draft}
+            now={now}
+            saving={saving}
+            moduleLabel={moduleLabel}
+            onRequiredChange={(item, required) => change(d => withRequired(d, item, required))}
+            actionsFor={actionsFor}
+          />
         )}
       </section>
 
@@ -375,14 +268,5 @@ export default function ManageModulePage() {
       />
       {confirmDialog}
     </>
-  )
-}
-
-/** "Published" once the visible date has passed, "Unpublished" before. Only shown, not changed here. */
-function PublishStatus({ published }: { published: boolean }) {
-  return (
-    <span className={`manage-publish-label ${published ? 'is-published' : 'is-unpublished'}`}>
-      {published ? 'Published' : 'Unpublished'}
-    </span>
   )
 }

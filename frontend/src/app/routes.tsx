@@ -1,7 +1,7 @@
 import { Navigate, Route, Routes } from 'react-router'
 import AuthGate from './auth/AuthGate'
 import RequireAccess from './auth/RequireAccess'
-import CourseContentPage from '@features/course-management/pages/CourseContentPage'
+import ModuleListPage from '@features/course-management/pages/ModuleListPage'
 import CourseDetailsPage from '@features/course-management/pages/CourseDetailsPage'
 import CourseMembersPage from '@features/course-management/pages/CourseMembersPage'
 import CourseTabsLayout from '@features/course-management/pages/CourseTabsLayout'
@@ -102,7 +102,7 @@ export default function AppRoutes() {
           {/* One course (see paths.manage*): its tabs, then its modules and their content. */}
           <Route path={paths.manageCourseRoute} element={<ManageCourseLayout />}>
             <Route element={<CourseTabsLayout />}>
-              <Route index element={<CourseContentPage />} />
+              <Route index element={<ModuleListPage />} />
               <Route path="members" element={<CourseMembersPage />} />
               <Route path="details" element={<CourseDetailsPage />} />
             </Route>

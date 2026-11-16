@@ -2,6 +2,7 @@ import type { CourseId, GroupId, UserId } from '@shared/types'
 import { useCourseEnrollments } from '@domain/courses/hooks'
 import { groupName, useCourseGroups } from '@domain/groups/hooks'
 import type { CourseGroup } from '@domain/groups/types'
+import { fullName } from '@shared/lib/fullName'
 
 /**
  * Names for the ids the backend sends with submissions (studentUserId, groupId,
@@ -16,7 +17,7 @@ export function usePeopleNames(courseId: CourseId) {
     const member =
       members.data?.find(m => String(m.userId) === String(userId)) ??
       groups.data?.flatMap(g => g.members ?? []).find(m => String(m.userId) === String(userId))
-    return member ? `${member.firstName} ${member.lastName}` : `User #${userId}`
+    return member ? fullName(member) : `User #${userId}`
   }
 
   function groupOf(groupId: GroupId | null | undefined): CourseGroup | undefined {

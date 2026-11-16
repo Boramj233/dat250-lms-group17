@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef, useState } from 'react'
 import './ActionMenu.css'
+import { MoreIcon } from '@shared/ui/icons'
 
 export type ActionMenuItem = {
   label: string
@@ -77,11 +78,7 @@ export default function ActionMenu({ label, items }: ActionMenuProps) {
         aria-controls={open ? menuId : undefined}
         onClick={() => (open ? close() : setOpen(true))}
       >
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false">
-          <circle cx="5" cy="12" r="2" />
-          <circle cx="12" cy="12" r="2" />
-          <circle cx="19" cy="12" r="2" />
-        </svg>
+        <MoreIcon size={18} />
       </button>
 
       {open && (

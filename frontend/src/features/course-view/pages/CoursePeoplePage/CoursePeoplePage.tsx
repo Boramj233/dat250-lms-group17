@@ -3,13 +3,12 @@ import { paths } from '@shared/paths'
 import PageHeader from '@shared/ui/PageHeader'
 import QueryState from '@shared/ui/QueryState'
 import { useCourseEnrollments } from '@domain/courses/hooks'
-import type { CourseEnrollment, CourseRole } from '@domain/courses/types'
+import { byRoleThenName, ROLE_LABEL } from '@domain/courses/members'
+import type { CourseEnrollment } from '@domain/courses/types'
 import DataTable from '@shared/ui/DataTable'
 import { useCourseView } from '../../courseContext'
+import { fullName } from '@shared/lib/fullName'
 import './CoursePeoplePage.css'
-
-const ROLE_LABEL: Record<CourseRole, string> = { TEACHER: 'Teacher', STUDENT: 'Student' }
-const ROLE_ORDER: Record<CourseRole, number> = { TEACHER: 0, STUDENT: 1 }
 
 /** Everyone enrolled in the course in a table: name, email and role. */
 export default function CoursePeoplePage() {
@@ -30,17 +29,11 @@ export default function CoursePeoplePage() {
           <>
             <DataTable<CourseEnrollment>
               caption={`Members of ${course.title}`}
-              // Teachers first, then by last name and first name.
-              rows={[...all].sort(
-                (a, b) =>
-                  ROLE_ORDER[a.role] - ROLE_ORDER[b.role] ||
-                  a.lastName.localeCompare(b.lastName) ||
-                  a.firstName.localeCompare(b.firstName),
-              )}
+              rows={[...all].sort(byRoleThenName)}
               rowKey={member => String(member.userId)}
               empty="This course has no members yet."
               columns={[
-                { header: 'Name', cell: member => `${member.firstName} ${member.lastName}` },
+                { header: 'Name', cell: member => fullName(member) },
                 { header: 'Email', cell: member => <a href={`mailto:${member.email}`}>{member.email}</a> },
                 {
                   header: 'Role',

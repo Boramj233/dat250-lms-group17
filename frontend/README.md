@@ -17,10 +17,10 @@ src/
 ├── shared/               knows nothing about courses, modules or content
 │   ├── api/              apiClient (adds the Bearer token to every call)
 │   ├── auth/             login session and current user: auth, access, useAuth
-│   ├── lib/              dateFormat, safeUrl, useDebounced, moveItem
+│   ├── lib/              dateFormat, fullName, safeUrl, useDebounced, moveItem
 │   ├── navigation/       breadcrumbs (Trail)
 │   ├── styles/           tokens, global styles, forms.css
-│   ├── ui/               QueryState, PageHeader, DataTable, Tabs, ActionMenu (the "⋯" menu),
+│   ├── ui/               QueryState, PageHeader, DataTable, Tabs, ActionMenu (the "⋯" menu), icons,
 │   │                     ConfirmDialog, SaveBar, RequiredMark, NotFoundPage
 │   ├── paths.ts          URL patterns and link builders
 │   └── types.ts          id types (CourseId, ModuleId, ...)
@@ -34,9 +34,9 @@ src/
 │   │   ├── README.md     API contract
 │   │   └── components/   small display components for the domain, props only
 │   │
-│   ├── courses/          + courseFormat, CourseCard, CourseGrid, CourseForm
+│   ├── courses/          + courseFormat, members (role labels, sorting), CourseCard, CourseGrid, CourseForm
 │   ├── deadlines/        + DeadlineList
-│   ├── modules/          + prerequisites
+│   ├── modules/          + prerequisites, moduleFormat
 │   ├── content/          + contentTypes, visibility
 │   ├── quizzes/          + passRule
 │   ├── assignments/      + scoreFormat, submissionStats
@@ -59,11 +59,17 @@ src/
     │   │                 Code Exercises), the module overview and one content item
     │   └── components/   DetailLayout (cards + details panel of an item's page), SideMenuLayout,
     │                     PassedBadge, VisibleFromTag, SubmissionAnswer, ...
-    └── course-management/  course managers: Manage courses, New course,
-        │                 ManageCourseLayout (breadcrumbs) and CourseTabsLayout
-        │                 (Content, Members, Details)
-        └── module/       ManageModuleLayout, the module page ("+ Assignment" …, content
-                          with a "⋯" menu), NewContentPage and ContentDetailsPage.
+    └── course-management/  course managers (/manage-courses)
+        ├── manageCourseContext.ts, useManageBreadcrumbs.ts
+        ├── pages/        ManageCourses, NewCourse, ManageCourseLayout (breadcrumbs),
+        │                 CourseTabsLayout and its tabs: ModuleListPage (Content), CourseMembers,
+        │                 CourseDetails
+        └── module/       one module: manageModuleContext.ts, useManagedContent.ts
+            ├── pages/    ManageModuleLayout, ManageModulePage (create buttons, content table,
+            │             availability; contentDraft.ts holds its unsaved changes), NewContentPage,
+            │             ContentDetailsPage
+            └── components/  ContentForm (create and edit every content type; the values, checks
+                             and what is sent are in contentFormValues.ts), VisibleFromField
 ```
 
 Each layout level loads what its pages share and provides it through a React context
@@ -79,9 +85,9 @@ the two in sync).
   `shared/`/`app/`): `./types`, `../../manageCourseContext`.
 - **Everything else goes through an alias**, also from one domain to another:
   `@shared/ui/QueryState`, `@domain/courses/hooks`, `@domain/grades/queryKeys`.
-- `test/*.test.mjs` runs the source with plain Node, which does not know the aliases.
-  Modules the tests load may use aliases for `import type` only (Node strips those);
-  their other imports stay relative, with the `.ts` extension.
+- `test/*.test.mjs` runs the source with Node. `test/setup/resolve-hooks.mjs` teaches it
+  the aliases and imports without an extension, so a test can import any `.ts` file in
+  `src/` (not `.tsx`: Node does not read JSX). Add a new alias there too.
 - `mock/` imports `src/` with relative paths (`../src/domain/content/types`).
 
 ### Rules
