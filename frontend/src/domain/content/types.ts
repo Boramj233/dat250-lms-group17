@@ -18,12 +18,6 @@ export interface ContentSummary {
    */
   requiredForModuleCompletion?: boolean
   /**
-   * Students can see the item. Teachers switch it off to prepare content before it is
-   * shown, or to hide it. Proposed field (see README), not in the backend yet; missing
-   * means active.
-   */
-  active?: boolean
-  /**
    * Proposed (see README): ISO 8601 instant students can see the item from. Null or
    * missing: it inherits its module's start date (availableFrom). Never before it.
    */
@@ -241,7 +235,7 @@ export interface EditContentInput {
 export interface UpdateContentInput {
   moduleId: ModuleId
   contentId: ContentId
-  changes: Partial<Pick<StaticPageContent, 'title' | 'position' | 'body' | 'active' | 'visibleFrom'>>
+  changes: Partial<Pick<StaticPageContent, 'title' | 'position' | 'body' | 'visibleFrom'>>
 }
 
 // The backend's ContentCompletionController.Settings:
@@ -252,6 +246,32 @@ export interface CompletionSettingsInput {
   requiredForModuleCompletion: boolean
   /** Quizzes only, 1–100; leave out to keep the current one. */
   passingPercentage?: number
+}
+
+// The backend's ContentCompletionService.Status: GET /api/contents/{contentId}/completion
+// and PUT …/completion (students only; 403 for others).
+export interface ContentCompletion {
+  contentId: ContentId
+  requiredForModuleCompletion: boolean
+  /**
+   * A page: marked as done by the student. A quiz: an attempt passed. An assignment:
+   * a released, passed grade. A coding exercise: always false for now.
+   */
+  completed: boolean
+}
+
+// PUT /api/contents/{contentId}/completion with { completed }: pages only (400 for other
+// types, 403 outside the page's visible window).
+export interface PageCompletionInput {
+  contentId: ContentId
+  completed: boolean
+}
+
+// The backend's UpdateAssignmentExamRequirementRequest:
+// PATCH /api/assignments/{assignmentId}/exam-requirement (teachers, 204).
+export interface ExamRequirementInput {
+  contentId: ContentId
+  mandatoryForExam: boolean
 }
 
 export interface DeleteContentInput {

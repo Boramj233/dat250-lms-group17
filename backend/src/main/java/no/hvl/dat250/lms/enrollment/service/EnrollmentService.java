@@ -1,6 +1,10 @@
 package no.hvl.dat250.lms.enrollment.service;
 
+import java.util.Comparator;
+import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.stream.Collectors;
 
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.LockModeType;
@@ -57,6 +61,29 @@ public class EnrollmentService {
 
         return enrollment;
     }
+    /**
+     * The courses where the user has an active enrollment, with their role in each
+     * (course id -> role). Empty when the user is in no course.
+     */
+    @Transactional(readOnly = true)
+    public Map<Long, CourseRole> activeCourseRoles(Long userId) {
+        return enrollmentRepository.findActiveByUser(userId).stream()
+            .collect(Collectors.toMap(e -> e.getCourse().getId(), Enrollment::getRole, (first, second) -> first));
+    }
+
+    /**
+     * The user's active enrollments with their courses, the newest term first
+     * (year descending, autumn before spring), then by course title.
+     */
+    @Transactional(readOnly = true)
+    public List<Enrollment> activeEnrollmentsWithCourses(Long userId) {
+        Comparator<Enrollment> newestFirst = Comparator
+            .comparingInt((Enrollment e) -> e.getCourse().getYear()).reversed()
+            .thenComparing(e -> e.getCourse().getTerm(), Comparator.reverseOrder())
+            .thenComparing(e -> e.getCourse().getTitle(), String.CASE_INSENSITIVE_ORDER);
+        return enrollmentRepository.findActiveByUser(userId).stream().sorted(newestFirst).toList();
+    }
+
     @Transactional(readOnly = true)
     public Enrollment requireActiveTeacher(
             Long userId,

@@ -495,7 +495,6 @@ export const contents: (Content & { courseId: number })[] = [
     deadline: inDays(-3),
     allowLateSubmission: false,
     mandatoryForExam: false,
-    active: false,
   },
   // DAT250, module 2
   {

@@ -12,14 +12,17 @@ export interface Course {
   year: number
 }
 
+// Matches the backend's CourseRole enum (enrollment/domain/CourseRole.java).
 export type CourseRole = 'STUDENT' | 'TEACHER'
 
+// Matches the backend's EnrolledCourseResponse (GET /api/users/{userId}/courses): the
+// course plus the user's role in it. Active enrollments only, newest term first.
 export interface EnrolledCourse extends Course {
   role: CourseRole
 }
 
-// One member of a course (proposed: GET /api/courses/{courseId}/enrollments). The names
-// and email let teachers see who is enrolled without a request per user.
+// Matches the backend's EnrollmentResponse (GET/POST/PATCH /api/courses/{courseId}/enrollments).
+// The names and email let teachers see who is enrolled without a request per user.
 export interface CourseEnrollment {
   userId: UserId
   role: CourseRole

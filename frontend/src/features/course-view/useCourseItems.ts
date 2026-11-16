@@ -1,7 +1,7 @@
 import { courseItems } from '@domain/content/courseItems'
 import { useCourseContent } from '@domain/content/hooks'
 import type { ContentSummary } from '@domain/content/types'
-import { isVisibleTo, useCourseView } from './courseContext'
+import { useCourseView } from './courseContext'
 
 type CourseItemsOptions = {
   /** Only the items this accepts. */
@@ -12,13 +12,13 @@ type CourseItemsOptions = {
 
 /**
  * The content of every module of the course being viewed, in module order, each item
- * with its module. Students do not get inactive items. Uses the same queries (and cache)
- * as the modules' own content lists. Only for pages inside CourseLayout.
+ * with its module. The backend leaves out what students may not see yet. Uses the same
+ * queries (and cache) as the modules' own content lists. Only for pages inside CourseLayout.
  */
 export function useCourseItems({ filter, enabled = true }: CourseItemsOptions = {}) {
-  const { course, modules, isTeacher } = useCourseView()
+  const { course, modules } = useCourseView()
   const content = useCourseContent(course.id, enabled ? modules.map(module => module.id) : [])
-  const items = courseItems(content.byModule, modules, item => isVisibleTo(item, isTeacher) && (filter?.(item) ?? true))
+  const items = courseItems(content.byModule, modules, item => filter?.(item) ?? true)
   return { items, isPending: content.isPending, isError: content.isError }
 }
 

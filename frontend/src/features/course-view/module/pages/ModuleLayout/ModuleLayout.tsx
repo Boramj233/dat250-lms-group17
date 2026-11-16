@@ -8,7 +8,7 @@ import CourseMenuHeading from '../../../components/CourseMenuHeading'
 import SideMenuLayout from '../../../components/SideMenuLayout'
 import { CONTENT_SECTIONS } from '../../../contentSections'
 import { courseMenuItems, courseMenuPath } from '../../../courseMenu'
-import { useCourseView, visibleContent } from '../../../courseContext'
+import { useCourseView } from '../../../courseContext'
 import { ModuleViewContext } from '../../moduleContext'
 import { ChevronLeftIcon, ChevronRightIcon } from '@shared/ui/icons'
 
@@ -31,7 +31,7 @@ export default function ModuleLayout() {
 
   if (!module) return <p role="alert">This module does not exist in {course.title}.</p>
 
-  const items = content.data && visibleContent(content.data, isTeacher)
+  const items = content.data
   const currentItem = items?.find(item => String(item.id) === contentId)
 
   // Course › Modules › module › the section › the item (on a content page). The last

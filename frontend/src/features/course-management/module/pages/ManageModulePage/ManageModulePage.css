@@ -98,12 +98,6 @@
   cursor: pointer;
 }
 
-/* Inactive content is hidden from students: dimmed, but the checkboxes stay clear. */
-.manage-content-table tr.is-inactive th,
-.manage-content-table tr.is-inactive .manage-content-type {
-  opacity: 0.6;
-}
-
 /* Unlocking: one checkbox per other module. */
 .module-prerequisites {
   display: flex;

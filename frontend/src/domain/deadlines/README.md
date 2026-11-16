@@ -1,19 +1,20 @@
-# Deadlines API contract (proposed)
+# Deadlines API contract
 
 The dashboard shows the upcoming deadlines from all of the user's courses in
-one list. The backend has `deadline` on assignments and coding exercises, but no
-endpoint that collects them per user yet. Building the list in the frontend would
-need one request per course, module and content item, so the backend should
-collect it.
+one list. The backend collects them (`UserController`, `UpcomingDeadlineResponse`),
+so the frontend needs a single request.
 
 | Method | Endpoint                                 | Request body | Response             |
 | ------ | ---------------------------------------- | ------------ | -------------------- |
 | GET    | `/api/users/{userId}/upcoming-deadlines` | —            | `UpcomingDeadline[]` |
 
-The response contains assignments and coding exercises that:
+Only the user themselves or an `ADMIN` may call it (else 403). The response contains
+assignments and coding exercises that:
 
-- are in a course the user is enrolled in (as student or teacher), and
-- have a `deadline` that has not passed yet (content without a deadline is left out),
+- are in a course the user has an active enrollment in (as student or teacher),
+- have a `deadline` that has not passed yet (content without a deadline is left out), and
+- for students: are inside their `visibleFrom`/`visibleUntil` window (teachers of the
+  course get them regardless),
 
 sorted by `deadline`, earliest first.
 
@@ -25,6 +26,7 @@ sorted by `deadline`, earliest first.
     "title": "Assignment 1",
     "deadline": "2026-11-14T22:59:00Z",
     "allowLateSubmission": false,
+    "mandatoryForExam": true,
     "courseId": 1,
     "courseTitle": "DAT250",
     "moduleId": 3
@@ -32,9 +34,9 @@ sorted by `deadline`, earliest first.
 ]
 ```
 
-`type` is `ASSIGNMENT` or `CODING_EXERCISE`. Assignments also have `mandatory`
-(boolean, see the content README); it is left out for coding exercises. `deadline` is an ISO 8601 instant
-(Java `Instant`); the frontend shows it in the user's time zone.
+`type` is `ASSIGNMENT` or `CODING_EXERCISE`. `mandatoryForExam` is the assignment's
+flag (see the content README) and `null` for coding exercises. `deadline` is an
+ISO 8601 instant (Java `Instant`); the frontend shows it in the user's time zone.
 
 ```tsx
 const deadlines = useUpcomingDeadlines(userId)

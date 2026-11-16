@@ -51,12 +51,11 @@ export default function ModuleContentTable(props: ModuleContentTableProps) {
         <tbody>
           {content.map(item => {
             const { deleted, movedTo, requiredChanged, required } = itemDraft(draft, item)
-            const rowClass = [
-              item.active === false ? 'is-inactive' : '',
-              deleted ? 'is-deleted' : movedTo !== undefined || requiredChanged ? 'is-changed' : '',
-            ]
-              .filter(Boolean)
-              .join(' ')
+            const rowClass = deleted
+              ? 'is-deleted'
+              : movedTo !== undefined || requiredChanged
+                ? 'is-changed'
+                : undefined
             return (
               <tr key={item.id} className={rowClass || undefined}>
                 <th scope="row">

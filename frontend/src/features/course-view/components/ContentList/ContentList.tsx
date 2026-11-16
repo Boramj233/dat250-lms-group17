@@ -15,8 +15,8 @@ export type ContentRow = {
 }
 
 /**
- * Content items as links, one per row, with "Hidden from students" for inactive ones and
- * "Visible to students from …" for those students cannot see yet.
+ * Content items as links, one per row, with "Visible to students from …" for those
+ * students cannot see yet.
  */
 export default function ContentList({ rows }: { rows: ContentRow[] }) {
   return (

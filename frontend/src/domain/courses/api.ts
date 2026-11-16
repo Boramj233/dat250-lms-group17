@@ -23,7 +23,6 @@ export function getCourseEnrollments(courseId: CourseId): Promise<CourseEnrollme
   return apiClient<CourseEnrollment[]>(apiPath`/api/courses/${courseId}/enrollments`)
 }
 
-// Proposed API contract is documented in ../README.md until backend is implemented.
 export function createCourse(input: CreateCourseInput): Promise<Course> {
   return apiClient<Course>('/api/courses', jsonBody('POST', input))
 }
@@ -32,14 +31,19 @@ export function updateCourse({ courseId, changes }: UpdateCourseInput): Promise<
   return apiClient<Course>(apiPath`/api/courses/${courseId}`, jsonBody('PATCH', changes))
 }
 
-export function enrollInCourse({ courseId, userId, role }: EnrollInCourseInput): Promise<void> {
-  return apiClient<void>(apiPath`/api/courses/${courseId}/enrollments`, jsonBody('POST', { userId, role }))
+/** 201 with the new member; 404 for an unknown user or course, 409 if already a member. */
+export function enrollInCourse({ courseId, userId, role }: EnrollInCourseInput): Promise<CourseEnrollment> {
+  return apiClient<CourseEnrollment>(apiPath`/api/courses/${courseId}/enrollments`, jsonBody('POST', { userId, role }))
 }
 
 export function removeCourseEnrollment({ courseId, userId }: CourseEnrollmentInput): Promise<void> {
   return apiClient<void>(apiPath`/api/courses/${courseId}/enrollments/${userId}`, { method: 'DELETE' })
 }
 
-export function updateCourseRole({ courseId, userId, role }: UpdateCourseRoleInput): Promise<void> {
-  return apiClient<void>(apiPath`/api/courses/${courseId}/enrollments/${userId}`, jsonBody('PATCH', { role }))
+/** Returns the member with the new role. */
+export function updateCourseRole({ courseId, userId, role }: UpdateCourseRoleInput): Promise<CourseEnrollment> {
+  return apiClient<CourseEnrollment>(
+    apiPath`/api/courses/${courseId}/enrollments/${userId}`,
+    jsonBody('PATCH', { role }),
+  )
 }

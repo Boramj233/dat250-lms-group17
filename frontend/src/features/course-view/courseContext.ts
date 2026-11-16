@@ -1,5 +1,4 @@
 import { createContext, useContext } from 'react'
-import type { ContentSummary } from '@domain/content/types'
 import type { Course } from '@domain/courses/types'
 import type { CourseModule } from '@domain/modules/types'
 
@@ -8,7 +7,7 @@ export type CourseViewContextValue = {
   course: Course
   /** Sorted by position. */
   modules: CourseModule[]
-  /** The user teaches this course: sees hidden content and gets the Manage button. */
+  /** The user teaches this course: sees unpublished content and gets the Manage button. */
   isTeacher: boolean
   /** Whether the side menu (course or module menu) is open; shared by both menus. */
   menuOpen: boolean
@@ -22,14 +21,4 @@ export function useCourseView(): CourseViewContextValue {
   const value = useContext(CourseViewContext)
   if (!value) throw new Error('useCourseView is used outside CourseLayout')
   return value
-}
-
-/** Students only see active content (missing `active` means active); teachers see all. */
-export function isVisibleTo(item: ContentSummary, isTeacher: boolean): boolean {
-  return isTeacher || item.active !== false
-}
-
-/** The items the user may see (see isVisibleTo). */
-export function visibleContent(items: ContentSummary[], isTeacher: boolean): ContentSummary[] {
-  return isTeacher ? items : items.filter(item => isVisibleTo(item, isTeacher))
 }

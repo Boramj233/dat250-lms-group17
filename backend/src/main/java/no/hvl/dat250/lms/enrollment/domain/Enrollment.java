@@ -66,4 +66,12 @@ public class Enrollment {
     public void reactivate() {
         this.active = true;
     }
+
+    /** Makes the member a teacher or a student of the course. */
+    public void changeRole(CourseRole role) {
+        if (role == null) {
+            throw new IllegalArgumentException("Role is required");
+        }
+        this.role = role;
+    }
 }

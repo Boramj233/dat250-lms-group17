@@ -3,7 +3,10 @@ import type { ContentId, CourseId, ModuleId } from '@shared/types'
 // Content types that have a deadline in the backend (Assignment, CodingExercise).
 export type DeadlineContentType = 'ASSIGNMENT' | 'CODING_EXERCISE'
 
-/** One upcoming deadline in a course the user is enrolled in. */
+/**
+ * One upcoming deadline in a course the user is enrolled in. Matches the backend's
+ * UpcomingDeadlineResponse (GET /api/users/{userId}/upcoming-deadlines).
+ */
 export interface UpcomingDeadline {
   contentId: ContentId
   type: DeadlineContentType
@@ -11,8 +14,8 @@ export interface UpcomingDeadline {
   /** ISO 8601 instant, as the backend's `Instant deadline`. */
   deadline: string
   allowLateSubmission: boolean
-  /** Assignments only: as AssignmentResponse.mandatoryForExam. Left out for coding exercises. */
-  mandatoryForExam?: boolean
+  /** Assignments: as AssignmentResponse.mandatoryForExam. Null for coding exercises. */
+  mandatoryForExam: boolean | null
   courseId: CourseId
   courseTitle: string
   moduleId: ModuleId

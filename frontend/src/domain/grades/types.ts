@@ -3,7 +3,8 @@ import type { ReleasedGrade, SubmissionId } from '@domain/assignments/types'
 
 /**
  * One assignment or coding exercise the logged-in user has submitted: either graded
- * (grade released) or waiting for a grade.
+ * (grade released) or waiting for a grade. Matches the backend's UserGradeResponse
+ * (GET /api/users/me/grades).
  */
 export interface GradeEntry {
   contentId: ContentId

@@ -33,9 +33,17 @@ complete to complete its module, for every content type. The module content list
 | GET    | `/api/contents/{contentId}/completion`          | —                                                    | `{ contentId, requiredForModuleCompletion, completed }` (students)    |
 | PUT    | `/api/contents/{contentId}/completion`          | `{ completed }`                                      | the same; pages only (marked as read by the student)                  |
 
-The frontend uses the PATCH (`useUpdateCompletionSettings`); the two student endpoints
-have no UI yet. A page is completed when the student marks it, a quiz when an attempt
-reaches its passing percentage, an assignment when a released grade is passed.
+The frontend uses all three:
+
+- `useUpdateCompletionSettings`: the module's content table (teachers).
+- `useContentCompletion` / `useSetPageCompletion`: "Mark as done" under a page
+  (students; `PageCompletion` in the course view).
+- `useContentCompletions`: the Status column of the Pages table (students).
+
+Only active students of the course may call the two student endpoints (403 for
+teachers), so the frontend never asks for teachers. A page is completed when the
+student marks it, a quiz when an attempt reaches its passing percentage, an assignment
+when a released grade is passed; a coding exercise is never completed yet.
 
 It is separate from an assignment's `mandatoryForExam`, which means the assignment must
 be passed to sit the exam.
@@ -45,25 +53,12 @@ as completed when the user has completed all its required items. How a module wi
 no required items is treated is up to the backend; the mock then requires all its
 assignments, coding exercises and quizzes, as before.
 
-## Active (visible to students) content (proposed)
-
-`ContentSummary.active` (boolean) says whether students can see an item. Teachers
-switch it off to prepare content before it is shown, or to hide it again, with
-`PATCH /api/contents/{contentId}` (`{ active }`). New content is active. The module
-content list includes it; missing means active.
-
-The UI no longer switches `active`; it shows items with `active: false` as "Hidden from
-students". Published / Unpublished in the UI is decided by the visible date alone (below).
-
-For students the backend must leave inactive content out everywhere: the module
-content list, the detail endpoints (404), upcoming deadlines and completion. Teachers
-of the course still get it, with `active: false`.
-
 ## Visible from (proposed)
 
 Every content item can get a date students see it from, so a module's content does not
-all appear at once. The `Content` entity already has `visibleFrom`; the API does not
-use it yet.
+all appear at once; it is also how a teacher prepares content before it is shown (there
+is no separate "active" flag). The `Content` entity already has `visibleFrom`; the API
+does not use it yet.
 
 - `visibleFrom` (ISO instant or null) on every create request (pages, assignments,
   coding exercises, quizzes), on `PATCH /api/contents/{id}`, and on
@@ -86,13 +81,13 @@ Published / Unpublished. A teacher can change **everything** about an item until
 
 - `PATCH /api/contents/{contentId}` takes any of the fields the item was created with:
   `title`, `visibleFrom`, and per type `body` (pages); `instructions`, `deadline`,
-  `allowLateSubmission`, `mandatoryForExam`, `groupAssignment`, `acceptedFileTypes`
-  (assignments); `instructions`, `deadline`, `allowLateSubmission`,
+  `allowLateSubmission`, `groupAssignment`, `acceptedFileTypes` (assignments; not
+  `mandatoryForExam`, see "Mandatory for the exam"); `instructions`, `deadline`, `allowLateSubmission`,
   `starterRepositoryUrl`, `starterCode` (coding exercises); `maxAttempts`,
   `passingPercentage` (quizzes).
 - `PUT /api/quizzes/{quizId}/questions` replaces all of a quiz's questions.
-- Once published, both answer **409**. Only `position` and `active` can still be changed
-  with PATCH (and the completion settings, which have their own endpoint).
+- Once published, both answer **409**. Only `position` can still be changed with PATCH
+  (and the completion settings, which have their own endpoint).
 - `POST /api/quizzes/{quizId}/questions` stays open, since a new quiz's questions are
   added right after it is created.
 
@@ -192,7 +187,13 @@ and `AssignmentResponse`. Until then they are missing and the UI does not show t
 `AssignmentContent.mandatoryForExam` (boolean) says whether the assignment must be
 passed to sit the exam. It is sent on `CreateAssignmentRequest` and returned in
 `AssignmentResponse`; the backend changes it with
-`PATCH /api/assignments/{assignmentId}/exam-requirement` (`{ mandatoryForExam }`, 204).
+`PATCH /api/assignments/{assignmentId}/exam-requirement` (`{ mandatoryForExam }`, 204),
+also after the assignment is published.
+
+The frontend uses that endpoint (`updateExamRequirement`, `useUpdateExamRequirement`).
+When the edit form saves an assignment, `editContent` sends `mandatoryForExam` there
+first and the other fields with `PATCH /api/contents/{id}`, so a change to the exam
+requirement is kept even if the item is published and the PATCH answers 409.
 
 ## Other endpoints
 

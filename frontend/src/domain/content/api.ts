@@ -6,12 +6,15 @@ import type {
   CodingExerciseContent,
   CompletionSettingsInput,
   Content,
+  ContentCompletion,
   ContentSummary,
   ContentType,
   CreateContentInput,
   DeleteContentInput,
   EditContentInput,
+  ExamRequirementInput,
   MoveContentInput,
+  PageCompletionInput,
   QuizContent,
   StaticPageContent,
   UpdateContentInput,
@@ -93,8 +96,17 @@ export async function createContent(input: CreateContentInput): Promise<{ id: Co
  * Proposed: saves all fields of an unpublished item (PATCH /api/contents/{id}); a quiz's
  * questions are then replaced as a whole (PUT /api/quizzes/{id}/questions). 409 once
  * the item is published.
+ *
+ * An assignment's `mandatoryForExam` has its own endpoint, which also works after the
+ * assignment is published; it is saved first, so it is kept even if the rest is refused.
  */
 export async function editContent({ contentId, fields }: EditContentInput): Promise<void> {
+  if (fields.type === 'ASSIGNMENT') {
+    const { type: _type, mandatoryForExam, ...changes } = fields
+    await updateExamRequirement({ contentId, mandatoryForExam })
+    await apiClient<Content>(apiPath`/api/contents/${contentId}`, jsonBody('PATCH', changes))
+    return
+  }
   const { type, ...changes } = fields
   if (type !== 'QUIZ') {
     await apiClient<Content>(apiPath`/api/contents/${contentId}`, jsonBody('PATCH', changes))
@@ -126,6 +138,24 @@ export function updateCompletionSettings({
     apiPath`/api/contents/${contentId}/completion-settings`,
     jsonBody('PATCH', { requiredForModuleCompletion, passingPercentage: passingPercentage ?? null }),
   )
+}
+
+/** Teachers: whether an assignment must be passed to sit the exam (204). */
+export function updateExamRequirement({ contentId, mandatoryForExam }: ExamRequirementInput): Promise<void> {
+  return apiClient<void>(
+    apiPath`/api/assignments/${contentId}/exam-requirement`,
+    jsonBody('PATCH', { mandatoryForExam }),
+  )
+}
+
+/** Students: whether they have completed the item (backend: ContentCompletionController). */
+export function getCompletion(contentId: ContentId): Promise<ContentCompletion> {
+  return apiClient<ContentCompletion>(apiPath`/api/contents/${contentId}/completion`)
+}
+
+/** Students: marks a page as done or not done; returns the new status. */
+export function setPageCompletion({ contentId, completed }: PageCompletionInput): Promise<ContentCompletion> {
+  return apiClient<ContentCompletion>(apiPath`/api/contents/${contentId}/completion`, jsonBody('PUT', { completed }))
 }
 
 /** Proposed: DELETE /api/contents/{id}. */

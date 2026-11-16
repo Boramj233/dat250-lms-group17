@@ -8,6 +8,7 @@ import type { CourseModule } from '@domain/modules/types'
 import ContentTags from '../../components/ContentTags'
 import QuizView from '../QuizView'
 import SubmittableContent from '../SubmittableContent'
+import PageCompletion from './PageCompletion'
 import './ContentView.css'
 
 type ContentViewProps = {
@@ -44,7 +45,12 @@ export default function ContentView({ summary, isTeacher, context, module }: Con
 function ContentBody({ content, isTeacher }: { content: Content; isTeacher: boolean }) {
   switch (content.type) {
     case 'STATIC_PAGE':
-      return <div className="content-view-text">{content.body}</div>
+      return (
+        <>
+          <div className="content-view-text">{content.body}</div>
+          {!isTeacher && <PageCompletion contentId={content.id} />}
+        </>
+      )
     case 'ASSIGNMENT':
     case 'CODING_EXERCISE':
       return <SubmittableContent content={content} isTeacher={isTeacher} />

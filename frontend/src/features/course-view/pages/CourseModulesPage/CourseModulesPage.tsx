@@ -8,7 +8,7 @@ import { useCourseContent } from '@domain/content/hooks'
 import type { ContentSummary } from '@domain/content/types'
 import type { CourseModule } from '@domain/modules/types'
 import ContentList from '../../components/ContentList'
-import { useCourseView, visibleContent } from '../../courseContext'
+import { useCourseView } from '../../courseContext'
 import './CourseModulesPage.css'
 import { ChevronRightIcon } from '@shared/ui/icons'
 
@@ -17,7 +17,7 @@ import { ChevronRightIcon } from '@shared/ui/icons'
  * opens the module with its own menu.
  */
 export default function CourseModulesPage() {
-  const { course, modules, isTeacher } = useCourseView()
+  const { course, modules } = useCourseView()
   const content = useCourseContent(
     course.id,
     modules.map(module => module.id),
@@ -47,7 +47,7 @@ export default function CourseModulesPage() {
               <ModuleBox
                 courseId={course.id}
                 module={module}
-                items={loaded && visibleContent(loaded, isTeacher)}
+                items={loaded}
                 loading={loaded === undefined && !content.isError}
                 open={!closed.has(String(module.id))}
                 onToggle={() => toggle(String(module.id))}

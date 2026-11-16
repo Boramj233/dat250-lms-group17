@@ -72,6 +72,41 @@ function isTeacher(user: MockUser, courseId: string | number) {
   )
 }
 
+/** An active student of the course (the backend's requireActiveStudent). */
+function isStudent(user: MockUser, courseId: string | number) {
+  return enrollments.some(
+    e => e.userId === user.userId && String(e.courseId) === String(courseId) && e.role === 'STUDENT',
+  )
+}
+
+/** The backend's ContentCompletionService.Status for the caller. */
+function completionStatus(user: MockUser, content: { id: number | string; requiredForModuleCompletion?: boolean }) {
+  return {
+    contentId: content.id,
+    requiredForModuleCompletion: content.requiredForModuleCompletion ?? false,
+    completed: completions.some(c => c.userId === user.userId && c.contentId === Number(content.id)),
+  }
+}
+
+/** Like the backend's enrollment endpoints: a teacher of this course, or an admin. */
+function isTeacherOrAdmin(user: MockUser, courseId: string | number) {
+  return user.access === 'ADMIN' || isTeacher(user, courseId)
+}
+
+/** The backend's EnrollmentResponse: the member with their name and email. */
+function enrollmentResponse(enrollment: (typeof enrollments)[number]) {
+  const member = users.find(u => u.userId === enrollment.userId)
+  return member
+    ? {
+        userId: enrollment.userId,
+        role: enrollment.role,
+        firstName: member.firstName,
+        lastName: member.lastName,
+        email: member.email,
+      }
+    : undefined
+}
+
 const badRequest = (error: string): MockResult => ({ status: 400, body: { error } })
 const nextId = (items: { id: number | string }[]) => Math.max(0, ...items.map(item => Number(item.id))) + 1
 
@@ -295,16 +330,16 @@ function detailResponse(content: Content & { courseId: number }, forTeacher = fa
 }
 
 /**
- * Students see content that is active and whose visible date (its own, or its module's
+ * Students see content whose visible date (its own, or its module's
  * start date) has passed. Proposed, like the backend should.
  */
-function visibleToStudents(content: { active?: boolean; visibleFrom?: string | null; moduleId: number | string }) {
+function visibleToStudents(content: { visibleFrom?: string | null; moduleId: number | string }) {
   const module = modules.find(m => String(m.id) === String(content.moduleId))
-  return content.active !== false && !(module && isNotYetVisible(content, module, Date.now()))
+  return !(module && isNotYetVisible(content, module, Date.now()))
 }
 
-/** Published: students can see it. After that only active, position and required may change. */
-function publishedContent(content: { active?: boolean; visibleFrom?: string | null; moduleId: number | string }) {
+/** Published: students can see it. After that only position and required may change. */
+function publishedContent(content: { visibleFrom?: string | null; moduleId: number | string }) {
   const module = modules.find(m => String(m.id) === String(content.moduleId))
   return module ? isPublished(content, module, Date.now()) : true
 }
@@ -316,7 +351,7 @@ const EDITABLE_FIELDS: Record<ContentType, string[]> = {
     'instructions',
     'deadline',
     'allowLateSubmission',
-    'mandatoryForExam',
+    // mandatoryForExam has its own endpoint: PATCH /api/assignments/{id}/exam-requirement.
     'groupAssignment',
     'acceptedFileTypes',
   ],
@@ -368,15 +403,16 @@ const routes: MockHandler[] = [
     path: '/api/users/:userId/upcoming-deadlines',
     handle: ({ user, params }) => {
       if (!canReadUser(user, params.userId)) return forbidden()
-      const courseIds = new Set(coursesOf(Number(params.userId)).map(course => course.id))
+      // Like the backend: students only get content inside its visible window, teachers get all of it.
+      const roles = new Map(coursesOf(Number(params.userId)).map(course => [course.id, course.role]))
       const now = Date.now()
       const result: UpcomingDeadline[] = contents
         .flatMap(content =>
           (content.type === 'ASSIGNMENT' || content.type === 'CODING_EXERCISE') &&
           content.deadline &&
           Date.parse(content.deadline) > now &&
-          courseIds.has(content.courseId) &&
-          visibleToStudents(content)
+          roles.has(content.courseId) &&
+          (roles.get(content.courseId) === 'TEACHER' || visibleToStudents(content))
             ? [
                 {
                   contentId: content.id,
@@ -384,7 +420,7 @@ const routes: MockHandler[] = [
                   title: content.title,
                   deadline: content.deadline,
                   allowLateSubmission: content.allowLateSubmission,
-                  ...(content.type === 'ASSIGNMENT' ? { mandatoryForExam: content.mandatoryForExam } : {}),
+                  mandatoryForExam: content.type === 'ASSIGNMENT' ? content.mandatoryForExam : null,
                   courseId: content.courseId,
                   courseTitle: courses.find(c => c.id === content.courseId)?.title ?? '',
                   moduleId: content.moduleId,
@@ -438,7 +474,7 @@ const routes: MockHandler[] = [
       const module = modules.find(m => String(m.id) === params.moduleId && String(m.courseId) === params.courseId)
       if (!module) return notFound()
       if (!canReadCourse(user, params.courseId)) return forbidden()
-      // Students do not see inactive content or content before its visible date; teachers do.
+      // Students do not see content before its visible date; teachers do.
       const teacher = isTeacher(user, params.courseId)
       return ok(
         contents
@@ -450,7 +486,6 @@ const routes: MockHandler[] = [
             title: c.title,
             position: c.position,
             requiredForModuleCompletion: c.requiredForModuleCompletion ?? false,
-            active: c.active ?? true,
             visibleFrom: c.visibleFrom ?? null,
           })),
       )
@@ -567,8 +602,8 @@ const routes: MockHandler[] = [
     },
   },
   {
-    // Proposed endpoint (src/domain/grades/README.md): the latest submission per
-    // assignment / coding exercise, with its published grade or null.
+    // Backend: UserGradeResponse[]. The latest submission per assignment / coding
+    // exercise, with its released grade or null, newest first.
     method: 'GET',
     path: '/api/users/me/grades',
     handle: ({ user }) => {
@@ -616,7 +651,7 @@ const routes: MockHandler[] = [
       const completedIds = new Set(
         courseModules
           .filter(module => {
-            const inModule = contents.filter(c => c.moduleId === module.id && c.active !== false)
+            const inModule = contents.filter(c => c.moduleId === module.id)
             const required = inModule.filter(c => c.requiredForModuleCompletion)
             const tasks = required.length > 0 ? required : inModule.filter(c => c.type !== 'STATIC_PAGE')
             return tasks.length > 0 && tasks.every(task => done.has(Number(task.id)))
@@ -688,25 +723,13 @@ const routes: MockHandler[] = [
     method: 'GET',
     path: '/api/courses/:courseId/enrollments',
     handle: ({ user, params }) => {
-      // Every member of the course may see who else is in it (the People page).
+      // Every member of the course (and admins) may see who is in it, sorted by name.
       if (!canReadCourse(user, params.courseId)) return forbidden()
       return ok(
         enrollments
           .filter(e => String(e.courseId) === params.courseId)
-          .flatMap(e => {
-            const member = users.find(u => u.userId === e.userId)
-            return member
-              ? [
-                  {
-                    userId: e.userId,
-                    role: e.role,
-                    firstName: member.firstName,
-                    lastName: member.lastName,
-                    email: member.email,
-                  },
-                ]
-              : []
-          }),
+          .flatMap(e => enrollmentResponse(e) ?? [])
+          .sort((a, b) => a.lastName.localeCompare(b.lastName) || a.firstName.localeCompare(b.firstName)),
       )
     },
   },
@@ -806,34 +829,40 @@ const routes: MockHandler[] = [
     method: 'POST',
     path: '/api/courses/:courseId/enrollments',
     handle: ({ user, params, body }) => {
-      if (!isTeacher(user, params.courseId)) return forbidden()
+      // Backend: EnrollRequest -> 201 EnrollmentResponse; 404 unknown user or course, 409 already a member.
+      if (!isTeacherOrAdmin(user, params.courseId)) return forbidden()
+      if (!courses.some(c => String(c.id) === params.courseId)) return notFound()
       const { userId, role = 'STUDENT' } = body as { userId: number; role?: 'STUDENT' | 'TEACHER' }
       if (!users.some(u => u.userId === Number(userId))) return notFound()
       if (enrollments.some(e => e.userId === Number(userId) && String(e.courseId) === params.courseId)) {
         return { status: 409, body: { error: 'Already enrolled' } }
       }
-      enrollments.push({ userId: Number(userId), courseId: Number(params.courseId), role })
-      return noContent()
+      const enrollment = { userId: Number(userId), courseId: Number(params.courseId), role }
+      enrollments.push(enrollment)
+      return created(enrollmentResponse(enrollment))
     },
   },
   {
+    // Backend: UpdateCourseRoleRequest -> EnrollmentResponse.
     method: 'PATCH',
     path: '/api/courses/:courseId/enrollments/:userId',
     handle: ({ user, params, body }) => {
-      if (!isTeacher(user, params.courseId)) return forbidden()
+      if (!isTeacherOrAdmin(user, params.courseId)) return forbidden()
       const enrollment = enrollments.find(
         e => String(e.userId) === params.userId && String(e.courseId) === params.courseId,
       )
       if (!enrollment) return notFound()
-      enrollment.role = (body as { role: 'STUDENT' | 'TEACHER' }).role
-      return noContent()
+      const { role } = (body ?? {}) as { role?: 'STUDENT' | 'TEACHER' }
+      if (role !== 'STUDENT' && role !== 'TEACHER') return badRequest('role is required')
+      enrollment.role = role
+      return ok(enrollmentResponse(enrollment))
     },
   },
   {
     method: 'DELETE',
     path: '/api/courses/:courseId/enrollments/:userId',
     handle: ({ user, params }) => {
-      if (!isTeacher(user, params.courseId)) return forbidden()
+      if (!isTeacherOrAdmin(user, params.courseId)) return forbidden()
       const index = enrollments.findIndex(
         e => String(e.userId) === params.userId && String(e.courseId) === params.courseId,
       )
@@ -1024,7 +1053,55 @@ const routes: MockHandler[] = [
     },
   },
   {
-    // Proposed (src/domain/content/README.md): active and position at any time; every
+    // Backend (ContentCompletionController): the caller's status; active students only.
+    // The mock counts an item as completed when it has a row in `completions`.
+    method: 'GET',
+    path: '/api/contents/:contentId/completion',
+    handle: ({ user, params }) => {
+      const content = contents.find(c => String(c.id) === params.contentId)
+      if (!content) return notFound()
+      if (!isStudent(user, content.courseId)) return forbidden()
+      return ok(completionStatus(user, content))
+    },
+  },
+  {
+    // Backend: { completed } -> the new status. Pages only (400), inside their visible window (403).
+    method: 'PUT',
+    path: '/api/contents/:contentId/completion',
+    handle: ({ user, params, body }) => {
+      const content = contents.find(c => String(c.id) === params.contentId)
+      if (!content) return notFound()
+      if (!isStudent(user, content.courseId)) return forbidden()
+      const { completed } = (body ?? {}) as { completed?: boolean }
+      if (typeof completed !== 'boolean') return badRequest('completed is required')
+      if (content.type !== 'STATIC_PAGE') return badRequest('Only pages support manual completion')
+      if (!visibleToStudents(content)) return forbidden()
+      const contentId = Number(content.id)
+      const index = completions.findIndex(c => c.userId === user.userId && c.contentId === contentId)
+      if (completed && index < 0) {
+        completions.push({ userId: user.userId, contentId, completedAt: new Date().toISOString() })
+      } else if (!completed && index >= 0) {
+        completions.splice(index, 1)
+      }
+      return ok(completionStatus(user, content))
+    },
+  },
+  {
+    // Backend (AssignmentController): { mandatoryForExam } -> 204, also after publishing.
+    method: 'PATCH',
+    path: '/api/assignments/:assignmentId/exam-requirement',
+    handle: ({ user, params, body }) => {
+      const content = contents.find(c => String(c.id) === params.assignmentId)
+      if (!content || content.type !== 'ASSIGNMENT') return notFound()
+      if (!isTeacher(user, content.courseId)) return forbidden()
+      const { mandatoryForExam } = (body ?? {}) as { mandatoryForExam?: boolean }
+      if (typeof mandatoryForExam !== 'boolean') return badRequest('mandatoryForExam is required')
+      content.mandatoryForExam = mandatoryForExam
+      return noContent()
+    },
+  },
+  {
+    // Proposed (src/domain/content/README.md): position at any time; every
     // other field (title, visibleFrom and the type's own) only until the content is
     // published: 409 after.
     method: 'PATCH',
@@ -1037,11 +1114,10 @@ const routes: MockHandler[] = [
         title: string
         position: number
         body: string
-        active: boolean
         visibleFrom: string | null
       }> &
         Record<string, unknown>
-      const contentChanges = Object.keys(changes).filter(key => !['active', 'position'].includes(key))
+      const contentChanges = Object.keys(changes).filter(key => key !== 'position')
       if (contentChanges.length > 0 && publishedContent(content)) return conflict('Published content cannot be changed')
       if (changes.title !== undefined && !changes.title.trim()) return badRequest('Title is required')
       const typeFields = EDITABLE_FIELDS[content.type].filter(key => key in changes && key !== 'body')
@@ -1054,7 +1130,6 @@ const routes: MockHandler[] = [
       }
       if (changes.title !== undefined) content.title = changes.title
       if (changes.position !== undefined) content.position = changes.position
-      if (changes.active !== undefined) content.active = changes.active
       if (changes.body !== undefined && content.type === 'STATIC_PAGE') content.body = changes.body
       return ok(detailResponse(content))
     },

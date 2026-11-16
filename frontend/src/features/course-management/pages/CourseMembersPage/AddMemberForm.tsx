@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { useEnrollInCourse } from '@domain/courses/hooks'
+import { errorMessage } from '@shared/api/errorMessage'
 import type { CourseEnrollment, CourseRole } from '@domain/courses/types'
 import { useUserSearch } from '@domain/users/hooks'
 import type { UserLookup } from '@domain/users/types'
@@ -111,7 +112,18 @@ export default function AddMemberForm({ courseId, members }: AddMemberFormProps)
           </div>
         )}
 
-        <FormError>{enroll.error && 'Could not add the member. Try again.'}</FormError>
+        <FormError>
+          {enroll.error &&
+            errorMessage(
+              enroll.error,
+              {
+                403: 'Only teachers of this course can add members.',
+                404: 'The user or the course no longer exists.',
+                409: 'This user is already in the course.',
+              },
+              'Could not add the member. Try again.',
+            )}
+        </FormError>
         <FormSuccess>{added}</FormSuccess>
         <div className="form-actions">
           <SubmitButton pending={enroll.isPending} pendingLabel="Adding…" disabled={!selected}>

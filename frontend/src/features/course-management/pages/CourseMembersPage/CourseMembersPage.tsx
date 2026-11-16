@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useCurrentUser } from '@shared/auth/useAuth'
+import { errorMessage } from '@shared/api/errorMessage'
 import { useCourseEnrollments, useRemoveCourseEnrollment, useUpdateCourseRole } from '@domain/courses/hooks'
 import QueryState from '@shared/ui/QueryState'
 import { useConfirm } from '@shared/ui/ConfirmDialog'
@@ -90,8 +91,14 @@ export default function CourseMembersPage() {
         setDraft(d => withoutSavedRemoval(d, id))
       }
       setSaved('All changes are saved.')
-    } catch {
-      setError('Some changes could not be saved. Those still marked are not saved; try again.')
+    } catch (failure) {
+      setError(
+        errorMessage(
+          failure,
+          { 403: 'Only teachers of this course can change its members.' },
+          'Some changes could not be saved. Those still marked are not saved; try again.',
+        ),
+      )
     } finally {
       setSaving(false)
     }

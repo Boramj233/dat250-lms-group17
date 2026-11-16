@@ -1,7 +1,7 @@
 import { paths, type CourseSection } from '@shared/paths'
 import type { CourseId } from '@shared/types'
 import { contentSection, isSubmittable, isSubmittableType } from '@domain/content/contentTypes'
-import { useContents } from '@domain/content/hooks'
+import { useContentCompletions, useContents } from '@domain/content/hooks'
 import type { Content, ContentSummary, ContentType, QuizContent } from '@domain/content/types'
 import { formatScore } from '@domain/assignments/scoreFormat'
 import { useMyGrades } from '@domain/grades/hooks'
@@ -49,7 +49,8 @@ type Row = ContentTypeRow & {
 /**
  * Content of one type as a table, used by the course's and the module's pages.
  * Assignments and code exercises show the deadline (and for students their status);
- * quizzes show the number of questions and attempts; pages only their title.
+ * quizzes show the number of questions and attempts; pages their title (and for
+ * students whether they marked it as done).
  */
 export default function ContentTypeTable({
   courseId,
@@ -69,6 +70,10 @@ export default function ContentTypeTable({
   const grades = useMyGrades()
   // Students' quiz attempts, for the quizzes' Status (same cache as the quiz page).
   const quizAttempts = useMyQuizAttemptsFor(type === 'QUIZ' && !isTeacher ? rows.map(({ item }) => item.id) : [])
+  // Students' "done" marks on pages (same cache as the page itself).
+  const pageCompletions = useContentCompletions(
+    type === 'STATIC_PAGE' && !isTeacher ? rows.map(({ item }) => item.id) : [],
+  )
 
   const fullRows: Row[] = rows.map(row => ({
     ...row,
@@ -120,6 +125,22 @@ export default function ContentTypeTable({
         ),
       })
     }
+  } else if (type === 'STATIC_PAGE' && !isTeacher) {
+    columns.push({
+      header: 'Status',
+      cell: ({ item }) => {
+        const completion = pageCompletions.byContent.get(String(item.id))
+        if (!completion) return pageCompletions.isPending ? '…' : <span className="text-meta">–</span>
+        return completion.completed ? (
+          <span className="data-table-done">
+            <CheckCircleIcon size={18} strokeWidth={2.5} />
+            Done
+          </span>
+        ) : (
+          <span className="text-meta">Not done</span>
+        )
+      },
+    })
   }
 
   return (

@@ -7,14 +7,17 @@ import {
   createContent,
   deleteContent,
   editContent,
+  getCompletion,
   getContent,
   getModuleContent,
   moveContent,
+  setPageCompletion,
   updateCompletionSettings,
   updateContent,
+  updateExamRequirement,
 } from './api'
 import { contentKeys } from './queryKeys'
-import type { Content, ContentSummary, ContentType } from './types'
+import type { Content, ContentCompletion, ContentSummary, ContentType } from './types'
 
 // Fetches and caches the full details of a content item. The type comes from the
 // content summary, since the backend has one endpoint per content type.
@@ -113,4 +116,40 @@ export function useUpdateContent() {
 /** Teachers: "required for module completion" (and a quiz's passing percentage). */
 export function useUpdateCompletionSettings() {
   return useInvalidatingMutation(updateCompletionSettings, itemKeys)
+}
+
+/** Teachers: whether an assignment is mandatory for the exam; refreshes its details. */
+export function useUpdateExamRequirement() {
+  return useInvalidatingMutation(updateExamRequirement, (_result, { contentId }) => [contentKeys.content(contentId)])
+}
+
+// Students: whether they have completed one item. Only students may ask (403 for
+// teachers), so pass `enabled: false` for them.
+export function useContentCompletion(contentId: ContentId, enabled = true) {
+  return useQuery({
+    queryKey: contentKeys.completion(contentId),
+    queryFn: () => getCompletion(contentId),
+    enabled,
+  })
+}
+
+// Students: completion of several items at once, e.g. a table of pages. Shares the
+// cache with useContentCompletion (same query keys).
+export function useContentCompletions(contentIds: ContentId[]) {
+  const { byId, isPending } = useQueriesById(contentIds, {
+    queryKey: contentId => contentKeys.completion(contentId),
+    queryFn: (contentId): Promise<ContentCompletion> => getCompletion(contentId),
+  })
+  /** Completion per content id (as string); missing while loading or if it failed. */
+  return { byContent: byId, isPending }
+}
+
+// Students: marks a page as done or not done. The answer is the new status, so it goes
+// straight into the cache.
+export function useSetPageCompletion() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: setPageCompletion,
+    onSuccess: status => queryClient.setQueryData(contentKeys.completion(status.contentId), status),
+  })
 }

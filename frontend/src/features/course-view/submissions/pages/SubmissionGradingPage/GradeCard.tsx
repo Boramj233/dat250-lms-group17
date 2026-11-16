@@ -11,7 +11,7 @@ import type { GradeReview, ReviewSubmission } from '@domain/assignments/types'
 import { Card } from '../../../components/DetailLayout'
 import PassedBadge from '../../../components/PassedBadge'
 
-/** The passed / not passed choice in the grading form (proposed in the backend). */
+/** The passed / not passed choice in the grading form (SaveGradeRequest.passed). */
 const PASSED_CHOICES: { value: boolean | null; label: string }[] = [
   { value: true, label: 'Passed' },
   { value: false, label: 'Not passed' },
