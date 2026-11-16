@@ -30,9 +30,6 @@ public abstract class Content {
     public boolean isRequiredForModuleCompletion() { return requiredForModuleCompletion; }
 
     public void setRequiredForModuleCompletion(boolean required) {
-        if (required && this instanceof CodingExercise) {
-            throw new IllegalArgumentException("Coding completion is not supported yet");
-        }
         this.requiredForModuleCompletion = required;
     }
 

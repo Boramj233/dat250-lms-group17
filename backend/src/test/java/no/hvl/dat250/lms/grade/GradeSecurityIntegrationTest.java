@@ -156,9 +156,7 @@ class GradeSecurityIntegrationTest {
             .andExpect(jsonPath("$.feedback").value("Final"))
             .andExpect(jsonPath("$.version").doesNotExist())
             .andExpect(jsonPath("$.gradedByEnrollmentId").doesNotExist());
-        if (coding) {
-            assertFalse(contents.isCompleted(f.contentId(), f.owner().getUserId()));
-        }
+        assertTrue(contents.isCompleted(f.contentId(), f.owner().getUserId()));
         mvc.perform(get(base).header("Authorization", TestTokens.bearer(f.otherStudent())))
             .andExpect(status().isNotFound());
         mvc.perform(put(base).header("Authorization", TestTokens.bearer(f.teacher()))
