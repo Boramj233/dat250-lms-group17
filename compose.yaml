@@ -57,11 +57,31 @@ services:
       start_period: 30s
       retries: 12
 
+  seaweedfs:
+    image: chrislusf/seaweedfs:4.53@sha256:ccad23e18639c8b98cee17e7100b95830a06077b56d8e5b006d6dcf8ec5e94a0
+    entrypoint: ["/bin/sh", "/etc/lms/start.sh"]
+    environment:
+      LMS_STORAGE_ACCESS_KEY: ${LMS_STORAGE_ACCESS_KEY:?Set LMS_STORAGE_ACCESS_KEY}
+      LMS_STORAGE_SECRET_KEY: ${LMS_STORAGE_SECRET_KEY:?Set LMS_STORAGE_SECRET_KEY}
+    ports:
+      - "127.0.0.1:8333:8333"
+    volumes:
+      - seaweedfs-data:/data
+      - ./infra/seaweedfs/start.sh:/etc/lms/start.sh:ro
+    networks:
+      - storage
+
   backend:
     build:
       context: .
       dockerfile: backend/Dockerfile
     environment:
+      LMS_STORAGE_ENABLED: "true"
+      LMS_SUBMISSION_MAX_FILE_SIZE: ${LMS_SUBMISSION_MAX_FILE_SIZE:-10MB}
+      LMS_SUBMISSION_MAX_REQUEST_SIZE: ${LMS_SUBMISSION_MAX_REQUEST_SIZE:-11MB}
+      LMS_STORAGE_ENDPOINT: http://seaweedfs:8333
+      LMS_STORAGE_ACCESS_KEY: ${LMS_STORAGE_ACCESS_KEY:?Set LMS_STORAGE_ACCESS_KEY}
+      LMS_STORAGE_SECRET_KEY: ${LMS_STORAGE_SECRET_KEY:?Set LMS_STORAGE_SECRET_KEY}
       SPRING_RABBITMQ_HOST: rabbitmq
       SPRING_RABBITMQ_PORT: 5672
       SPRING_RABBITMQ_USERNAME: ${RABBITMQ_USERNAME:-lms}
@@ -80,7 +100,10 @@ services:
     volumes:
       - backend-data:/app/data
 
+    networks: [default, storage]
     depends_on:
+      seaweedfs:
+        condition: service_started
       rabbitmq:
         condition: service_healthy
       keycloak:
@@ -96,11 +119,16 @@ services:
       - backend
 
 # TODO: Add SQL database (PostgreSQL) as a Docker-service
-# TODO: Add NoSQL database (MongoDB or similar) as a Docker-service
 
 volumes:
   keycloak-data:
   rabbitmq-data:
   backend-data:
+  seaweedfs-data:
 
-# TODO: Add SQL and NoSQL database volumes
+# Dedicated bridge: only Backend and SeaweedFS join it.
+# Publish only the S3 port on loopback; do not publish filer/master interfaces.
+# internal:true prevents localhost port publication on Docker 29.
+networks:
+  storage:
+    driver: bridge

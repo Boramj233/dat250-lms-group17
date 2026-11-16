@@ -2,8 +2,8 @@ package no.hvl.dat250.lms.submission.api.dto;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
-
 import no.hvl.dat250.lms.submission.domain.SubmissionType;
 
 public record CreateSubmissionRequest(
@@ -13,6 +13,9 @@ public record CreateSubmissionRequest(
 
     @NotBlank(message = "Submission payload must not be blank")
     @Size(max = 10000)
-    String payload
+    String payload,
+    @Positive Long groupId
 
-) {}
+) {
+    public CreateSubmissionRequest(SubmissionType type, String payload) { this(type, payload, null); }
+}

@@ -41,6 +41,11 @@ class GroupServiceTest {
     @Mock
     private UserService userService;
 
+    @Mock
+    private jakarta.persistence.EntityManager entities;
+    @Mock
+    private no.hvl.dat250.lms.enrollment.service.EnrollmentService enrollments;
+
     @InjectMocks
     private GroupService service;
 

@@ -22,6 +22,8 @@ import no.hvl.dat250.lms.submission.domain.SubmissionType;
 import no.hvl.dat250.lms.submission.repository.SubmissionRepository;
 import no.hvl.dat250.lms.submission.service.SubmissionService;
 
+import org.springframework.security.access.AccessDeniedException;
+import no.hvl.dat250.lms.submission.service.SubmissionDeadlinePassedException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -62,7 +64,10 @@ class SubmissionServiceTest {
             contentService,
             enrollmentLookupService,
             submissionRepository,
-            fixedClock
+            fixedClock,
+            mock(no.hvl.dat250.lms.enrollment.service.EnrollmentService.class),
+            mock(org.springframework.context.ApplicationEventPublisher.class),
+            mock(no.hvl.dat250.lms.group.service.GroupService.class)
         );
     }
 
@@ -71,6 +76,7 @@ class SubmissionServiceTest {
         Module module = mock(Module.class);
         Course course = mock(Course.class);
 
+        lenient().when(contentService.lockSubmissionContent(30L)).thenReturn(content);
         when(contentService.requireContent(30L))
             .thenReturn(content);
 
@@ -142,7 +148,7 @@ class SubmissionServiceTest {
         assertEquals(NOW, result.getSubmittedAt());
         assertFalse(result.isLate());
 
-        verify(enrollmentLookupService)
+        verify(enrollmentLookupService, times(2))
             .requireActiveStudentEnrollment(5L, 10L);
 
         verify(submissionRepository).save(result);
@@ -193,7 +199,7 @@ class SubmissionServiceTest {
         prepareEnrollment();
 
         assertThrows(
-            IllegalStateException.class,
+            SubmissionDeadlinePassedException.class,
             () -> service.submitIndividual(
                 30L,
                 5L,
@@ -217,7 +223,7 @@ class SubmissionServiceTest {
             ));
 
         assertThrows(
-            IllegalStateException.class,
+            AccessDeniedException.class,
             () -> service.submitIndividual(
                 30L,
                 5L,
@@ -336,4 +342,42 @@ class SubmissionServiceTest {
             submissionRepository
         );
     }
+    @Test
+    void missingEnrollmentIsForbiddenWithoutSaving() {
+        prepareAssignment();
+        when(enrollmentLookupService.requireActiveStudentEnrollment(5L, 10L))
+            .thenThrow(new NoSuchElementException("Enrollment not found"));
+        assertThrows(AccessDeniedException.class,
+            () -> service.submitIndividual(30L, 5L, SubmissionType.TEXT, "Answer"));
+        verifyNoInteractions(submissionRepository);
+    }
+
+    @Test
+    void unrelatedStateFailureIsNotConvertedToAccessDenied() {
+        prepareAssignment();
+        prepareEnrollment();
+        IllegalStateException failure = new IllegalStateException("Persistence failure");
+        when(submissionRepository.save(any(Submission.class))).thenThrow(failure);
+        assertSame(failure, assertThrows(IllegalStateException.class,
+            () -> service.submitIndividual(30L, 5L, SubmissionType.TEXT, "Answer")));
+    }
+
+    @Test
+    void fileSubmittedExactlyAtDeadlineIsOnTimeAndUsesServerClock() {
+        Assignment assignment = prepareAssignment();
+        when(assignment.getDeadline()).thenReturn(NOW);
+        Enrollment enrollment = prepareEnrollment();
+        mockSaving();
+        var metadata = new no.hvl.dat250.lms.submission.domain.SubmissionFileMetadata(
+                "lms-submissions", "submissions/unique", "report.pdf", "application/pdf", 123, "a".repeat(64));
+
+        Submission result = service.saveFileSubmission(30L, 5L, metadata);
+
+        assertSame(enrollment, result.getSubmittedBy());
+        assertEquals(NOW, result.getSubmittedAt());
+        assertFalse(result.isLate());
+        assertNull(result.getPayload());
+        assertSame(metadata, result.getFile());
+    }
+
 }

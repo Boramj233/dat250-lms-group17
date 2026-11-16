@@ -5,6 +5,7 @@ import java.time.Instant;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.Map;
 import java.util.Set;
 
@@ -21,6 +22,7 @@ import no.hvl.dat250.lms.enrollment.domain.Enrollment;
 import no.hvl.dat250.lms.enrollment.service.EnrollmentService;
 
 import org.springframework.stereotype.Service;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
@@ -68,8 +70,13 @@ public class QuizAttemptService {
                 .getId();
 
         // 2. Verify the student's enrollment.
-        Enrollment enrollment = enrollmentService
-                .requireActiveStudent(userId, courseId);
+        Enrollment enrollment;
+        try {
+            enrollment = enrollmentService.requireActiveStudent(userId, courseId);
+        } catch (NoSuchElementException | IllegalStateException ex) {
+            // Translate only the enrollment operation's documented membership refusals.
+            throw new AccessDeniedException("Active student enrollment required", ex);
+        }
 
         // 3. Check how many attempts are already stored.
         long previousAttempts = attemptRepository
@@ -79,8 +86,7 @@ public class QuizAttemptService {
                 );
 
         if (previousAttempts >= quiz.getMaxAttempts()) {
-            throw new IllegalStateException(
-                "Maximum quiz attempts reached");
+            throw new QuizAttemptLimitExceededException();
         }
 
         // 4. Validate the submission and calculate score.

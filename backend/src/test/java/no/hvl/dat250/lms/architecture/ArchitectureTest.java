@@ -44,7 +44,7 @@ class ArchitectureTest {
         // Include security explicitly: authentication should use the user service rather
         // than bypassing it to access the user repository.
         for (String feature : new String[] {
-                "security", "user", "course", "module", "content", "submission", "enrollment", "group"
+                "security", "user", "course", "module", "content", "submission", "enrollment", "group", "grade"
         }) {
             noClasses()
                     .that().resideOutsideOfPackage(ROOT + feature + "..")

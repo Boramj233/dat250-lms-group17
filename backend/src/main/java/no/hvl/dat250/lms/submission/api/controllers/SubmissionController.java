@@ -5,13 +5,15 @@ import java.util.NoSuchElementException;
 
 import jakarta.validation.Valid;
 
-import no.hvl.dat250.lms.identity.CurrentUserService;
+import no.hvl.dat250.lms.security.AuthenticatedUser;
+import no.hvl.dat250.lms.submission.service.SubmissionDeadlinePassedException;
 import no.hvl.dat250.lms.submission.api.dto.CreateSubmissionRequest;
 import no.hvl.dat250.lms.submission.api.dto.SubmissionResponse;
 import no.hvl.dat250.lms.submission.domain.Submission;
 import no.hvl.dat250.lms.submission.service.SubmissionService;
 
-import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -22,40 +24,22 @@ public class SubmissionController {
 
     private final SubmissionService submissionService;
 
-    private final ObjectProvider<CurrentUserService>
-        currentUserProvider;
-
-    public SubmissionController(
-            SubmissionService submissionService,
-            ObjectProvider<CurrentUserService> currentUserProvider) {
-
+    public SubmissionController(SubmissionService submissionService) {
         this.submissionService = submissionService;
-        this.currentUserProvider = currentUserProvider;
     }
 
     // Student creates a new individual submission.
     @PostMapping("/contents/{contentId}/submissions")
     public ResponseEntity<SubmissionResponse> submitIndividual(
             @PathVariable Long contentId,
-            @Valid @RequestBody CreateSubmissionRequest request) {
+            @Valid @RequestBody CreateSubmissionRequest request,
+            @AuthenticationPrincipal AuthenticatedUser currentUser) {
 
-        CurrentUserService currentUser =
-            currentUserProvider.getIfAvailable();
+        Long userId = currentUser.userId();
 
-        if (currentUser == null) {
-            return ResponseEntity
-                .status(HttpStatus.SERVICE_UNAVAILABLE)
-                .build();
-        }
-
-        Long userId = currentUser.requireCurrentUserId();
-
-        Submission saved = submissionService.submitIndividual(
-            contentId,
-            userId,
-            request.type(),
-            request.payload()
-        );
+        Submission saved = request.groupId() == null
+            ? submissionService.submitIndividual(contentId, userId, request.type(), request.payload())
+            : submissionService.submit(contentId, userId, request.type(), request.payload(), request.groupId());
 
         return ResponseEntity
             .status(HttpStatus.CREATED)
@@ -65,18 +49,10 @@ public class SubmissionController {
     // Student reads one of their own submissions.
     @GetMapping("/submissions/{submissionId}")
     public ResponseEntity<SubmissionResponse> findOwnSubmission(
-            @PathVariable Long submissionId) {
+            @PathVariable Long submissionId,
+            @AuthenticationPrincipal AuthenticatedUser currentUser) {
 
-        CurrentUserService currentUser =
-            currentUserProvider.getIfAvailable();
-
-        if (currentUser == null) {
-            return ResponseEntity
-                .status(HttpStatus.SERVICE_UNAVAILABLE)
-                .build();
-        }
-
-        Long userId = currentUser.requireCurrentUserId();
+        Long userId = currentUser.userId();
 
         Submission submission =
             submissionService.findOwnSubmission(
@@ -93,18 +69,10 @@ public class SubmissionController {
     @GetMapping("/contents/{contentId}/submissions/me")
     public ResponseEntity<List<SubmissionResponse>>
             findMySubmissionHistory(
-                @PathVariable Long contentId) {
+                @PathVariable Long contentId,
+                @AuthenticationPrincipal AuthenticatedUser currentUser) {
 
-        CurrentUserService currentUser =
-            currentUserProvider.getIfAvailable();
-
-        if (currentUser == null) {
-            return ResponseEntity
-                .status(HttpStatus.SERVICE_UNAVAILABLE)
-                .build();
-        }
-
-        Long userId = currentUser.requireCurrentUserId();
+        Long userId = currentUser.userId();
 
         List<SubmissionResponse> responses =
             submissionService
@@ -114,6 +82,18 @@ public class SubmissionController {
                 .toList();
 
         return ResponseEntity.ok(responses);
+    }
+
+    @ExceptionHandler(SubmissionDeadlinePassedException.class)
+    @ResponseStatus(HttpStatus.CONFLICT)
+    public void handleDeadlinePassed() {
+        // A valid student cannot submit after a closed deadline.
+    }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    @ResponseStatus(HttpStatus.FORBIDDEN)
+    public void handleAccessDenied() {
+        // Match the authorization exception before its enrollment lookup cause.
     }
 
     @ExceptionHandler(NoSuchElementException.class)
