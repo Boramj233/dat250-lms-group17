@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ApiError } from '@shared/api/apiClient'
+import { errorMessage } from '@shared/api/errorMessage'
 import { useCurrentUser } from '@shared/auth/useAuth'
 import type { UserId } from '@shared/types'
 import PageHeader from '@shared/ui/PageHeader'
@@ -302,12 +302,11 @@ function GroupAction({ isTeacher, mine, label, disabled, onJoin, onLeave, onDele
 }
 
 function joinError(error: Error): string {
-  if (error instanceof ApiError) {
-    if (error.status === 409) return 'You are already in a group in this course. Leave it before you join another.'
-    if (error.status === 403) return 'You are not allowed to join this group.'
-    if (error.status === 404) return 'The group no longer exists.'
-  }
-  return 'You could not join the group. Try again.'
+  return errorMessage(error, {
+    409: 'You are already in a group in this course. Leave it before you join another.',
+    403: 'You are not allowed to join this group.',
+    404: 'The group no longer exists.',
+  }, 'You could not join the group. Try again.')
 }
 
 function switchError(error: Error, from: CourseGroup, to: CourseGroup): string {
@@ -318,24 +317,21 @@ function switchError(error: Error, from: CourseGroup, to: CourseGroup): string {
       : `${why} You are no longer in ${groupName(from)} and not in ${groupName(to)}; join a group again.`
   }
   // Leaving the old group failed: nothing changed.
-  if (error instanceof ApiError && error.status === 409) {
-    return `You were no longer in ${groupName(from)}, so nothing was changed. Try joining ${groupName(to)} again.`
-  }
-  return `${leaveError(error)} You are still in ${groupName(from)}.`
+  return errorMessage(error, {
+    409: `You were no longer in ${groupName(from)}, so nothing was changed. Try joining ${groupName(to)} again.`,
+  }, `${leaveError(error)} You are still in ${groupName(from)}.`)
 }
 
 function leaveError(error: Error): string {
-  if (error instanceof ApiError) {
-    if (error.status === 409) return 'You are no longer in this group.'
-    if (error.status === 403) return 'You are not allowed to leave this group.'
-    if (error.status === 404) return 'The group no longer exists.'
-  }
-  return 'You could not leave the group. Try again.'
+  return errorMessage(error, {
+    409: 'You are no longer in this group.',
+    403: 'You are not allowed to leave this group.',
+    404: 'The group no longer exists.',
+  }, 'You could not leave the group. Try again.')
 }
 
 function deleteError(error: Error, group: CourseGroup): string {
-  if (error instanceof ApiError && error.status === 409) {
-    return `${groupName(group)} has submissions or other history and cannot be deleted.`
-  }
-  return `${groupName(group)} could not be deleted. Try again.`
+  return errorMessage(error, {
+    409: `${groupName(group)} has submissions or other history and cannot be deleted.`,
+  }, `${groupName(group)} could not be deleted. Try again.`)
 }

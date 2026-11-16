@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useParams } from 'react-router'
-import { ApiError } from '@shared/api/apiClient'
+import { errorMessage } from '@shared/api/errorMessage'
 import { formatDateTime } from '@shared/lib/dateFormat'
 import { Breadcrumbs, TrailLink } from '@shared/navigation/Trail'
 import { paths } from '@shared/paths'
@@ -10,11 +10,12 @@ import { useConfirm } from '@shared/ui/ConfirmDialog'
 import { useGradeReviewsFor, useReleaseGrade, useReviewSubmissions } from '@domain/assignments/hooks'
 import { formatScore } from '@domain/assignments/scoreFormat'
 import type { ReviewSubmission } from '@domain/assignments/types'
-import { contentTypeLabel } from '@domain/content/contentTypes'
-import { useContent, useCourseContent } from '@domain/content/hooks'
+import { contentTypeLabel, isSubmittable } from '@domain/content/contentTypes'
+import { useContent } from '@domain/content/hooks'
 import DataTable from '../../components/DataTable'
 import PassedBadge from '../../components/PassedBadge'
 import { useCourseView } from '../../courseContext'
+import { useCourseItem } from '../../useCourseItems'
 import { studentsOf, submissionKindLabel, submissionStats } from '../../submissionStats'
 import { usePeopleNames } from '../../usePeopleNames'
 import GradePublishing from './GradePublishing'
@@ -28,10 +29,8 @@ import './ContentSubmissionsPage.css'
  */
 export default function ContentSubmissionsPage() {
   const { contentId = '' } = useParams()
-  const { course, modules, isTeacher } = useCourseView()
-  const content = useCourseContent(course.id, modules.map(module => module.id))
-  const item = modules.flatMap(module => content.byModule.get(String(module.id)) ?? [])
-    .find(entry => String(entry.id) === contentId)
+  const { course, isTeacher } = useCourseView()
+  const item = useCourseItem(contentId).found?.item
   const details = useContent(item?.type, contentId)
   const submissions = useReviewSubmissions(contentId)
   const grades = useGradeReviewsFor((submissions.data ?? []).map(submission => submission.id))
@@ -47,7 +46,7 @@ export default function ContentSubmissionsPage() {
     { label: 'Submissions', to: paths.courseSection(course.id, 'submissions') },
     { label: item?.title ?? '…' },
   ]
-  const deadline = details.data && (details.data.type === 'ASSIGNMENT' || details.data.type === 'CODING_EXERCISE')
+  const deadline = isSubmittable(details.data)
     ? details.data.deadline
     : undefined
   const gradeOf = (submission: ReviewSubmission) => grades.bySubmission.get(String(submission.id))
@@ -64,10 +63,9 @@ export default function ContentSubmissionsPage() {
     if (!confirmed) return
     setPublishError(null)
     release.mutate({ submissionId: submission.id, contentId, version: grade.version }, {
-      onError: error => setPublishError(
-        error instanceof ApiError && error.status === 409
-          ? `The grade for ${name} was changed or published in the meantime. Reload the page and try again.`
-          : `Could not publish the grade for ${name}. Try again.`),
+      onError: error => setPublishError(errorMessage(error, {
+        409: `The grade for ${name} was changed or published in the meantime. Reload the page and try again.`,
+      }, `Could not publish the grade for ${name}. Try again.`)),
     })
   }
 

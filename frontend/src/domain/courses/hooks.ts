@@ -1,4 +1,5 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
+import { useInvalidatingMutation } from "@shared/api/useInvalidatingMutation";
 import type { CourseId, UserId } from "@shared/types";
 import { useCurrentUser } from "@shared/auth/useAuth";
 import { createCourse, enrollInCourse, getCourse, getCourseEnrollments, getMyCourses, removeCourseEnrollment, updateCourse, updateCourseRole } from "./api";
@@ -39,74 +40,37 @@ export function useMyCourses(userId: UserId) {
 }
 
 // Creates a course and marks cached course data as outdated.
+// Creating a course may also enroll its creator as a teacher.
 export function useCreateCourse() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: createCourse,
-    // Creating a course may also enroll its creator as a teacher.
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: courseKeys.all }),
-  });
+  return useInvalidatingMutation(createCourse, () => [courseKeys.all]);
 }
 
-// Enrolls a user in a course and marks its enrollments and the user's course list as outdated.
+// A change to one user's membership: the course's enrollments and that user's course list.
+const membershipKeys = (_data: unknown, { courseId, userId }: { courseId: CourseId; userId: UserId }) => [
+  courseKeys.enrollments(courseId),
+  courseKeys.myCourses(userId),
+];
+
+// Enrolls a user in a course.
 export function useEnrollInCourse() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: enrollInCourse,
-    onSuccess: async (_data, { courseId, userId }) => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: courseKeys.enrollments(courseId) }),
-        queryClient.invalidateQueries({ queryKey: courseKeys.myCourses(userId) }),
-      ]);
-    },
-  });
+  return useInvalidatingMutation(enrollInCourse, membershipKeys);
 }
 
-// Removes a user's enrollment and marks the affected enrollment and course lists as outdated.
+// Removes a user's enrollment.
 export function useRemoveCourseEnrollment() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: removeCourseEnrollment,
-    onSuccess: async (_data, { courseId, userId }) => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: courseKeys.enrollments(courseId) }),
-        queryClient.invalidateQueries({ queryKey: courseKeys.myCourses(userId) }),
-      ]);
-    },
-  });
+  return useInvalidatingMutation(removeCourseEnrollment, membershipKeys);
 }
 
 // Updates course information and marks its cached details and course lists as outdated.
 export function useUpdateCourse() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: updateCourse,
-    onSuccess: async (_course, { courseId }) => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: courseKeys.course(courseId) }),
-        queryClient.invalidateQueries({ queryKey: courseKeys.allCourses }),
-        queryClient.invalidateQueries({ queryKey: courseKeys.enrolledCourses }),
-      ]);
-    },
-  });
+  return useInvalidatingMutation(updateCourse, (_course, { courseId }) => [
+    courseKeys.course(courseId),
+    courseKeys.allCourses,
+    courseKeys.enrolledCourses,
+  ]);
 }
 
-// Changes a user's course role and marks its enrollments and the user's course list as outdated.
+// Changes a user's course role.
 export function useUpdateCourseRole() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: updateCourseRole,
-    onSuccess: async (_data, { courseId, userId }) => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: courseKeys.enrollments(courseId) }),
-        queryClient.invalidateQueries({ queryKey: courseKeys.myCourses(userId) }),
-      ]);
-    },
-  });
+  return useInvalidatingMutation(updateCourseRole, membershipKeys);
 }

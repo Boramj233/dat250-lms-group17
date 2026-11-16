@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ApiError } from '@shared/api/apiClient'
+import { errorMessage } from '@shared/api/errorMessage'
 import { formatDateTime } from '@shared/lib/dateFormat'
 import { paths } from '@shared/paths'
 import PageHeader from '@shared/ui/PageHeader'
@@ -91,9 +91,8 @@ function EditForm({ content }: { content: Content }) {
 }
 
 function editError(error: Error): string {
-  if (error instanceof ApiError) {
-    if (error.status === 409) return 'The server does not allow changing it any more (e.g. because it is published).'
-    if (error.status === 400) return 'Some of the values are not allowed, e.g. a visible date before the module opens.'
-  }
-  return 'Could not save. Try again.'
+  return errorMessage(error, {
+    409: 'The server does not allow changing it any more (e.g. because it is published).',
+    400: 'Some of the values are not allowed, e.g. a visible date before the module opens.',
+  }, 'Could not save. Try again.')
 }

@@ -1,5 +1,5 @@
 import { useState, type FormEvent, type ReactNode } from 'react'
-import { ApiError } from '@shared/api/apiClient'
+import { errorMessage } from '@shared/api/errorMessage'
 import { useCurrentUser } from '@shared/auth/useAuth'
 import { formatDateTime, formatTimeLeft } from '@shared/lib/dateFormat'
 import { safeHttpUrl } from '@shared/lib/safeUrl'
@@ -276,14 +276,13 @@ function GroupFact({ submission, people, userId }: GroupFactProps) {
 
 /** A message for a failed hand-in, from the backend's status code. */
 function submitError(error: unknown): string {
-  if (error instanceof ApiError) {
-    if (error.status === 409) return 'The deadline has passed, so it could not be handed in.'
-    if (error.status === 415) return 'Only PDF files are accepted.'
-    if (error.status === 413) return 'The file is too large (at most 10 MB).'
-    if (error.status === 403) return 'You cannot hand in here (or for this group).'
-    if (error.status === 503) return 'Handing in files is not available right now. Try again later.'
-  }
-  return 'Could not submit your answer. Try again.'
+  return errorMessage(error, {
+    409: 'The deadline has passed, so it could not be handed in.',
+    415: 'Only PDF files are accepted.',
+    413: 'The file is too large (at most 10 MB).',
+    403: 'You cannot hand in here (or for this group).',
+    503: 'Handing in files is not available right now. Try again later.',
+  }, 'Could not submit your answer. Try again.')
 }
 
 type SubmissionFormProps = {

@@ -1,4 +1,6 @@
-import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useInvalidatingMutation } from "@shared/api/useInvalidatingMutation";
+import { useQueriesById } from "@shared/api/useQueriesById";
 import type { ContentId, CourseId, ModuleId } from "@shared/types";
 import { quizKeys } from "@domain/quizzes/queryKeys";
 import { createContent, deleteContent, editContent, getContent, getModuleContent, moveContent, updateContent } from "./api";
@@ -19,40 +21,24 @@ export function useContent(type: ContentType | undefined, contentId: ContentId) 
 // The full details of several content items at once, e.g. the deadlines in a course's
 // table of assignments. Shares the cache with useContent (same query keys).
 export function useContents(items: { type: ContentType; id: ContentId }[]) {
-  return useQueries({
-    queries: items.map(item => ({
-      queryKey: contentKeys.content(item.id),
-      queryFn: () => getContent(item.type, item.id),
-    })),
-    combine: results => ({
-      /** Details per content id (as string); missing while that item is loading. */
-      byId: new Map<string, Content>(
-        results.flatMap((result, index) =>
-          result.data ? [[String(items[index].id), result.data] as const] : [])
-      ),
-      isPending: results.some(result => result.isPending),
-    }),
+  const { byId, isPending } = useQueriesById(items, {
+    queryKey: item => contentKeys.content(item.id),
+    queryFn: (item): Promise<Content> => getContent(item.type, item.id),
+    key: item => String(item.id),
   });
+  /** Details per content id (as string); missing while that item is loading. */
+  return { byId, isPending };
 }
 
 // The content of several modules of a course at once, e.g. "all assignments in the
 // course". Shares the cache with useModuleContent (same query keys).
 export function useCourseContent(courseId: CourseId, moduleIds: ModuleId[]) {
-  return useQueries({
-    queries: moduleIds.map(moduleId => ({
-      queryKey: contentKeys.moduleContent(moduleId),
-      queryFn: () => getModuleContent(courseId, moduleId),
-    })),
-    combine: results => ({
-      /** Content per module id (as string); missing while that module is loading. */
-      byModule: new Map<string, ContentSummary[]>(
-        results.flatMap((result, index) =>
-          result.data ? [[String(moduleIds[index]), result.data] as const] : [])
-      ),
-      isPending: results.some(result => result.isPending),
-      isError: results.some(result => result.isError),
-    }),
+  const { byId, isPending, isError } = useQueriesById(moduleIds, {
+    queryKey: moduleId => contentKeys.moduleContent(moduleId),
+    queryFn: (moduleId): Promise<ContentSummary[]> => getModuleContent(courseId, moduleId),
   });
+  /** Content per module id (as string); missing while that module is loading. */
+  return { byModule: byId, isPending, isError };
 }
 
 // Fetches and caches the content summaries of a module, sorted by position.
@@ -69,13 +55,7 @@ export function useModuleContent(courseId: CourseId, moduleId: ModuleId | undefi
 // the module's content list.
 //only for teachers, not for students
 export function useCreateContent() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: createContent,
-    onSuccess: (_content, { moduleId }) =>
-      queryClient.invalidateQueries({ queryKey: contentKeys.moduleContent(moduleId) }),
-  });
+  return useInvalidatingMutation(createContent, (_content, { moduleId }) => [contentKeys.moduleContent(moduleId)]);
 }
 
 // Deletes content, clears its cached data (also the user's quiz attempts), and
@@ -97,50 +77,26 @@ export function useDeleteContent() {
 // Moves or reorders content and refreshes its details and module lists.
 //only for teachers, not for students
 export function useMoveContent() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: moveContent,
-    onSuccess: async (_content, { contentId, sourceModuleId, targetModuleId }) => {
-      const affectedKeys = [
-        contentKeys.content(contentId),
-        contentKeys.moduleContent(sourceModuleId),
-      ];
-      if (String(sourceModuleId) !== String(targetModuleId)) {
-        affectedKeys.push(contentKeys.moduleContent(targetModuleId));
-      }
-      await Promise.all(affectedKeys.map((queryKey) => queryClient.invalidateQueries({ queryKey })));
-    },
-  });
+  return useInvalidatingMutation(moveContent, (_content, { contentId, sourceModuleId, targetModuleId }) => [
+    contentKeys.content(contentId),
+    contentKeys.moduleContent(sourceModuleId),
+    ...(String(sourceModuleId) !== String(targetModuleId) ? [contentKeys.moduleContent(targetModuleId)] : []),
+  ]);
 }
+
+// One item changed: its details and its module's content list.
+const itemKeys = (_result: unknown, { contentId, moduleId }: { contentId: ContentId; moduleId: ModuleId }) => [
+  contentKeys.content(contentId),
+  contentKeys.moduleContent(moduleId),
+];
 
 // Updates content and refreshes its details and module content list.
 //only for teachers, not for students
 /** Teachers: saves all fields of an unpublished item (proposed), then reloads it and its module. */
 export function useEditContent() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: editContent,
-    onSuccess: async (_result, { contentId, moduleId }) => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: contentKeys.content(contentId) }),
-        queryClient.invalidateQueries({ queryKey: contentKeys.moduleContent(moduleId) }),
-      ]);
-    },
-  });
+  return useInvalidatingMutation(editContent, itemKeys);
 }
 
 export function useUpdateContent() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: updateContent,
-    onSuccess: async (_content, { contentId, moduleId }) => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: contentKeys.content(contentId) }),
-        queryClient.invalidateQueries({ queryKey: contentKeys.moduleContent(moduleId) }),
-      ]);
-    },
-  });
+  return useInvalidatingMutation(updateContent, itemKeys);
 }

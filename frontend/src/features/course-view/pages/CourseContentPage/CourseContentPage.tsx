@@ -1,8 +1,8 @@
 import { useParams } from 'react-router'
 import { Breadcrumbs } from '@shared/navigation/Trail'
 import { paths, type CourseSection } from '@shared/paths'
-import { useCourseContent } from '@domain/content/hooks'
-import { useCourseView, visibleContent } from '../../courseContext'
+import { useCourseView } from '../../courseContext'
+import { useCourseItem } from '../../useCourseItems'
 import ContentView from '../ContentView'
 
 type CourseContentPageProps = {
@@ -19,14 +19,10 @@ type CourseContentPageProps = {
  */
 export default function CourseContentPage({ section, label }: CourseContentPageProps) {
   const { contentId = '' } = useParams()
-  const { course, modules, isTeacher } = useCourseView()
+  const { course, isTeacher } = useCourseView()
   // The same queries as the course's lists, so this is read from the cache.
-  const content = useCourseContent(course.id, modules.map(module => module.id))
-
-  const found = modules.flatMap(module =>
-    visibleContent(content.byModule.get(String(module.id)) ?? [], isTeacher)
-      .filter(item => String(item.id) === contentId)
-      .map(item => ({ item, module })))[0]
+  const content = useCourseItem(contentId)
+  const { found } = content
 
   const crumbs = [
     { label: course.title, to: paths.course(course.id) },

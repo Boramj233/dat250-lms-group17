@@ -2,7 +2,7 @@ import { formatDateTime } from '@shared/lib/dateFormat'
 import { TrailLink } from '@shared/navigation/Trail'
 import { paths, type CourseSection } from '@shared/paths'
 import type { CourseId } from '@shared/types'
-import { contentSection } from '@domain/content/contentTypes'
+import { contentSection, isSubmittable, isSubmittableType } from '@domain/content/contentTypes'
 import { useContents } from '@domain/content/hooks'
 import type { Content, ContentSummary, ContentType, QuizContent } from '@domain/content/types'
 import { formatScore } from '@domain/assignments/scoreFormat'
@@ -54,7 +54,7 @@ type Row = ContentTypeRow & {
 export default function ContentTypeTable(
   { courseId, type, title, place, rows, showModule, isTeacher, courseSection }: ContentTypeTableProps,
 ) {
-  const submittable = type === 'ASSIGNMENT' || type === 'CODING_EXERCISE'
+  const submittable = isSubmittableType(type)
   // Deadlines, questions and attempts are in each item's details (same cache as the
   // content page). Pages need no details.
   const details = useContents(type === 'STATIC_PAGE' ? [] : rows.map(({ item }) => ({ type: item.type, id: item.id })))
@@ -136,13 +136,13 @@ export default function ContentTypeTable(
 
 function Deadline({ content }: { content?: Content }) {
   if (!content) return '…'
-  if (content.type !== 'ASSIGNMENT' && content.type !== 'CODING_EXERCISE') return '–'
+  if (!isSubmittable(content)) return '–'
   return content.deadline ? formatDateTime(new Date(content.deadline)) : 'No deadline'
 }
 
 function LateSubmissions({ content }: { content?: Content }) {
   if (!content) return '…'
-  if (content.type !== 'ASSIGNMENT' && content.type !== 'CODING_EXERCISE') return '–'
+  if (!isSubmittable(content)) return '–'
   return <span className="data-table-muted">{content.allowLateSubmission ? 'Accepted' : 'Not accepted'}</span>
 }
 

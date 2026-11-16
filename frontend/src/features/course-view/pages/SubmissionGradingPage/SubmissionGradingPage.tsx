@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { Link, useParams } from 'react-router'
-import { ApiError } from '@shared/api/apiClient'
+import { errorMessage } from '@shared/api/errorMessage'
 import { formatDateTime, fromDateTimeLocal, toDateTimeLocal } from '@shared/lib/dateFormat'
 import { Breadcrumbs } from '@shared/navigation/Trail'
 import { paths } from '@shared/paths'
@@ -10,10 +10,12 @@ import QueryState from '@shared/ui/QueryState'
 import { useGradeReview, useReleaseGrade, useReviewHistory, useReviewSubmission, useReviewSubmissions, useSaveGrade } from '@domain/assignments/hooks'
 import { formatScore, MAX_SCORE } from '@domain/assignments/scoreFormat'
 import type { GradeReview, ReviewSubmission } from '@domain/assignments/types'
-import { useContent, useCourseContent } from '@domain/content/hooks'
+import { useContent } from '@domain/content/hooks'
+import { isSubmittable } from '@domain/content/contentTypes'
 import PassedBadge from '../../components/PassedBadge'
 import SubmissionAnswer from '../../components/SubmissionAnswer'
 import { useCourseView } from '../../courseContext'
+import { useCourseItem } from '../../useCourseItems'
 import { submissionKindLabel } from '../../submissionStats'
 import { usePeopleNames } from '../../usePeopleNames'
 import RequiredMark from '@shared/ui/RequiredMark'
@@ -28,10 +30,8 @@ import './SubmissionGradingPage.css'
  */
 export default function SubmissionGradingPage() {
   const { contentId = '', submissionId = '' } = useParams()
-  const { course, modules, isTeacher } = useCourseView()
-  const content = useCourseContent(course.id, modules.map(module => module.id))
-  const item = modules.flatMap(module => content.byModule.get(String(module.id)) ?? [])
-    .find(entry => String(entry.id) === contentId)
+  const { course, isTeacher } = useCourseView()
+  const item = useCourseItem(contentId).found?.item
   const details = useContent(item?.type, contentId)
   const submission = useReviewSubmission(submissionId)
   const history = useReviewHistory(submissionId)
@@ -49,7 +49,7 @@ export default function SubmissionGradingPage() {
     { label: item?.title ?? '…', to: paths.courseSectionContent(course.id, 'submissions', contentId) },
     { label: studentName },
   ]
-  const deadline = details.data && (details.data.type === 'ASSIGNMENT' || details.data.type === 'CODING_EXERCISE')
+  const deadline = isSubmittable(details.data)
     ? details.data.deadline
     : undefined
   // The newest submission in the history is the one that can be graded.
@@ -165,12 +165,11 @@ export default function SubmissionGradingPage() {
 
 /** A message for a failed save or release, from the backend's status code. */
 function gradeError(error: unknown): string {
-  if (error instanceof ApiError) {
-    if (error.status === 409) return 'The grade was changed in the meantime, it is already published, or a newer submission exists. Reload the page and try again.'
-    if (error.status === 400) return `The score must be a number from 0 to ${MAX_SCORE}, with at most two decimals, and the visible date in the future.`
-    if (error.status === 403) return 'Only active teachers of the course can grade.'
-  }
-  return 'Could not save the grade. Try again.'
+  return errorMessage(error, {
+    409: 'The grade was changed in the meantime, it is already published, or a newer submission exists. Reload the page and try again.',
+    400: `The score must be a number from 0 to ${MAX_SCORE}, with at most two decimals, and the visible date in the future.`,
+    403: 'Only active teachers of the course can grade.',
+  }, 'Could not save the grade. Try again.')
 }
 
 /** The passed / not passed choice in the grading form (proposed in the backend). */

@@ -33,6 +33,21 @@ export function contentTypeLabel(type: ContentType): string {
   return contentTypeInfo(type)?.label ?? type
 }
 
+/** The types students hand something in for, with a deadline: assignments and coding exercises. */
+export type SubmittableType = 'ASSIGNMENT' | 'CODING_EXERCISE'
+
+export function isSubmittableType(type: ContentType | undefined): type is SubmittableType {
+  return type === 'ASSIGNMENT' || type === 'CODING_EXERCISE'
+}
+
+/**
+ * Whether students hand in the item. Also narrows a `Content` to an assignment or coding
+ * exercise, so `content.deadline` can be read after the check.
+ */
+export function isSubmittable<T extends { type: ContentType }>(item: T | undefined): item is T & { type: SubmittableType } {
+  return isSubmittableType(item?.type)
+}
+
 /** The type's part of a content URL: "assignments", "quizzes", "code-exercises" or "pages". */
 export function contentSection(type: ContentType): ContentSection {
   return contentTypeInfo(type).section

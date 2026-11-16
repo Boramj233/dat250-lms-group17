@@ -25,6 +25,11 @@ export function useCourseView(): CourseViewContextValue {
 }
 
 /** Students only see active content (missing `active` means active); teachers see all. */
+export function isVisibleTo(item: ContentSummary, isTeacher: boolean): boolean {
+  return isTeacher || item.active !== false
+}
+
+/** The items the user may see (see isVisibleTo). */
 export function visibleContent(items: ContentSummary[], isTeacher: boolean): ContentSummary[] {
-  return isTeacher ? items : items.filter(item => item.active !== false)
+  return isTeacher ? items : items.filter(item => isVisibleTo(item, isTeacher))
 }

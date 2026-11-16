@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { Link } from 'react-router'
 import { fromDateTimeLocal, toDateTimeLocal } from '@shared/lib/dateFormat'
+import { isSubmittable, isSubmittableType } from '@domain/content/contentTypes'
 import type { Content, ContentFields, ContentType, NewQuizQuestion } from '@domain/content/types'
 import { checkContentVisibleFrom } from '@domain/content/visibility'
 import type { CourseModule } from '@domain/modules/types'
@@ -150,7 +151,7 @@ export default function ContentForm(
         </fieldset>
       )}
 
-      {(type === 'ASSIGNMENT' || type === 'CODING_EXERCISE') && (
+      {isSubmittableType(type) && (
         <>
           <div className="form-field">
             <label htmlFor="content-deadline">Deadline</label>
@@ -243,7 +244,7 @@ export default function ContentForm(
 /** The form's starting values: empty for a new item, otherwise the saved item's. */
 function initialValues(content: Content | undefined) {
   const files = content?.type === 'ASSIGNMENT' ? splitExtensions(content.acceptedFileTypes ?? []) : undefined
-  const submittable = content?.type === 'ASSIGNMENT' || content?.type === 'CODING_EXERCISE' ? content : undefined
+  const submittable = isSubmittable(content) ? content : undefined
   return {
     title: content?.title ?? '',
     visibleFrom: toDateTimeLocal(content?.visibleFrom),

@@ -3,8 +3,8 @@ import { TrailLink } from '@shared/navigation/Trail'
 import { paths } from '@shared/paths'
 import PageHeader from '@shared/ui/PageHeader'
 import { useGradeReviewsFor, useReviewSubmissionsFor } from '@domain/assignments/hooks'
-import { contentTypeLabel } from '@domain/content/contentTypes'
-import { useContents, useCourseContent } from '@domain/content/hooks'
+import { contentTypeLabel, isSubmittable } from '@domain/content/contentTypes'
+import { useContents } from '@domain/content/hooks'
 import type { Content, ContentSummary } from '@domain/content/types'
 import { useCourseEnrollments } from '@domain/courses/hooks'
 import type { CourseModule } from '@domain/modules/types'
@@ -12,6 +12,7 @@ import DataTable from '../../components/DataTable'
 import MandatoryLabel from '../../components/MandatoryLabel'
 import VisibleFromTag from '../../components/VisibleFromTag'
 import { useCourseView } from '../../courseContext'
+import { useCourseItems } from '../../useCourseItems'
 import { submissionStats, type SubmissionStats } from '../../submissionStats'
 
 type Row = {
@@ -29,12 +30,9 @@ type Row = {
  * them are graded and published, and whether it is mandatory. A row opens its submissions.
  */
 export default function CourseSubmissionsPage() {
-  const { course, modules, isTeacher } = useCourseView()
-  const content = useCourseContent(course.id, isTeacher ? modules.map(module => module.id) : [])
-  const items = modules.flatMap(module =>
-    (content.byModule.get(String(module.id)) ?? [])
-      .filter(item => item.type === 'ASSIGNMENT' || item.type === 'CODING_EXERCISE')
-      .map(item => ({ item, module })))
+  const { course, isTeacher } = useCourseView()
+  const content = useCourseItems({ enabled: isTeacher, filter: item => isSubmittable(item) })
+  const { items } = content
   const details = useContents(items.map(({ item }) => ({ type: item.type, id: item.id })))
   const submissions = useReviewSubmissionsFor(items.map(({ item }) => item.id))
   const allSubmissions = [...submissions.byContent.values()].flat()
@@ -113,7 +111,7 @@ export default function CourseSubmissionsPage() {
 
 function Deadline({ content }: { content?: Content }) {
   if (!content) return '…'
-  if (content.type !== 'ASSIGNMENT' && content.type !== 'CODING_EXERCISE') return '–'
+  if (!isSubmittable(content)) return '–'
   return content.deadline ? formatDateTime(new Date(content.deadline)) : 'No deadline'
 }
 

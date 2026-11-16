@@ -1,8 +1,8 @@
 import type { CourseSection } from '@shared/paths'
 import PageHeader from '@shared/ui/PageHeader'
-import { useCourseContent } from '@domain/content/hooks'
 import type { ContentType } from '@domain/content/types'
-import { useCourseView, visibleContent } from '../../courseContext'
+import { useCourseView } from '../../courseContext'
+import { useCourseItems } from '../../useCourseItems'
 import ContentTypeTable from '../ContentTypeTable'
 
 type CourseContentTypePageProps = {
@@ -15,12 +15,8 @@ type CourseContentTypePageProps = {
 
 /** All content of one type in the course as a table, in module order. */
 export default function CourseContentTypePage({ type, title, section }: CourseContentTypePageProps) {
-  const { course, modules, isTeacher } = useCourseView()
-  const content = useCourseContent(course.id, modules.map(module => module.id))
-  const rows = modules.flatMap(module =>
-    visibleContent(content.byModule.get(String(module.id)) ?? [], isTeacher)
-      .filter(item => item.type === type)
-      .map(item => ({ item, module })))
+  const { course, isTeacher } = useCourseView()
+  const content = useCourseItems({ filter: item => item.type === type })
 
   return (
     <>
@@ -34,7 +30,7 @@ export default function CourseContentTypePage({ type, title, section }: CourseCo
             type={type}
             title={title}
             place={course.title}
-            rows={rows}
+            rows={content.items}
             showModule
             isTeacher={isTeacher}
             courseSection={section}

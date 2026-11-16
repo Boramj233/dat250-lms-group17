@@ -1,4 +1,5 @@
-import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueriesById } from "@shared/api/useQueriesById";
 import { getMyQuizAttempt, getMyQuizAttempts, submitQuizAnswers } from "./api";
 import { quizKeys } from "./queryKeys";
 import type { QuizAttemptId, QuizAttemptScore, QuizId } from "./types";
@@ -28,20 +29,12 @@ export function useSubmitQuizAnswers() {
 // The logged-in user's attempts at several quizzes at once, e.g. for a table of
 // quizzes. Shares the cache with useMyQuizAttempts (same query keys).
 export function useMyQuizAttemptsFor(quizIds: QuizId[]) {
-  return useQueries({
-    queries: quizIds.map(quizId => ({
-      queryKey: quizKeys.myAttempts(quizId),
-      queryFn: () => getMyQuizAttempts(quizId),
-    })),
-    combine: results => ({
-      /** Attempts per quiz id (as string); missing while loading or if it failed. */
-      byQuiz: new Map<string, QuizAttemptScore[]>(
-        results.flatMap((result, index) =>
-          result.data ? [[String(quizIds[index]), result.data] as const] : [])
-      ),
-      isPending: results.some(result => result.isPending),
-    }),
+  const { byId, isPending } = useQueriesById(quizIds, {
+    queryKey: quizId => quizKeys.myAttempts(quizId),
+    queryFn: (quizId): Promise<QuizAttemptScore[]> => getMyQuizAttempts(quizId),
   });
+  /** Attempts per quiz id (as string); missing while loading or if it failed. */
+  return { byQuiz: byId, isPending };
 }
 
 // One of the user's attempts with the answers (proposed endpoint). An attempt never

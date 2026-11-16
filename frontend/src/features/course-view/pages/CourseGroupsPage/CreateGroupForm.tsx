@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react'
-import { ApiError } from '@shared/api/apiClient'
+import { errorMessage } from '@shared/api/errorMessage'
 import type { CourseId } from '@shared/types'
 import { nextGroupNumber, useCreateGroup } from '@domain/groups/hooks'
 import type { CourseGroup } from '@domain/groups/types'
@@ -73,10 +73,9 @@ export default function CreateGroupForm({ courseId, groups }: CreateGroupFormPro
 }
 
 function createError(error: Error, groupNumber: number): string {
-  if (error instanceof ApiError) {
-    if (error.status === 409) return `Group ${groupNumber} already exists.`
-    if (error.status === 400) return 'The number must be a whole number of 1 or more.'
-    if (error.status === 403) return 'Only teachers of the course can create groups.'
-  }
-  return 'The group could not be created. Try again.'
+  return errorMessage(error, {
+    409: `Group ${groupNumber} already exists.`,
+    400: 'The number must be a whole number of 1 or more.',
+    403: 'Only teachers of the course can create groups.',
+  }, 'The group could not be created. Try again.')
 }

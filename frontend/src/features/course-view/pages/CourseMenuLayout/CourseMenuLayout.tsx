@@ -1,12 +1,13 @@
 import { Link, NavLink, Outlet, useMatch } from 'react-router'
 import { paths, type CourseSection } from '@shared/paths'
-import { useCourseContent } from '@domain/content/hooks'
+import { isSubmittable } from '@domain/content/contentTypes'
 import { formatTerm } from '@domain/courses/courseFormat'
 import CourseMenuHeading from '../../components/CourseMenuHeading'
 import SideMenuLayout from '../../components/SideMenuLayout'
 import { CONTENT_SECTIONS } from '../../contentSections'
 import { courseMenuItems, courseMenuPath } from '../../courseMenu'
-import { useCourseView, visibleContent } from '../../courseContext'
+import { useCourseView } from '../../courseContext'
+import { useCourseItems } from '../../useCourseItems'
 
 type SubItem = { key: string, label: string, to: string }
 
@@ -23,7 +24,7 @@ export default function CourseMenuLayout() {
   const onSubmissions = current === 'submissions' && isTeacher
   // The same queries as the content pages, so this is read from the cache. Only
   // fetched on a content type's page and on Submissions.
-  const content = useCourseContent(course.id, contentSection || onSubmissions ? modules.map(m => m.id) : [])
+  const { items } = useCourseItems({ enabled: contentSection !== undefined || onSubmissions })
 
   function subItems(section: CourseSection | undefined): SubItem[] {
     if (section !== current) return []
@@ -33,25 +34,23 @@ export default function CourseMenuLayout() {
       }))
     }
     if (contentSection && section === contentSection.section) {
-      return modules.flatMap(module =>
-        visibleContent(content.byModule.get(String(module.id)) ?? [], isTeacher)
-          .filter(item => item.type === contentSection.type)
-          .map(item => ({
-            key: String(item.id),
-            label: item.title,
-            to: paths.courseSectionContent(course.id, section, item.id),
-          })))
+      return items
+        .filter(({ item }) => item.type === contentSection.type)
+        .map(({ item }) => ({
+          key: String(item.id),
+          label: item.title,
+          to: paths.courseSectionContent(course.id, section, item.id),
+        }))
     }
     if (section === 'submissions' && onSubmissions) {
       // Everything students hand in: assignments and code exercises.
-      return modules.flatMap(module =>
-        (content.byModule.get(String(module.id)) ?? [])
-          .filter(item => item.type === 'ASSIGNMENT' || item.type === 'CODING_EXERCISE')
-          .map(item => ({
-            key: String(item.id),
-            label: item.title,
-            to: paths.courseSectionContent(course.id, 'submissions', item.id),
-          })))
+      return items
+        .filter(({ item }) => isSubmittable(item))
+        .map(({ item }) => ({
+          key: String(item.id),
+          label: item.title,
+          to: paths.courseSectionContent(course.id, 'submissions', item.id),
+        }))
     }
     return []
   }

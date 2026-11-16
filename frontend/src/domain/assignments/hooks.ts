@@ -1,9 +1,10 @@
-import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueriesById } from "@shared/api/useQueriesById";
 import type { ContentId } from "@shared/types";
 import { gradeKeys } from "@domain/grades/queryKeys";
 import { getGradeReview, releaseAllGrades, getMyReleasedGrade, getMySubmissionHistory, getReviewHistory, getReviewSubmission, getReviewSubmissions, releaseGrade, saveGrade, submitFile, submitMySubmission } from "./api";
 import { submissionKeys } from "./queryKeys";
-import type { GradeReview, MySubmission, ReviewSubmission, SubmissionId } from "./types";
+import type { MySubmission, SubmissionId } from "./types";
 
 const newestFirst = <T extends { submittedAt: string }>(submissions: T[]) =>
   [...submissions].sort((a, b) => Date.parse(b.submittedAt) - Date.parse(a.submittedAt));
@@ -64,20 +65,12 @@ export function useReviewSubmissions(contentId: ContentId) {
 // The latest submissions of several items at once (the course's Submissions table).
 // Shares the cache with useReviewSubmissions.
 export function useReviewSubmissionsFor(contentIds: ContentId[]) {
-  return useQueries({
-    queries: contentIds.map(contentId => ({
-      queryKey: submissionKeys.review(contentId),
-      queryFn: () => getReviewSubmissions(contentId),
-    })),
-    combine: results => ({
-      /** Submissions per content id (as string); missing while loading or if it failed. */
-      byContent: new Map<string, ReviewSubmission[]>(
-        results.flatMap((result, index) =>
-          result.data ? [[String(contentIds[index]), result.data] as const] : [])
-      ),
-      isPending: results.some(result => result.isPending),
-    }),
+  const { byId, isPending } = useQueriesById(contentIds, {
+    queryKey: contentId => submissionKeys.review(contentId),
+    queryFn: getReviewSubmissions,
   });
+  /** Submissions per content id (as string); missing while loading or if it failed. */
+  return { byContent: byId, isPending };
 }
 
 // One submission, as a teacher sees it.
@@ -108,20 +101,12 @@ export function useGradeReview(submissionId: SubmissionId) {
 // The grades of several submissions at once (the tables). Shares the cache with
 // useGradeReview.
 export function useGradeReviewsFor(submissionIds: SubmissionId[]) {
-  return useQueries({
-    queries: submissionIds.map(submissionId => ({
-      queryKey: submissionKeys.gradeReview(submissionId),
-      queryFn: () => getGradeReview(submissionId),
-    })),
-    combine: results => ({
-      /** Grade per submission id (as string): null when not graded, missing while loading. */
-      bySubmission: new Map<string, GradeReview | null>(
-        results.flatMap((result, index) =>
-          result.data !== undefined ? [[String(submissionIds[index]), result.data] as const] : [])
-      ),
-      isPending: results.some(result => result.isPending),
-    }),
+  const { byId, isPending } = useQueriesById(submissionIds, {
+    queryKey: submissionId => submissionKeys.gradeReview(submissionId),
+    queryFn: getGradeReview,
   });
+  /** Grade per submission id (as string): null when not graded, missing while loading. */
+  return { bySubmission: byId, isPending };
 }
 
 // Saves (creates or changes) a grade; the answer is the new grade with its version.
