@@ -7,10 +7,14 @@ import jakarta.validation.Valid;
 
 import no.hvl.dat250.lms.content.api.dto.AssignmentResponse;
 import no.hvl.dat250.lms.content.api.dto.CreateAssignmentRequest;
+import no.hvl.dat250.lms.content.api.dto.UpdateAssignmentExamRequirementRequest;
 import no.hvl.dat250.lms.content.domain.Assignment;
 import no.hvl.dat250.lms.content.service.AssignmentService;
+import no.hvl.dat250.lms.security.AuthenticatedUser;
 
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -32,7 +36,8 @@ public class AssignmentController {
     public AssignmentResponse createAssignment(
             @PathVariable Long courseId,
             @PathVariable Long moduleId,
-            @Valid @RequestBody CreateAssignmentRequest request) {
+            @Valid @RequestBody CreateAssignmentRequest request,
+            @AuthenticationPrincipal AuthenticatedUser currentUser) {
 
         try {
             Assignment assignment = assignmentService.createAssignment(
@@ -42,7 +47,8 @@ public class AssignmentController {
                 request.position(),
                 request.instructions(),
                 request.deadline(),
-                request.allowLateSubmission()
+                request.allowLateSubmission(),
+                currentUser.userId()
             );
 
             return AssignmentResponse.from(assignment);
@@ -54,6 +60,35 @@ public class AssignmentController {
                 ex
             );
         }
+    }
+
+    @PatchMapping("/api/assignments/{assignmentId}/exam-requirement")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void updateExamRequirement(
+            @PathVariable Long assignmentId,
+            @Valid @RequestBody UpdateAssignmentExamRequirementRequest request,
+            @AuthenticationPrincipal AuthenticatedUser currentUser) {
+
+        assignmentService.updateExamRequirement(
+            assignmentId,
+            currentUser.userId(),
+            request.mandatoryForExam()
+        );
+    }
+
+    @ExceptionHandler(NoSuchElementException.class)
+    @ResponseStatus(HttpStatus.NOT_FOUND)
+    public void handleNotFound() {
+    }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    @ResponseStatus(HttpStatus.FORBIDDEN)
+    public void handleAccessDenied() {
+    }
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public void handleInvalidArgument() {
     }
 
     @GetMapping("/api/assignments/{assignmentId}")

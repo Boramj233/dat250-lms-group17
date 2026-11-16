@@ -22,6 +22,9 @@ public class Assignment extends Content {
     @Column(name = "allow_late_submission", nullable = false)
     private boolean allowLateSubmission;
 
+    @Column(name = "mandatory_for_exam", nullable = false)
+    private boolean mandatoryForExam;
+
     protected Assignment() {
         // Required by JPA
     }
@@ -45,6 +48,14 @@ public class Assignment extends Content {
         this.instructions = instructions;
         this.deadline = deadline;
         this.allowLateSubmission = allowLateSubmission;
+    }
+
+    public boolean isMandatoryForExam() {
+        return mandatoryForExam;
+    }
+
+    public void setMandatoryForExam(boolean mandatoryForExam) {
+        this.mandatoryForExam = mandatoryForExam;
     }
 
     public String getInstructions() {
