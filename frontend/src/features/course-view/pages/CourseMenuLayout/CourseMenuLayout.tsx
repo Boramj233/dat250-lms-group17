@@ -5,7 +5,7 @@ import { formatTerm } from '../../../courses/courseFormat'
 import CourseMenuHeading from '../../components/CourseMenuHeading'
 import SideMenuLayout from '../../components/SideMenuLayout'
 import { CONTENT_SECTIONS } from '../../contentSections'
-import { COURSE_MENU_ITEMS, courseMenuPath } from '../../courseMenu'
+import { courseMenuItems, courseMenuPath } from '../../courseMenu'
 import { useCourseView, visibleContent } from '../../courseContext'
 
 type SubItem = { key: string, label: string, to: string }
@@ -20,9 +20,10 @@ export default function CourseMenuLayout() {
   // The section, also on its content pages (/courses/1/assignments/101).
   const current = useMatch('/courses/:courseId/:section/*')?.params.section
   const contentSection = CONTENT_SECTIONS.find(s => s.section === current)
+  const onSubmissions = current === 'submissions' && isTeacher
   // The same queries as the content pages, so this is read from the cache. Only
-  // fetched on a content type's page.
-  const content = useCourseContent(course.id, contentSection ? modules.map(m => m.id) : [])
+  // fetched on a content type's page and on Submissions.
+  const content = useCourseContent(course.id, contentSection || onSubmissions ? modules.map(m => m.id) : [])
 
   function subItems(section: CourseSection | undefined): SubItem[] {
     if (section !== current) return []
@@ -39,6 +40,17 @@ export default function CourseMenuLayout() {
             key: String(item.id),
             label: item.title,
             to: paths.courseSectionContent(course.id, section, item.id),
+          })))
+    }
+    if (section === 'submissions' && onSubmissions) {
+      // Everything students hand in: assignments and code exercises.
+      return modules.flatMap(module =>
+        (content.byModule.get(String(module.id)) ?? [])
+          .filter(item => item.type === 'ASSIGNMENT' || item.type === 'CODING_EXERCISE')
+          .map(item => ({
+            key: String(item.id),
+            label: item.title,
+            to: paths.courseSectionContent(course.id, 'submissions', item.id),
           })))
     }
     return []
@@ -65,7 +77,7 @@ export default function CourseMenuLayout() {
             </Link>
           )}
           <ul className="side-menu-list">
-            {COURSE_MENU_ITEMS.map(item => {
+            {courseMenuItems(isTeacher).map(item => {
               const sub = subItems(item.section)
               return (
                 <li key={item.label}>

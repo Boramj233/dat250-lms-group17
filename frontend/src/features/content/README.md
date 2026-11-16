@@ -109,105 +109,52 @@ It is not in the backend's `AssignmentResponse` (or the `Assignment` entity) yet
 backend should add it to the entity, `CreateAssignmentRequest` and
 `AssignmentResponse`. Until then the field is missing and the UI does not show it.
 
-## Completions (proposed)
-
-Assignments, coding exercises and quizzes are shown as "To do" or "Completed". One
-request per course gives the status of all of them:
-
-| Method | Endpoint | Request body | Response |
-| --- | --- | --- | --- |
-| GET | `/api/courses/{courseId}/completions/me` | — | `CompletedContent[]` |
-
-`CompletedContent` is `{ contentId, completedAt }`. The list contains, for the
-logged-in user:
-
-- assignments and coding exercises with at least one submission (by the user, or
-  by their group), `completedAt` = first submission;
-- quizzes with at least one submitted attempt, `completedAt` = first attempt.
-
-Static pages are not included. The backend has `GET /api/contents/{id}/submissions/me`,
-but that would be one request per item.
-
-```tsx
-const completed = useCourseCompletions(courseId); // Set of content ids (strings)
-completed.data?.has(String(item.id));
-```
-
 ## Other endpoints
 
 Proposed (not in the backend yet):
 
 | Method | Endpoint | Request body | Response |
 | --- | --- | --- | --- |
-| POST | `/api/modules/{moduleId}/content` | Text or quiz fields from `CreateContentInput` | `Content` |
 | PATCH | `/api/content/{contentId}` | Updated `title`, `position`, `body`, `requiredForCompletion` and/or `active` | `Content` |
 | DELETE | `/api/content/{contentId}` | — | `204 No Content` |
 | PATCH | `/api/content/{contentId}/move` | `{ moduleId, position }` | `Content` |
-| GET | `/api/users/{userId}/content/{contentId}/completion` | — | `ContentCompletion` |
-| PUT | `/api/users/{userId}/content/{contentId}/completion` | `{ completed }` | `ContentCompletion` |
 
-Create quizzes through `useCreateContent` with `type: "QUIZ"` and teacher-only
-question definitions, including correct answers. Use `useUpdateQuiz` to edit
-questions and settings, and `useQuizDefinition` for the teacher's editor. The
-student-facing `useQuiz`, `useContent`, and attempt responses must exclude answer
-keys and grading rules; the backend must enforce this distinction.
-
-Quiz attempts, answers, hints, and submission use the API functions in
-`../quizzes/api`. Quiz submission registers the interaction and refreshes module
-progress; students do not manually mark quizzes complete using the text-completion
-operation. Await pending answer saves before submitting an attempt. Released
-results are part of `QuizAttempt`; a missing result means unavailable or unreleased.
+Content is created with the backend's endpoint for its type
+(`POST /api/courses/{courseId}/modules/{moduleId}/contents/{pages|assignments|coding-exercises|quizzes}`)
+through `useCreateContent`; a quiz is created first and its questions are then added
+with `POST /api/quizzes/{quizId}/questions`. Taking a quiz is described under
+"Taking a quiz" above.
 
 The backend returns module content sorted by position and maintains ordering after
 creation, deletion, position changes, and moves. Moves are within one course and
-may reorder content in the same module. Moving content preserves its ID and user
-completion records. Deleting content deletes its completion records.
+may reorder content in the same module. Moving content preserves its ID.
 
-Completion is separate from shared content. A `ContentCompletion` contains
-`contentId`, `userId`, and `completed`. GET returns `completed: false` for a valid
-content/user pair with no completion record. PUT sets the requested state, so
-repeating the same request does not toggle it. This is a manual text-completion
-feature; completion rules for graded content must be defined separately. The
-backend uses these records to compute module completion and prerequisite-based
-access to other modules. It must persist and recalculate progress before returning
-a successful completion response; the frontend does not calculate or grant access.
 
 ```tsx
 const items = useModuleContent(courseId, moduleId);
 const content = useContent(summary.type, contentId);
 const all = useCourseContent(courseId, moduleIds); // several modules at once
-const completion = useContentCompletion(contentId, userId);
-const moduleProgress = useUserModuleProgress(courseId, userId);
 const createContent = useCreateContent();
 const updateContent = useUpdateContent();
 const moveContent = useMoveContent();
 const deleteContent = useDeleteContent();
-const setCompletion = useSetContentCompletion();
 
 createContent.mutate({ moduleId, type: "STATIC_PAGE", title: "Welcome", position: 0, body: "Hello" });
 updateContent.mutate({ contentId, moduleId, changes: { body: "Updated text" } });
 moveContent.mutate({ contentId, sourceModuleId: moduleId, targetModuleId, position: 0 });
 deleteContent.mutate({ contentId, moduleId });
-setCompletion.mutate({ courseId, contentId, userId, completed: true });
 ```
 
 Mutation inputs include parent IDs used for cache invalidation even when those
 IDs are not sent to the API. Supply the current module ID when updating/deleting
-and both module IDs when moving content. Completion inputs also require `courseId`
-for refreshing that user's module progress; it is not sent in the completion body.
+and both module IDs when moving content.
 Queries require defined IDs.
 
 Mutations invalidate the affected lists/details. Moving content refreshes both
-module lists; deletion removes cached details and all users' completion records.
-Setting completion invalidates that content/user pair and the user's module
-progress for the course, so newly unlocked or relocked modules can be reflected
-without reloading the page. Creating, editing, deleting, and moving content also
-invalidate module progress because the set of content required for module
-completion may have changed. Cache IDs are normalized to strings and completion
-keys include user ID to separate progress.
+module lists; deletion removes the cached details. Cache IDs are normalized to strings.
 
 The backend must enforce enrollment and course teacher permissions, validate
-source/destination modules, enforce module prerequisites when content is requested,
-and restrict access to user progress. A frontend
+source/destination modules and enforce module prerequisites when content is
+requested. A frontend
 `userId` does not identify the authenticated actor. Authentication is still a TODO
 in `apiClient`. Clear caches when logging out or switching users.

@@ -4,7 +4,8 @@ const id = (value: CourseId | ModuleId | ContentId) => encodeURIComponent(String
 
 /** The sections of a course's menu after Home, as URL parts: /courses/1/modules. */
 export type CourseSection =
-  | 'modules' | 'assignments' | 'people' | 'groups' | 'quizzes' | 'grades' | 'files' | 'code-exercises'
+  | 'modules' | 'assignments' | 'people' | 'groups' | 'quizzes' | 'grades' | 'submissions' | 'files'
+  | 'code-exercises'
 
 /** One per content type, in URLs: /courses/1/modules/2/quizzes/13. */
 export type ContentSection = 'pages' | 'assignments' | 'quizzes' | 'code-exercises'
@@ -28,6 +29,9 @@ export const paths = {
    */
   courseSectionContent: (courseId: CourseId, section: CourseSection, contentId: ContentId) =>
     `/courses/${id(courseId)}/${section}/${id(contentId)}`,
+  /** Teachers: one submission to grade, /courses/1/submissions/101/7 (content 101). */
+  courseSubmission: (courseId: CourseId, contentId: ContentId, submissionId: string | number) =>
+    `/courses/${id(courseId)}/submissions/${id(contentId)}/${encodeURIComponent(String(submissionId))}`,
   // One module in a course, with the module menu: its overview, its sections and its content.
   courseModule: (courseId: CourseId, moduleId: ModuleId) =>
     `/courses/${id(courseId)}/modules/${id(moduleId)}`,

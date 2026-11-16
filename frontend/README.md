@@ -61,8 +61,8 @@ what its pages share and provides it through a React context.
   from `features` or `app`, and `features` never import from `app`.
 - **Features may use each other's data**, meaning `api.ts`, `hooks.ts`,
   `queryKeys.ts`, `types.ts` and `components/` (for example `dashboard` uses
-  `courses/components/CourseGrid`, and `assignments/cache.ts` invalidates
-  `grades` and `modules` keys). Pages and the contexts in a feature are internal:
+  `courses/components/CourseGrid`, and `content/hooks.ts` invalidates `quizzes`
+  keys). Pages and the contexts in a feature are internal:
   only `app/routes.tsx` imports pages.
 - **Pages orchestrate, components display.** Pages read route params, contexts and
   data hooks, and pass what the components need as props. Components in
@@ -111,7 +111,10 @@ Run `npm install` first, then from this directory:
 - `/courses` lists all of the user's courses by term; `/courses/:courseId` shows one
   course with its course menu (`/modules`, `/assignments`, `/people`, `/groups`,
   `/quizzes`, `/grades`, `/files`, `/code-exercises`; the lists are tables, and Files is empty until the backend has files),
-  and teachers get a Manage button in it. `/courses/:courseId/modules/:moduleId` shows
+  and teachers get a Manage button in it. Teachers also get Submissions
+  (`/submissions`: every assignment and code exercise with answered, submitted and
+  graded counts; `/submissions/:contentId` its submissions; `/submissions/:contentId/:submissionId`
+  one submission to grade, see src/features/assignments/README.md). `/courses/:courseId/modules/:moduleId` shows
   one module with its own menu (`/files`, `/pages`, `/assignments`, `/quizzes`,
   `/code-exercises`) and `/<section>/:contentId` (e.g. `/assignments/101`) one item in it.
   The course's lists open their items under themselves instead, with the course menu:

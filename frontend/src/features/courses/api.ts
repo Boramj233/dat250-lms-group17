@@ -2,11 +2,6 @@ import { apiClient, apiPath, jsonBody } from "../../shared/api/apiClient";
 import type { CourseId, UserId } from "../../shared/types";
 import type { Course, CourseEnrollment, CourseEnrollmentInput, CreateCourseInput, EnrolledCourse, EnrollInCourseInput, UpdateCourseInput, UpdateCourseRoleInput } from "./types";
 
-//collection of all api calls that fetch data related to courses
-export function getAllCourses(): Promise<Course[]> {
-  return apiClient<Course[]>("/api/courses");
-}
-
 export function getMyCourses(userId: UserId): Promise<EnrolledCourse[]> {
   return apiClient<EnrolledCourse[]>(apiPath`/api/users/${userId}/courses`);
 }
@@ -31,10 +26,6 @@ export function updateCourse({
   changes,
 }: UpdateCourseInput): Promise<Course> {
   return apiClient<Course>(apiPath`/api/courses/${courseId}`, jsonBody("PATCH", changes));
-}
-
-export function deleteCourse(courseId: CourseId): Promise<void> {
-  return apiClient<void>(apiPath`/api/courses/${courseId}`, { method: "DELETE" });
 }
 
 export function enrollInCourse({

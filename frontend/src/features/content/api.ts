@@ -1,6 +1,6 @@
 import { apiClient, apiPath, jsonBody } from "../../shared/api/apiClient";
-import type { ContentId, CourseId, ModuleId, UserId } from "../../shared/types";
-import type { AssignmentContent, CodingExerciseContent, CompletedContent, Content, ContentCompletion, ContentSummary, ContentType, CreateContentInput, DeleteContentInput, MoveContentInput, QuizContent, SetContentCompletionInput, StaticPageContent, UpdateContentInput } from "./types";
+import type { ContentId, CourseId, ModuleId } from "../../shared/types";
+import type { AssignmentContent, CodingExerciseContent, Content, ContentSummary, ContentType, CreateContentInput, DeleteContentInput, MoveContentInput, QuizContent, StaticPageContent, UpdateContentInput } from "./types";
 
 // The backend sends "Assignment" for assignments in content lists, unlike the other
 // types (STATIC_PAGE, QUIZ, CODING_EXERCISE). Accept both spellings.
@@ -37,18 +37,6 @@ export async function getContent(type: ContentType, contentId: ContentId): Promi
     case "CODING_EXERCISE":
       return { ...(await apiClient<Omit<CodingExerciseContent, "type">>(apiPath`/api/coding-exercises/${contentId}`)), type };
   }
-}
-
-export function getContentCompletion(
-  contentId: ContentId,
-  userId: UserId
-): Promise<ContentCompletion> {
-  return apiClient<ContentCompletion>(apiPath`/api/users/${userId}/content/${contentId}/completion`);
-}
-
-/** What the logged-in user has completed in a course (proposed endpoint, see README). */
-export function getMyCourseCompletions(courseId: CourseId): Promise<CompletedContent[]> {
-  return apiClient<CompletedContent[]>(apiPath`/api/courses/${courseId}/completions/me`);
 }
 
 function post<T>(url: string, body: unknown): Promise<T> {
@@ -104,16 +92,5 @@ export function moveContent({
   return apiClient<Content>(
     apiPath`/api/content/${contentId}/move`,
     jsonBody("PATCH", { moduleId: targetModuleId, position })
-  );
-}
-
-export function setContentCompletion({
-  contentId,
-  userId,
-  completed,
-}: SetContentCompletionInput): Promise<ContentCompletion> {
-  return apiClient<ContentCompletion>(
-    apiPath`/api/users/${userId}/content/${contentId}/completion`,
-    jsonBody("PUT", { completed })
   );
 }

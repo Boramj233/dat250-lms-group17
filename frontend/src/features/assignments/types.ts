@@ -1,4 +1,4 @@
-import type { ContentId, CourseId, GroupId, UserId } from "../../shared/types";
+import type { ContentId, GroupId, UserId } from "../../shared/types";
 
 export type SubmissionId = string | number;
 
@@ -33,33 +33,6 @@ export interface SubmissionGroup {
 
 export type SubmissionStatus = "SUBMITTED" | "GRADING" | "GRADED" | "GRADING_FAILED";
 
-export type SubmissionOwner =
-  | { type: "INDIVIDUAL"; userId: UserId }
-  // Membership snapshot provided by the backend when the group submits.
-  | { type: "GROUP"; groupId: GroupId; memberIds: UserId[] };
-
-export interface SubmissionFile {
-  id: string | number;
-  name: string;
-  mediaType: string;
-  size: number;
-  downloadUrl: string;
-}
-
-export type SubmissionPayload =
-  | { type: "FILES"; files: SubmissionFile[] }
-  | { type: "REPOSITORY"; repositoryUrl: string; commitRef: string };
-
-/**
- * A student's latest submission for an assignment or coding exercise, as a teacher
- * sees it (proposed: GET /api/contents/{contentId}/submissions). `grade` includes
- * unpublished grades here, with `publishedAt` null until published.
- */
-export interface ContentSubmission extends MySubmission {
-  student: { userId: UserId; firstName: string; lastName: string; email: string };
-  grade: SubmissionGrade | null;
-}
-
 export interface SubmissionGrade {
   // The course's grading scheme determines valid values, e.g. "A" or "Passed".
   value: string;
@@ -84,24 +57,6 @@ export interface SubmissionResult {
   errorMessage: string | null;
 }
 
-export interface SubmissionSummary {
-  id: SubmissionId;
-  contentId: ContentId;
-  courseId: CourseId;
-  contentType: "ASSIGNMENT" | "CODING_EXERCISE";
-  submittedBy: UserId;
-  owner: SubmissionOwner;
-  submittedAt: string;
-  // Backend calculates lateness and rejects submissions if late delivery is forbidden.
-  late: boolean;
-  status: SubmissionStatus;
-}
-
-export interface Submission extends SubmissionSummary {
-  payload: SubmissionPayload;
-  result: SubmissionResult | null;
-}
-
 // Matches the backend's CreateSubmissionRequest (POST /api/contents/{contentId}/submissions):
 // TEXT for an assignment answer, GIT_URL for a coding exercise's repository.
 export interface SubmitMySubmissionInput {
@@ -111,23 +66,29 @@ export interface SubmitMySubmissionInput {
   payload: string;
 }
 
-export interface SubmitAssignmentInput {
-  contentId: ContentId;
-  files: File[];
-  // Omit for an individual submission. Backend validates group membership.
-  groupId?: GroupId;
-}
+// Teachers: grading (proposed, see README.md).
 
-export interface SubmitCodingExerciseInput {
-  contentId: ContentId;
-  repositoryUrl: string;
-  // Backend resolves and stores the exact commit so later repository edits do not alter a submission.
-  commitRef: string;
-  groupId?: GroupId;
+/**
+ * One submission as a teacher sees it (GET /api/contents/{contentId}/submissions): the
+ * student's SubmissionResponse plus who handed it in and the grade, also before it is
+ * published (`publishedAt` null).
+ */
+export interface ContentSubmission extends MySubmission {
+  student: { userId: UserId; firstName: string; lastName: string; email: string };
+  grade: SubmissionGrade | null;
 }
 
 export interface GradeSubmissionInput {
   submissionId: SubmissionId;
+  /** Cache scope: the content the submission belongs to. */
+  contentId: ContentId;
+  /** e.g. "Passed", "Not passed" or "B". */
   grade: string;
-  feedback?: string;
+  feedback: string;
+}
+
+export interface PublishGradeInput {
+  submissionId: SubmissionId;
+  /** Cache scope: the content the submission belongs to. */
+  contentId: ContentId;
 }

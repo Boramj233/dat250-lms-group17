@@ -19,13 +19,6 @@ export interface CourseModule {
   openToAllFrom?: string | null;
 }
 
-// Computed by the backend for one user's progress and access in a course.
-export interface UserModuleProgress {
-  moduleId: ModuleId;
-  completed: boolean;
-  accessible: boolean;
-}
-
 export interface CreateModuleInput {
   courseId: CourseId;
   title: string;
@@ -37,9 +30,4 @@ export interface UpdateModuleInput {
   courseId: CourseId;
   moduleId: ModuleId;
   changes: Partial<Pick<CourseModule, "title" | "position" | "prerequisiteModuleIds" | "availableFrom" | "openToAllFrom">>;
-}
-
-export interface DeleteModuleInput {
-  courseId: CourseId;
-  moduleId: ModuleId;
 }

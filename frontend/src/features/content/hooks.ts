@@ -1,8 +1,7 @@
 import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { ContentId, CourseId, ModuleId, UserId } from "../../shared/types";
-import { moduleKeys } from "../modules/queryKeys";
+import type { ContentId, CourseId, ModuleId } from "../../shared/types";
 import { quizKeys } from "../quizzes/queryKeys";
-import { createContent, deleteContent, getContent, getContentCompletion, getModuleContent, getMyCourseCompletions, moveContent, setContentCompletion, updateContent } from "./api";
+import { createContent, deleteContent, getContent, getModuleContent, moveContent, updateContent } from "./api";
 import { contentKeys } from "./queryKeys";
 import type { Content, ContentSummary, ContentType } from "./types";
 
@@ -33,24 +32,6 @@ export function useContents(items: { type: ContentType; id: ContentId }[]) {
       ),
       isPending: results.some(result => result.isPending),
     }),
-  });
-}
-
-// Fetches and caches a specific user's completion status for a content item.
-export function useContentCompletion(contentId: ContentId, userId: UserId) {
-  return useQuery({
-    queryKey: contentKeys.completion(contentId, userId),
-    queryFn: () => getContentCompletion(contentId, userId),
-  });
-}
-
-// Which assignments, coding exercises and quizzes in a course the logged-in user has
-// completed, as a set of content ids (strings) for quick lookups.
-export function useCourseCompletions(courseId: CourseId) {
-  return useQuery({
-    queryKey: contentKeys.courseCompletions(courseId),
-    queryFn: () => getMyCourseCompletions(courseId),
-    select: completions => new Set(completions.map(item => String(item.contentId))),
   });
 }
 
@@ -85,24 +66,20 @@ export function useModuleContent(courseId: CourseId, moduleId: ModuleId | undefi
 }
 
 // Creates a page, assignment, coding exercise or quiz (with questions) and refreshes
-// the module's content list and user progress.
+// the module's content list.
 //only for teachers, not for students
 export function useCreateContent() {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: createContent,
-    onSuccess: async (_content, { moduleId }) => {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: contentKeys.moduleContent(moduleId) }),
-        // Parent course IDs are not part of this mutation's input.
-        queryClient.invalidateQueries({ queryKey: moduleKeys.progress }),
-      ]);
-    },
+    onSuccess: (_content, { moduleId }) =>
+      queryClient.invalidateQueries({ queryKey: contentKeys.moduleContent(moduleId) }),
   });
 }
 
-// Deletes content, clears its cached data, and refreshes the module list and progress.
+// Deletes content, clears its cached data (also the user's quiz attempts), and
+// refreshes the module list.
 //only for teachers, not for students
 export function useDeleteContent() {
   const queryClient = useQueryClient();
@@ -111,19 +88,13 @@ export function useDeleteContent() {
     mutationFn: deleteContent,
     onSuccess: async (_data, { contentId, moduleId }) => {
       queryClient.removeQueries({ queryKey: contentKeys.content(contentId) });
-      queryClient.removeQueries({ queryKey: quizKeys.quiz(contentId) });
-      queryClient.removeQueries({ queryKey: quizKeys.definition(contentId) });
       queryClient.removeQueries({ queryKey: quizKeys.quizAttempts(contentId) });
-      queryClient.removeQueries({ queryKey: contentKeys.completions(contentId) });
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: contentKeys.moduleContent(moduleId) }),
-        queryClient.invalidateQueries({ queryKey: moduleKeys.progress }),
-      ]);
+      await queryClient.invalidateQueries({ queryKey: contentKeys.moduleContent(moduleId) });
     },
   });
 }
 
-// Moves or reorders content and refreshes its details, module lists, and user progress.
+// Moves or reorders content and refreshes its details and module lists.
 //only for teachers, not for students
 export function useMoveContent() {
   const queryClient = useQueryClient();
@@ -138,35 +109,12 @@ export function useMoveContent() {
       if (String(sourceModuleId) !== String(targetModuleId)) {
         affectedKeys.push(contentKeys.moduleContent(targetModuleId));
       }
-      await Promise.all([
-        ...affectedKeys.map((queryKey) => queryClient.invalidateQueries({ queryKey })),
-        queryClient.invalidateQueries({ queryKey: moduleKeys.progress }),
-      ]);
+      await Promise.all(affectedKeys.map((queryKey) => queryClient.invalidateQueries({ queryKey })));
     },
   });
 }
 
-// Records content completion and refreshes the user's module progress and access.
-//for studentinteraction
-export function useSetContentCompletion() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: setContentCompletion,
-    onSuccess: async (_completion, { courseId, contentId, userId }) => {
-      await Promise.all([
-        queryClient.invalidateQueries({
-          queryKey: contentKeys.completion(contentId, userId),
-        }),
-        queryClient.invalidateQueries({
-          queryKey: moduleKeys.userModuleProgress(courseId, userId),
-        }),
-      ]);
-    },
-  });
-}
-
-// Updates content and refreshes its details, module content list, and user progress.
+// Updates content and refreshes its details and module content list.
 //only for teachers, not for students
 export function useUpdateContent() {
   const queryClient = useQueryClient();
@@ -176,10 +124,7 @@ export function useUpdateContent() {
     onSuccess: async (_content, { contentId, moduleId }) => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: contentKeys.content(contentId) }),
-        queryClient.invalidateQueries({ queryKey: quizKeys.quiz(contentId) }),
-        queryClient.invalidateQueries({ queryKey: quizKeys.definition(contentId) }),
         queryClient.invalidateQueries({ queryKey: contentKeys.moduleContent(moduleId) }),
-        queryClient.invalidateQueries({ queryKey: moduleKeys.progress }),
       ]);
     },
   });

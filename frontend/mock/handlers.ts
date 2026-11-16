@@ -65,23 +65,14 @@ function publishedGrade(grade: (typeof submissions)[number]['grade']) {
   return grade?.publishedAt ? grade : null
 }
 
-/** A submission in the frontend's Submission shape (src/features/assignments/types.ts). */
-function submissionResponse(submission: (typeof submissions)[number]) {
-  const content = contents.find(c => c.id === submission.contentId)!
+/** A submission as a teacher sees it (ContentSubmission in src/features/assignments). */
+function contentSubmissionResponse(s: (typeof submissions)[number]) {
+  const student = users.find(u => u.userId === s.userId)!
   return {
-    id: submission.id,
-    contentId: submission.contentId,
-    courseId: content.courseId,
-    contentType: content.type,
-    submittedBy: submission.userId,
-    owner: { type: 'INDIVIDUAL', userId: submission.userId },
-    submittedAt: submission.submittedAt,
-    late: submission.late,
-    status: submission.grade ? 'GRADED' : 'SUBMITTED',
-    payload: submission.type === 'GIT_URL'
-      ? { type: 'REPOSITORY', repositoryUrl: submission.payload, commitRef: 'main' }
-      : { type: 'FILES', files: [] },
-    result: null,
+    id: s.id, contentId: s.contentId, type: s.type, payload: s.payload, submittedAt: s.submittedAt, late: s.late,
+    student: { userId: student.userId, firstName: student.firstName, lastName: student.lastName, email: student.email },
+    group: groupResponse(s.groupId),
+    grade: s.grade,
   }
 }
 
@@ -677,26 +668,17 @@ export const handlers: MockHandler[] = [
     },
   },
   {
-    // Proposed (src/features/assignments): every student's latest submission, for teachers.
+    // Proposed (src/features/assignments/README.md): every submission, for teachers.
     method: 'GET',
     path: '/api/contents/:contentId/submissions',
     handle: ({ user, params }) => {
       const content = contents.find(c => String(c.id) === params.contentId)
       if (!content) return notFound()
       if (!isTeacher(user, content.courseId)) return forbidden()
-      const latest = new Map<number, (typeof submissions)[number]>()
-      for (const s of submissions.filter(s => s.contentId === content.id)) {
-        const previous = latest.get(s.userId)
-        if (!previous || Date.parse(s.submittedAt) > Date.parse(previous.submittedAt)) latest.set(s.userId, s)
-      }
-      return ok([...latest.values()].map(s => {
-        const student = users.find(u => u.userId === s.userId)!
-        return {
-          id: s.id, contentId: s.contentId, type: s.type, payload: s.payload, submittedAt: s.submittedAt, late: s.late,
-          student: { userId: student.userId, firstName: student.firstName, lastName: student.lastName, email: student.email },
-          grade: s.grade,
-        }
-      }))
+      return ok(submissions
+        .filter(s => s.contentId === content.id)
+        .sort((a, b) => Date.parse(b.submittedAt) - Date.parse(a.submittedAt))
+        .map(contentSubmissionResponse))
     },
   },
   {
@@ -710,8 +692,8 @@ export const handlers: MockHandler[] = [
       if (!isTeacher(user, content.courseId)) return forbidden()
       const { grade, feedback } = body as { grade: string, feedback?: string }
       if (!grade?.trim()) return badRequest('Grade is required')
-      submission.grade = { value: grade, feedback: feedback ?? null, publishedAt: null }
-      return ok(submissionResponse(submission))
+      submission.grade = { value: grade.trim(), feedback: feedback?.trim() || null, publishedAt: null }
+      return ok(contentSubmissionResponse(submission))
     },
   },
   {
@@ -728,7 +710,7 @@ export const handlers: MockHandler[] = [
       if (!completions.some(c => c.userId === submission.userId && c.contentId === submission.contentId)) {
         completions.push({ userId: submission.userId, contentId: submission.contentId, completedAt: submission.submittedAt })
       }
-      return ok(submissionResponse(submission))
+      return ok(contentSubmissionResponse(submission))
     },
   },
   { method: 'GET', path: '/api/contents/:contentId', handle: contentDetail('STATIC_PAGE') },

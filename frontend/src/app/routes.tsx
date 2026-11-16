@@ -16,6 +16,9 @@ import NotFoundPage from '../shared/ui/NotFoundPage'
 import DashboardPage from '../features/dashboard/pages/DashboardPage'
 import CoursesPage from '../features/courses/pages/CoursesPage'
 import CourseSectionContentPage from '../features/course-view/pages/CourseContentPage'
+import CourseSubmissionsPage from '../features/course-view/pages/CourseSubmissionsPage'
+import ContentSubmissionsPage from '../features/course-view/pages/ContentSubmissionsPage'
+import SubmissionGradingPage from '../features/course-view/pages/SubmissionGradingPage'
 import CourseContentTypePage from '../features/course-view/pages/CourseContentTypePage'
 import CourseGradesPage from '../features/course-view/pages/CourseGradesPage'
 import CourseGroupsPage from '../features/course-view/pages/CourseGroupsPage'
@@ -57,6 +60,10 @@ export default function AppRoutes() {
             <Route path="quizzes/:contentId" element={<CourseSectionContentPage section="quizzes" label="Quizzes" />} />
             <Route path="grades" element={<CourseGradesPage />} />
             <Route path="grades/:contentId" element={<CourseSectionContentPage section="grades" label="Grades" />} />
+            {/* Teachers: what students hand in, per item, and grading one submission. */}
+            <Route path="submissions" element={<CourseSubmissionsPage />} />
+            <Route path="submissions/:contentId" element={<ContentSubmissionsPage />} />
+            <Route path="submissions/:contentId/:submissionId" element={<SubmissionGradingPage />} />
             <Route path="files" element={<CourseFilesPage />} />
             <Route path="code-exercises" element={<CourseContentTypePage type="CODING_EXERCISE" title="Code Exercises" section="code-exercises" />} />
             <Route path="code-exercises/:contentId" element={<CourseSectionContentPage section="code-exercises" label="Code Exercises" />} />

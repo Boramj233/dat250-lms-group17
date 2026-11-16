@@ -1,17 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { CourseId, UserId } from "../../shared/types";
 import { useCurrentUser } from "../../shared/auth/useAuth";
-import { createCourse, deleteCourse, enrollInCourse, getAllCourses, getCourse, getCourseEnrollments, getMyCourses, removeCourseEnrollment, updateCourse, updateCourseRole } from "./api";
+import { createCourse, enrollInCourse, getCourse, getCourseEnrollments, getMyCourses, removeCourseEnrollment, updateCourse, updateCourseRole } from "./api";
 import { courseKeys } from "./queryKeys";
 import type { CourseRole } from "./types";
-
-// Fetches and caches all courses, regardless of enrollment.
-export function useAllCourses() {
-  return useQuery({
-    queryKey: courseKeys.allCourses,
-    queryFn: getAllCourses,
-  });
-}
 
 // Fetches and caches a specific course by its ID.
 export function useCourse(courseId: CourseId) {
@@ -55,23 +47,6 @@ export function useCreateCourse() {
     // Creating a course may also enroll its creator as a teacher.
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: courseKeys.all }),
-  });
-}
-
-// Deletes a course, clears its cached details and enrollments, and marks course lists as outdated.
-export function useDeleteCourse() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: deleteCourse,
-    onSuccess: async (_data, courseId) => {
-      queryClient.removeQueries({ queryKey: courseKeys.course(courseId) });
-      queryClient.removeQueries({ queryKey: courseKeys.enrollments(courseId) });
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: courseKeys.allCourses }),
-        queryClient.invalidateQueries({ queryKey: courseKeys.enrolledCourses }),
-      ]);
-    },
   });
 }
 

@@ -7,7 +7,7 @@ import { formatTerm } from '../../../../courses/courseFormat'
 import CourseMenuHeading from '../../../components/CourseMenuHeading'
 import SideMenuLayout from '../../../components/SideMenuLayout'
 import { CONTENT_SECTIONS } from '../../../contentSections'
-import { COURSE_MENU_ITEMS, courseMenuPath } from '../../../courseMenu'
+import { courseMenuItems, courseMenuPath } from '../../../courseMenu'
 import { useCourseView, visibleContent } from '../../../courseContext'
 import { ModuleViewContext } from '../../moduleContext'
 
@@ -91,7 +91,7 @@ export default function ModuleLayout() {
                 </Link>
               )}
               <ul className="side-menu-list">
-                {COURSE_MENU_ITEMS.map(item => (
+                {courseMenuItems(isTeacher).map(item => (
                   <li key={item.label}>
                     <NavLink to={courseMenuPath(course.id, item.section)} end>{item.label}</NavLink>
                   </li>

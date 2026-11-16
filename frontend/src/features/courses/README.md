@@ -6,13 +6,11 @@ are frontend assumptions to agree on when implementing the backend.
 
 | Method | Endpoint | Request body | Response |
 | --- | --- | --- | --- |
-| GET | `/api/courses` | — | `Course[]` |
 | GET | `/api/courses/{courseId}` | — | `Course` |
 | GET | `/api/users/{userId}/courses` | — | `EnrolledCourse[]` |
 | GET | `/api/courses/{courseId}/enrollments` | — | `CourseEnrollment[]` (every member of the course: the People page) |
 | POST | `/api/courses` | `CreateCourseInput` | `Course` |
 | PATCH | `/api/courses/{courseId}` | `UpdateCourseInput.changes` | `Course` |
-| DELETE | `/api/courses/{courseId}` | — | `204 No Content` |
 | POST | `/api/courses/{courseId}/enrollments` | `{ userId, role? }` | `204 No Content` |
 | DELETE | `/api/courses/{courseId}/enrollments/{userId}` | — | `204 No Content` |
 | PATCH | `/api/courses/{courseId}/enrollments/{userId}` | `{ role }` | `204 No Content` |
@@ -42,13 +40,10 @@ or `mutateAsync`:
 const course = useCourse(courseId);
 const updateCourse = useUpdateCourse();
 const enrollInCourse = useEnrollInCourse();
-const deleteCourse = useDeleteCourse();
 
 updateCourse.mutate({ courseId, changes: { description: "New description" } });
 enrollInCourse.mutate({ courseId, userId });
-deleteCourse.mutate(courseId);
 ```
 
-Mutations invalidate affected queries after success. Deleting a course also
-removes its details and enrollments from the cache. Query IDs are normalized to
+Mutations invalidate affected queries after success. Query IDs are normalized to
 strings in cache keys so `42` and `"42"` share the same cached resource.

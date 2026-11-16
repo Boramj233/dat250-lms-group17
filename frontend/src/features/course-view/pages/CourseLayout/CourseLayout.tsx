@@ -21,7 +21,8 @@ export default function CourseLayout() {
   // (/courses/1/assignments/101: course › Assignments › item) draw their own breadcrumbs.
   const inModule = useMatch('/courses/:courseId/modules/:moduleId/*')
   const onCourseContent = useMatch('/courses/:courseId/:section/:contentId')
-  const ownBreadcrumbs = inModule !== null || onCourseContent !== null
+  const onSubmission = useMatch('/courses/:courseId/submissions/:contentId/:submissionId')
+  const ownBreadcrumbs = inModule !== null || onCourseContent !== null || onSubmission !== null
 
   if (course.isPending || modules.isPending || role.isPending) return <p role="status">Loading course…</p>
   if (course.error) return <p role="alert">Could not load the course.</p>

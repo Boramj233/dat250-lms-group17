@@ -151,6 +151,11 @@ export const submissions: {
     submittedAt: inDays(-1, 16, 20),
     grade: { value: 'Passed', feedback: 'Nice and simple. Add a dead letter queue next time.', publishedAt: inDays(0, 9, 0) },
   },
+  {
+    id: 7, userId: 5, contentId: 101, type: 'TEXT', late: false,
+    payload: 'My REST API has GET, POST and DELETE for polls. The code is in the repository I shared.',
+    submittedAt: inDays(-1, 12, 0), grade: null,
+  },
 ]
 
 /** Groups in a course, like the backend's GroupDTO; `name` is proposed (see src/features/groups). */

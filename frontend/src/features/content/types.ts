@@ -1,4 +1,4 @@
-import type { ContentId, CourseId, ModuleId, UserId } from "../../shared/types";
+import type { ContentId, CourseId, ModuleId } from "../../shared/types";
 
 // The content types in the backend (ContentSummaryResponse.type). The backend sends
 // "Assignment" for assignments; contentQueries normalizes it to "ASSIGNMENT".
@@ -201,29 +201,5 @@ export interface MoveContentInput {
   sourceModuleId: ModuleId;
   targetModuleId: ModuleId;
   position: number;
-}
-
-/**
- * A content item the logged-in user has completed: an assignment or coding exercise
- * with a submission, or a quiz with a submitted attempt. See README (completions).
- */
-export interface CompletedContent {
-  contentId: ContentId;
-  /** ISO 8601 instant of the submission / submitted attempt. */
-  completedAt: string;
-}
-
-export interface ContentCompletion {
-  contentId: ContentId;
-  userId: UserId;
-  completed: boolean;
-}
-
-export interface SetContentCompletionInput {
-  // Used to refresh module progress and access after the backend records completion.
-  courseId: CourseId;
-  contentId: ContentId;
-  userId: UserId;
-  completed: boolean;
 }
 
