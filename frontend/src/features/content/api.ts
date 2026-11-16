@@ -1,6 +1,6 @@
 import { apiClient, apiPath, jsonBody } from "../../shared/api/apiClient";
 import type { ContentId, CourseId, ModuleId } from "../../shared/types";
-import type { AssignmentContent, CodingExerciseContent, Content, ContentSummary, ContentType, CreateContentInput, DeleteContentInput, MoveContentInput, QuizContent, StaticPageContent, UpdateContentInput } from "./types";
+import type { AssignmentContent, CodingExerciseContent, Content, ContentSummary, ContentType, CreateContentInput, DeleteContentInput, EditContentInput, MoveContentInput, NewQuizQuestion, QuizContent, StaticPageContent, UpdateContentInput } from "./types";
 
 // The backend sends "Assignment" for assignments in content lists, unlike the other
 // types (STATIC_PAGE, QUIZ, CODING_EXERCISE). Accept both spellings.
@@ -63,14 +63,38 @@ export async function createContent(input: CreateContentInput): Promise<{ id: Co
   const { questions, ...quizFields } = fields as Omit<typeof input, "courseId" | "moduleId" | "type">;
   const quiz = await post<{ id: ContentId }>(url, quizFields);
   for (const [position, question] of questions.entries()) {
-    await post(apiPath`/api/quizzes/${quiz.id}/questions`, {
-      questionText: question.questionText,
-      position,
-      hint: question.hint || null,
-      options: question.options.map((option, index) => ({ ...option, position: index })),
-    });
+    await post(apiPath`/api/quizzes/${quiz.id}/questions`, questionRequest(question, position));
   }
   return quiz;
+}
+
+/** CreateQuizQuestionRequest for a question at `position`. */
+function questionRequest(question: NewQuizQuestion, position: number) {
+  return {
+    questionText: question.questionText,
+    position,
+    hint: question.hint || null,
+    options: question.options.map((option, index) => ({ ...option, position: index })),
+  };
+}
+
+/**
+ * Proposed: saves all fields of an unpublished item (PATCH /api/content/{id}); a quiz's
+ * questions are then replaced as a whole (PUT /api/quizzes/{id}/questions). 409 once
+ * the item is published.
+ */
+export async function editContent({ contentId, fields }: EditContentInput): Promise<void> {
+  const { type, ...changes } = fields;
+  if (type !== "QUIZ") {
+    await apiClient<Content>(apiPath`/api/content/${contentId}`, jsonBody("PATCH", changes));
+    return;
+  }
+  const { questions, ...quizChanges } = changes as Omit<typeof fields & { type: "QUIZ" }, "type">;
+  await apiClient<Content>(apiPath`/api/content/${contentId}`, jsonBody("PATCH", quizChanges));
+  await apiClient<unknown>(
+    apiPath`/api/quizzes/${contentId}/questions`,
+    jsonBody("PUT", questions.map(questionRequest)),
+  );
 }
 
 export function updateContent({

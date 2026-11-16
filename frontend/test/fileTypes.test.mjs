@@ -21,3 +21,11 @@ test('an empty list means any file type', () => {
   assert.equal(formatExtensions([]), 'Any file type')
   assert.equal(formatExtensions(['.pdf', '.zip']), '.pdf, .zip')
 })
+
+test('saved extensions are split back into presets and typed text', async () => {
+  const { splitExtensions } = await import('../src/features/course-management/fileTypes.ts')
+  assert.deepEqual(splitExtensions(['.pdf', '.zip', '.py']), { presetLabels: ['PDF', 'ZIP'], other: '.py' })
+  // Text needs both .txt and .md; only one of them stays typed.
+  assert.deepEqual(splitExtensions(['.txt']), { presetLabels: [], other: '.txt' })
+  assert.deepEqual(splitExtensions([]), { presetLabels: [], other: '' })
+})

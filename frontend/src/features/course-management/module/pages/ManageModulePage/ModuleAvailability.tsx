@@ -3,6 +3,8 @@ import { useUpdateModule } from '../../../../modules/hooks'
 import { canRequire, checkAvailabilityDates } from '../../../../modules/prerequisites'
 import type { CourseModule } from '../../../../modules/types'
 import { fromDateTimeLocal, toDateTimeLocal } from '../../../../../shared/lib/dateFormat'
+import { checkModuleStartAgainstContent } from '../../../../content/visibility'
+import { useManageModule } from '../../manageModuleContext'
 import type { CourseId } from '../../../../../shared/types'
 import '../../../../../shared/styles/forms.css'
 
@@ -37,6 +39,8 @@ export default function ModuleAvailability({ courseId, module, modules }: Module
 /** The two dates, with a Save button (typing a date should not save half a date). */
 function AvailabilityDates({ courseId, module }: { courseId: CourseId, module: CourseModule }) {
   const updateModule = useUpdateModule()
+  // The module's content: its own visible dates cannot come before the module's start.
+  const { content } = useManageModule()
   const [availableFrom, setAvailableFrom] = useState(toDateTimeLocal(module.availableFrom))
   const [openToAllFrom, setOpenToAllFrom] = useState(toDateTimeLocal(module.openToAllFrom))
   const [problem, setProblem] = useState<string | null>(null)
@@ -47,6 +51,7 @@ function AvailabilityDates({ courseId, module }: { courseId: CourseId, module: C
     setSaved(false)
     const changes = { availableFrom: fromDateTimeLocal(availableFrom), openToAllFrom: fromDateTimeLocal(openToAllFrom) }
     const dateProblem = checkAvailabilityDates(changes.availableFrom, changes.openToAllFrom)
+      ?? checkModuleStartAgainstContent(changes.availableFrom, content)
     setProblem(dateProblem ?? null)
     if (dateProblem) return
     updateModule.mutate({ courseId, moduleId: module.id, changes }, { onSuccess: () => setSaved(true) })
@@ -59,7 +64,9 @@ function AvailabilityDates({ courseId, module }: { courseId: CourseId, module: C
           <label htmlFor="module-available-from">Available from</label>
           <input id="module-available-from" type="datetime-local" value={availableFrom}
             onChange={event => { setAvailableFrom(event.target.value); setSaved(false) }} />
-          <p className="form-hint">Closed to students before this. Empty: no start date.</p>
+          <p className="form-hint">
+            Closed to students before this. Empty: no start date. Content without its own visible date is visible from then.
+          </p>
         </div>
         <div className="form-field">
           <label htmlFor="module-open-to-all">Available for all from</label>

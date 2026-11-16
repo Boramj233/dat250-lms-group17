@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { Link, useParams } from 'react-router'
 import { ApiError } from '../../../../shared/api/apiClient'
-import { formatDateTime } from '../../../../shared/lib/dateFormat'
+import { formatDateTime, fromDateTimeLocal, toDateTimeLocal } from '../../../../shared/lib/dateFormat'
 import { Breadcrumbs } from '../../../../shared/navigation/Trail'
 import { paths } from '../../../../shared/paths'
 import type { ContentId, CourseId } from '../../../../shared/types'
@@ -145,8 +145,10 @@ export default function SubmissionGradingPage() {
                       <span className="submittable-muted">
                         <br />
                         {grade.data.releasedAt
-                          ? `Released ${formatDateTime(new Date(grade.data.releasedAt))}`
-                          : 'Saved, not released to the student'}
+                          ? `Visible to the student since ${formatDateTime(new Date(grade.data.releasedAt))}`
+                          : grade.data.visibleFrom
+                            ? `Visible to the student from ${formatDateTime(new Date(grade.data.visibleFrom))}`
+                            : 'Saved, not visible to the student'}
                       </span>
                     )}
                   </dd>
@@ -163,8 +165,8 @@ export default function SubmissionGradingPage() {
 /** A message for a failed save or release, from the backend's status code. */
 function gradeError(error: unknown): string {
   if (error instanceof ApiError) {
-    if (error.status === 409) return 'The grade was changed in the meantime, it is already released, or a newer submission exists. Reload the page and try again.'
-    if (error.status === 400) return `The score must be a number from 0 to ${MAX_SCORE}, with at most two decimals.`
+    if (error.status === 409) return 'The grade was changed in the meantime, it is already published, or a newer submission exists. Reload the page and try again.'
+    if (error.status === 400) return `The score must be a number from 0 to ${MAX_SCORE}, with at most two decimals, and the visible date in the future.`
     if (error.status === 403) return 'Only active teachers of the course can grade.'
   }
   return 'Could not save the grade. Try again.'
@@ -189,8 +191,9 @@ type GradeCardProps = {
 }
 
 /**
- * The grade: a form while it can be changed, otherwise what was given. A released
- * grade cannot be changed, and an earlier submission cannot be graded.
+ * The grade: a form while it can be changed, otherwise what was given. A published
+ * grade cannot be changed, and an earlier submission cannot be graded. The grade is
+ * visible to the student from its own visible date, or once it is published.
  */
 function GradeCard({ submission, contentId, courseId, grade, isLatest, newestId }: GradeCardProps) {
   const save = useSaveGrade()
@@ -198,7 +201,12 @@ function GradeCard({ submission, contentId, courseId, grade, isLatest, newestId 
   const [score, setScore] = useState(grade ? String(grade.score) : '')
   const [feedback, setFeedback] = useState(grade?.feedback ?? '')
   const [passed, setPassed] = useState<boolean | null>(grade?.passed ?? null)
-  const [done, setDone] = useState<'saved' | 'released' | null>(null)
+  // The grade's own visible date (datetime-local); empty: hidden until published.
+  const [visibleDate, setVisibleDate] = useState(toDateTimeLocal(grade?.visibleFrom))
+  const [now] = useState(() => Date.now())
+  const visibleFrom = fromDateTimeLocal(visibleDate)
+  const visibleInPast = visibleFrom !== null && Date.parse(visibleFrom) <= now
+  const [done, setDone] = useState<'saved' | 'published' | null>(null)
   const busy = save.isPending || release.isPending
   const failed = save.error ?? release.error
 
@@ -214,7 +222,7 @@ function GradeCard({ submission, contentId, courseId, grade, isLatest, newestId 
           {formatScore(grade.score)} <PassedBadge passed={grade.passed} />
         </p>
         <div className="submittable-text">{grade.feedback || <span className="submittable-muted">No feedback.</span>}</div>
-        <p className="submittable-note">Released to the student {formatDateTime(new Date(grade.releasedAt))}. A released grade cannot be changed.</p>
+        <p className="submittable-note">Visible to the student since {formatDateTime(new Date(grade.releasedAt))}. A published grade cannot be changed.</p>
       </section>
     )
   }
@@ -240,10 +248,12 @@ function GradeCard({ submission, contentId, courseId, grade, isLatest, newestId 
         score: number,
         feedback: feedback.trim(),
         passed,
+        // Publishing now makes a later date pointless.
+        visibleFrom: andRelease ? null : visibleFrom,
         version: grade?.version ?? null,
       })
       if (andRelease) await release.mutateAsync({ submissionId: submission.id, contentId, version: saved.version })
-      setDone(andRelease ? 'released' : 'saved')
+      setDone(andRelease ? 'published' : 'saved')
     } catch {
       // Shown below from the mutations' errors.
     }
@@ -287,22 +297,39 @@ function GradeCard({ submission, contentId, courseId, grade, isLatest, newestId 
             onChange={event => setFeedback(event.target.value)} />
         </div>
 
+        <div className="form-field">
+          <label htmlFor="grading-visible-from">Visible date</label>
+          <input id="grading-visible-from" type="datetime-local" className="grading-visible-input" value={visibleDate}
+            aria-describedby="grading-visible-from-hint" onChange={event => setVisibleDate(event.target.value)} />
+          <p id="grading-visible-from-hint" className={visibleInPast ? 'form-error' : 'form-hint'}>
+            {visibleInPast
+              ? 'Choose a time in the future, or use Save and publish now.'
+              : 'When the student sees this grade. Leave it empty to keep it hidden until you publish it.'}
+          </p>
+        </div>
+
         {failed && <p className="form-error" role="alert">{gradeError(failed)}</p>}
         {done && (
           <p className="form-success" role="status">
-            {done === 'released' ? 'Saved and released to the student.' : 'Saved. The student cannot see it until you release it.'}
+            {done === 'published'
+              ? 'Saved and published to the student.'
+              : visibleFrom
+                ? `Saved. The student sees it from ${formatDateTime(new Date(visibleFrom))}, or when you publish it.`
+                : 'Saved. The student cannot see it until you publish it.'}
           </p>
         )}
 
         <div className="form-actions">
-          <button type="submit" className="button-primary" disabled={busy || !scoreValid}>
+          <button type="submit" className="button-primary" disabled={busy || !scoreValid || visibleInPast}>
             {save.isPending && !release.isPending ? 'Saving…' : 'Save'}
           </button>
           <button type="button" className="button-secondary" disabled={busy || !scoreValid} onClick={() => void submit(true)}>
-            {release.isPending ? 'Releasing…' : 'Save and release to the student'}
+            {release.isPending ? 'Publishing…' : 'Save and publish now'}
           </button>
         </div>
-        <p className="submittable-note">A released grade cannot be changed afterwards.</p>
+        <p className="submittable-note">
+          Save and publish now makes the grade visible right away. A published grade cannot be changed afterwards.
+        </p>
       </form>
     </section>
   )

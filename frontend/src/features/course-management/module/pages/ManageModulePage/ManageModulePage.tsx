@@ -1,4 +1,6 @@
+import { useState } from 'react'
 import { Link, useNavigate } from 'react-router'
+import { formatDateTime } from '../../../../../shared/lib/dateFormat'
 import { paths } from '../../../../../shared/paths'
 import { useCourseContent, useDeleteContent, useMoveContent, useUpdateContent } from '../../../../content/hooks'
 import type { ContentSummary } from '../../../../content/types'
@@ -6,6 +8,7 @@ import ActionMenu, { type ActionMenuItem } from '../../../../../shared/ui/Action
 import { useConfirm } from '../../../../../shared/ui/ConfirmDialog'
 import PageHeader from '../../../../../shared/ui/PageHeader'
 import { CONTENT_TYPES, contentTypeLabel } from '../../../../content/contentTypes'
+import { isPublished } from '../../../../content/visibility'
 import { useManageCourse } from '../../../manageCourseContext'
 import { useManageModule } from '../../manageModuleContext'
 import ModuleAvailability from './ModuleAvailability'
@@ -13,7 +16,8 @@ import './ManageModulePage.css'
 
 /**
  * One module: a button per content type to create new content, and a table of the
- * module's content (active, required for module completion, and a "⋯" menu to edit,
+ * module's content (visible from, published or unpublished by that date, required for
+ * module completion, and a "⋯" menu to edit,
  * move or delete it). Below, when students can open the module: start date, required
  * modules and the date it opens to everyone.
  */
@@ -27,6 +31,7 @@ export default function ManageModulePage() {
   // Content counts of all modules, so moved content goes to the end of its new module.
   const allContent = useCourseContent(course.id, modules.map(m => m.id))
   const [confirm, confirmDialog] = useConfirm()
+  const [now] = useState(() => Date.now())
 
   function actionsFor(item: ContentSummary): ActionMenuItem[] {
     const otherModules = modules
@@ -92,7 +97,8 @@ export default function ManageModulePage() {
                   <tr>
                     <th scope="col">Title</th>
                     <th scope="col">Type</th>
-                    <th scope="col" className="is-center">Active</th>
+                    <th scope="col">Visible from</th>
+                    <th scope="col">Status</th>
                     <th scope="col" className="is-center">Required for module completion</th>
                     <th scope="col"><span className="visually-hidden">Actions</span></th>
                   </tr>
@@ -106,20 +112,15 @@ export default function ManageModulePage() {
                         </Link>
                       </th>
                       <td className="manage-content-type">{contentTypeLabel(item.type)}</td>
-                      <td className="is-center">
-                        <input
-                          type="checkbox"
-                          className="manage-content-check"
-                          aria-label={`${item.title} is active (visible to students)`}
-                          title="Students can see active content"
-                          checked={item.active ?? true}
-                          disabled={updateContent.isPending}
-                          onChange={event => updateContent.mutate({
-                            contentId: item.id,
-                            moduleId: module.id,
-                            changes: { active: event.target.checked },
-                          })}
-                        />
+                      <td className="manage-content-type">
+                        {item.visibleFrom
+                          ? formatDateTime(new Date(item.visibleFrom))
+                          : module.availableFrom
+                            ? <>With the module · {formatDateTime(new Date(module.availableFrom))}</>
+                            : 'With the module'}
+                      </td>
+                      <td>
+                        <PublishStatus published={isPublished(item, module, now)} />
                       </td>
                       <td className="is-center">
                         <input
@@ -152,5 +153,14 @@ export default function ManageModulePage() {
       <ModuleAvailability courseId={course.id} module={module} modules={modules} />
       {confirmDialog}
     </>
+  )
+}
+
+/** "Published" once the visible date has passed, "Unpublished" before. Only shown, not changed here. */
+function PublishStatus({ published }: { published: boolean }) {
+  return (
+    <span className={`manage-publish-label ${published ? 'is-published' : 'is-unpublished'}`}>
+      {published ? 'Published' : 'Unpublished'}
+    </span>
   )
 }

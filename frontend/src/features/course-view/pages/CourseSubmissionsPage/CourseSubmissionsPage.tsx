@@ -10,6 +10,7 @@ import { useCourseEnrollments } from '../../../courses/hooks'
 import type { CourseModule } from '../../../modules/types'
 import DataTable from '../../components/DataTable'
 import MandatoryLabel from '../../components/MandatoryLabel'
+import VisibleFromTag from '../../components/VisibleFromTag'
 import { useCourseView } from '../../courseContext'
 import { submissionStats, type SubmissionStats } from '../../submissionStats'
 
@@ -25,7 +26,7 @@ type Row = {
 /**
  * Teachers: everything students hand in (assignments and coding exercises), with the
  * deadline, how many students have answered, the latest submissions and how many of
- * them are graded and released, and whether it is mandatory. A row opens its submissions.
+ * them are graded and published, and whether it is mandatory. A row opens its submissions.
  */
 export default function CourseSubmissionsPage() {
   const { course, modules, isTeacher } = useCourseView()
@@ -67,10 +68,11 @@ export default function CourseSubmissionsPage() {
             columns={[
               {
                 header: 'Title',
-                cell: ({ item }) => (
+                cell: ({ item, module }) => (
                   <>
                     <TrailLink to={paths.courseSectionContent(course.id, 'submissions', item.id)}>{item.title}</TrailLink>
                     {item.active === false && <span className="data-table-tag">Hidden from students</span>}
+                    <VisibleFromTag item={item} module={module} className="data-table-tag" />
                   </>
                 ),
               },
@@ -94,7 +96,7 @@ export default function CourseSubmissionsPage() {
                 cell: row => !row.stats ? noCounts : grades.isPending ? '…' : (
                   <span className={row.stats.graded < row.stats.submissions ? 'data-table-strong' : 'data-table-muted'}>
                     {row.stats.graded}/{row.stats.submissions}
-                    {row.stats.graded > 0 && <span className="data-table-muted"> · {row.stats.released} released</span>}
+                    {row.stats.graded > 0 && <span className="data-table-muted"> · {row.stats.released} published</span>}
                   </span>
                 ),
               },

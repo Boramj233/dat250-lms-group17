@@ -4,6 +4,7 @@ import PageHeader from '../../../../../shared/ui/PageHeader'
 import { contentSection, contentTypeLabel } from '../../../../content/contentTypes'
 import type { ContentSummary } from '../../../../content/types'
 import DataTable from '../../../components/DataTable'
+import VisibleFromTag from '../../../components/VisibleFromTag'
 import { useCourseView } from '../../../courseContext'
 import { useModuleView } from '../../moduleContext'
 
@@ -26,6 +27,7 @@ export default function ModuleOverviewPage() {
               <>
                 <TrailLink to={paths.courseContent(course.id, module.id, contentSection(item.type), item.id)}>{item.title}</TrailLink>
                 {item.active === false && <span className="data-table-tag">Hidden from students</span>}
+                <VisibleFromTag item={item} module={module} className="data-table-tag" />
               </>
             ),
           },

@@ -4,6 +4,8 @@ import QueryState from '../../../../shared/ui/QueryState'
 import { contentTypeLabel } from '../../../content/contentTypes'
 import { useContent } from '../../../content/hooks'
 import type { Content, ContentSummary } from '../../../content/types'
+import type { CourseModule } from '../../../modules/types'
+import VisibleFromTag from '../../components/VisibleFromTag'
 import QuizView from './QuizView'
 import SubmittableContent from './SubmittableContent'
 import './ContentView.css'
@@ -14,6 +16,8 @@ type ContentViewProps = {
   isTeacher: boolean
   /** Shown under the title, e.g. which module the item is in. */
   context?: ReactNode
+  /** The item's module, for "Visible to students from …" before its visible date. */
+  module?: CourseModule
 }
 
 /**
@@ -21,7 +25,7 @@ type ContentViewProps = {
  * (read-only), a quiz to take (QuizView), or an assignment or coding exercise that
  * students hand in (SubmittableContent).
  */
-export default function ContentView({ summary, isTeacher, context }: ContentViewProps) {
+export default function ContentView({ summary, isTeacher, context, module }: ContentViewProps) {
   // The type comes from the content list, since each type has its own endpoint.
   const content = useContent(summary.type, summary.id)
   return (
@@ -29,6 +33,7 @@ export default function ContentView({ summary, isTeacher, context }: ContentView
       <PageHeader title={summary.title} kicker={contentTypeLabel(summary.type)}>
         {context && <p className="content-view-context">{context}</p>}
         {summary.active === false && <p className="content-view-hidden">Hidden from students</p>}
+        {module && <VisibleFromTag item={summary} module={module} className="content-view-hidden content-view-visible-from" />}
       </PageHeader>
       <QueryState query={content} loading="Loading…" error="Could not load this content. Try again later.">
         {data => <ContentBody content={data} isTeacher={isTeacher} />}

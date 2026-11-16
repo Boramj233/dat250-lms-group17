@@ -33,3 +33,17 @@ export function combineExtensions(presetLabels: string[], typed: string): string
 export function formatExtensions(extensions: string[]): string {
   return extensions.length === 0 ? 'Any file type' : extensions.join(', ')
 }
+
+/**
+ * The other way round, to edit saved extensions: the presets whose extensions are all
+ * in the list, and the rest as typed text (".py, .java").
+ */
+export function splitExtensions(extensions: string[]): { presetLabels: string[], other: string } {
+  const saved = new Set(extensions)
+  const presets = FILE_TYPE_PRESETS.filter(preset => preset.extensions.every(extension => saved.has(extension)))
+  const covered = new Set(presets.flatMap(preset => preset.extensions))
+  return {
+    presetLabels: presets.map(preset => preset.label),
+    other: extensions.filter(extension => !covered.has(extension)).join(', '),
+  }
+}

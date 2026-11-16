@@ -44,9 +44,54 @@ switch it off to prepare content before it is shown, or to hide it again, with
 `PATCH /api/content/{contentId}` (`{ active }`). New content is active. The module
 content list includes it; missing means active.
 
+The UI no longer switches `active`; it shows items with `active: false` as "Hidden from
+students". Published / Unpublished in the UI is decided by the visible date alone (below).
+
 For students the backend must leave inactive content out everywhere: the module
 content list, the detail endpoints (404), upcoming deadlines and completion. Teachers
 of the course still get it, with `active: false`.
+
+## Visible from (proposed)
+
+Every content item can get a date students see it from, so a module's content does not
+all appear at once. The `Content` entity already has `visibleFrom`; the API does not
+use it yet.
+
+- `visibleFrom` (ISO instant or null) on every create request (pages, assignments,
+  coding exercises, quizzes), on `PATCH /api/content/{id}`, and on
+  `ContentSummaryResponse` and the detail responses.
+- Null: the item **inherits its module's start date** (`availableFrom`), or is visible
+  at once if the module has none.
+- It **cannot be before the module's start date**: 400. Likewise a module's
+  `availableFrom` cannot be moved after the visible date of content in it: 400.
+- Before that date students do not get the item (not in the module's list, 404 on its
+  page, not among upcoming deadlines); teachers of the course do, and see when it opens.
+
+The rules are in `visibility.ts` (`effectiveVisibleFrom`, `checkContentVisibleFrom`,
+`checkModuleStartAgainstContent`); the mock backend uses the same functions.
+
+## Editing until published (proposed)
+
+An item is **published** once its visible date has passed (its own `visibleFrom`, or its
+module's start date); that alone decides it, and the module's table shows it as
+Published / Unpublished. A teacher can change **everything** about an item until then:
+
+- `PATCH /api/content/{contentId}` takes any of the fields the item was created with:
+  `title`, `visibleFrom`, and per type `body` (pages); `instructions`, `deadline`,
+  `allowLateSubmission`, `mandatory`, `groupAssignment`, `acceptedFileTypes`
+  (assignments); `instructions`, `deadline`, `allowLateSubmission`,
+  `starterRepositoryUrl`, `starterCode` (coding exercises); `maxAttempts`,
+  `requiredCorrectAnswers` (quizzes).
+- `PUT /api/quizzes/{quizId}/questions` replaces all of a quiz's questions.
+- Once published, both answer **409**. Only `position` and `requiredForCompletion` (and
+  `active`) can still be changed with PATCH.
+- `POST /api/quizzes/{quizId}/questions` stays open, since a new quiz's questions are
+  added right after it is created.
+
+The frontend uses the same form for creating and editing (`course-management/module/ContentForm`).
+It does **not** check whether an item may be changed: it always shows the form and shows
+the backend's 409 if it refuses. The rule above is the backend's to decide (the mock
+backend follows it).
 
 ## Quiz questions and correct answers (proposed)
 
@@ -131,7 +176,8 @@ Proposed (not in the backend yet):
 
 | Method | Endpoint | Request body | Response |
 | --- | --- | --- | --- |
-| PATCH | `/api/content/{contentId}` | Updated `title`, `position`, `body`, `requiredForCompletion` and/or `active` | `Content` |
+| PATCH | `/api/content/{contentId}` | Any of the item's fields (see "Editing until published") | `Content` |
+| PUT | `/api/quizzes/{quizId}/questions` | `CreateQuizQuestionRequest[]`: all of an unpublished quiz's questions | the questions |
 | DELETE | `/api/content/{contentId}` | — | `204 No Content` |
 | PATCH | `/api/content/{contentId}/move` | `{ moduleId, position }` | `Content` |
 

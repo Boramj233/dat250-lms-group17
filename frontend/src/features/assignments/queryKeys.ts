@@ -15,4 +15,6 @@ export const submissionKeys = {
     ["submissions", "detail", String(submissionId), "history"] as const,
   gradeReview: (submissionId: SubmissionId) =>
     ["submissions", "detail", String(submissionId), "grade"] as const,
+  /** Every submission's data (grades included), e.g. after publishing all grades. */
+  details: ["submissions", "detail"] as const,
 };

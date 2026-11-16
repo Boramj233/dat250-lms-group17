@@ -99,6 +99,7 @@ function ModuleBox({ courseId, module, items, loading, open, onToggle }: ModuleB
             item,
             to: paths.courseContent(courseId, module.id, contentSection(item.type), item.id),
             meta: contentTypeLabel(item.type),
+            module,
           }))} />
         )}
       </div>

@@ -22,6 +22,11 @@ export interface ContentSummary {
    * means active.
    */
   active?: boolean;
+  /**
+   * Proposed (see README): ISO 8601 instant students can see the item from. Null or
+   * missing: it inherits its module's start date (availableFrom). Never before it.
+   */
+  visibleFrom?: string | null;
 }
 
 interface ContentDetailBase extends ContentSummary {
@@ -138,6 +143,8 @@ interface CreateContentBase {
   moduleId: ModuleId;
   title: string;
   position: number;
+  /** Proposed: visible to students from; null inherits the module's start date. */
+  visibleFrom: string | null;
 }
 
 export interface CreateStaticPageInput extends CreateContentBase {
@@ -192,10 +199,25 @@ export type CreateContentInput =
   | CreateCodingExerciseInput
   | CreateQuizInput;
 
+/** One field set per type: what the create and edit forms produce (no place in the module). */
+export type ContentFields = CreateContentInput extends infer Input
+  ? Input extends CreateContentInput ? Omit<Input, "courseId" | "moduleId" | "position"> : never
+  : never;
+
+/**
+ * Proposed: changes all of an unpublished item's fields (see README). A quiz's questions
+ * are replaced as a whole.
+ */
+export interface EditContentInput {
+  moduleId: ModuleId;
+  contentId: ContentId;
+  fields: ContentFields;
+}
+
 export interface UpdateContentInput {
   moduleId: ModuleId;
   contentId: ContentId;
-  changes: Partial<Pick<StaticPageContent, "title" | "position" | "body" | "requiredForCompletion" | "active">>;
+  changes: Partial<Pick<StaticPageContent, "title" | "position" | "body" | "requiredForCompletion" | "active" | "visibleFrom">>;
 }
 
 export interface DeleteContentInput {

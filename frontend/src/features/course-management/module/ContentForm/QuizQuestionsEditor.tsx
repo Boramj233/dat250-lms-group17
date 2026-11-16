@@ -1,4 +1,4 @@
-import type { NewQuizQuestion } from '../../../../content/types'
+import type { NewQuizQuestion } from '../../../content/types'
 import { emptyQuestion } from './quizQuestions'
 
 type QuizQuestionsEditorProps = {

@@ -1,7 +1,7 @@
 import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ContentId } from "../../shared/types";
 import { gradeKeys } from "../grades/queryKeys";
-import { getGradeReview, getMyReleasedGrade, getMySubmissionHistory, getReviewHistory, getReviewSubmission, getReviewSubmissions, releaseGrade, saveGrade, submitFile, submitMySubmission } from "./api";
+import { getGradeReview, releaseAllGrades, getMyReleasedGrade, getMySubmissionHistory, getReviewHistory, getReviewSubmission, getReviewSubmissions, releaseGrade, saveGrade, submitFile, submitMySubmission } from "./api";
 import { submissionKeys } from "./queryKeys";
 import type { GradeReview, MySubmission, ReviewSubmission, SubmissionId } from "./types";
 
@@ -139,5 +139,19 @@ export function useReleaseGrade() {
   return useMutation({
     mutationFn: releaseGrade,
     onSuccess: (grade) => queryClient.setQueryData(submissionKeys.gradeReview(grade.submissionId), grade),
+  });
+}
+
+
+/** Teachers: makes every saved, unpublished grade in the assignment's submissions visible now. */
+export function useReleaseAllGrades(contentId: ContentId) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => releaseAllGrades(contentId),
+    // Every grade may have changed; the students' views as well.
+    onSettled: () => Promise.all([
+      queryClient.invalidateQueries({ queryKey: submissionKeys.details }),
+      queryClient.invalidateQueries({ queryKey: gradeKeys.all }),
+    ]),
   });
 }

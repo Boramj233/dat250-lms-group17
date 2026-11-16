@@ -1,6 +1,6 @@
 import { apiClient, apiClientOrNull, apiPath, jsonBody } from "../../shared/api/apiClient";
 import type { ContentId } from "../../shared/types";
-import type { GradeReview, MySubmission, Page, ReleasedGrade, ReleaseGradeInput, ReviewSubmission, SaveGradeInput, SubmissionId, SubmitFileInput, SubmitMySubmissionInput } from "./types";
+import type { GradeReview, MySubmission, ReleaseAllGradesResult, Page, ReleasedGrade, ReleaseGradeInput, ReviewSubmission, SaveGradeInput, SubmissionId, SubmitFileInput, SubmitMySubmissionInput } from "./types";
 
 // --- Students (SubmissionController, SubmissionFileController) ----------------------
 
@@ -62,10 +62,10 @@ export function getGradeReview(submissionId: SubmissionId): Promise<GradeReview 
 }
 
 /** Creates (version null) or changes the grade; the student sees it once released. */
-export function saveGrade({ submissionId, score, feedback, passed, version }: SaveGradeInput): Promise<GradeReview> {
+export function saveGrade({ submissionId, score, feedback, passed, visibleFrom, version }: SaveGradeInput): Promise<GradeReview> {
   return apiClient<GradeReview>(
     apiPath`/api/submissions/${submissionId}/grade`,
-    jsonBody("PUT", { score, feedback, passed, version })
+    jsonBody("PUT", { score, feedback, passed, visibleFrom, version })
   );
 }
 
@@ -75,4 +75,13 @@ export function releaseGrade({ submissionId, version }: ReleaseGradeInput): Prom
     apiPath`/api/submissions/${submissionId}/grade/release`,
     jsonBody("POST", { version })
   );
+}
+
+
+/**
+ * Proposed: makes every saved, unpublished grade in the assignment's submissions visible
+ * now; each grade's visible date becomes this time.
+ */
+export function releaseAllGrades(contentId: ContentId): Promise<ReleaseAllGradesResult> {
+  return apiClient<ReleaseAllGradesResult>(apiPath`/api/contents/${contentId}/grades/release`, { method: "POST" });
 }

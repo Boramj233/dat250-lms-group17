@@ -122,7 +122,11 @@ export const submissions: {
   late: boolean
   groupId?: number
   /** `passed` is proposed: the teacher's passed / not passed; null when not decided. */
-  grade: { score: number, feedback: string | null, passed: boolean | null, gradedAt: string, releasedAt: string | null, version: number } | null
+  // `visibleFrom` (proposed): the grade becomes visible to the student at that time by itself.
+  grade: {
+    score: number, feedback: string | null, passed: boolean | null, visibleFrom?: string | null,
+    gradedAt: string, releasedAt: string | null, version: number,
+  } | null
 }[] = [
   {
     id: 1, userId: 1, contentId: 104, type: 'TEXT', late: false,
@@ -260,7 +264,8 @@ export const contents: (Content & { courseId: number })[] = [
       + 'Start with the page about REST, then take the quiz.',
   },
   {
-    id: 12, courseId: 1, moduleId: 1, position: 1, type: 'STATIC_PAGE', title: 'What is REST?',
+    // Proposed visibleFrom: students see it in two days, later than the rest of the module.
+    id: 12, courseId: 1, moduleId: 1, position: 1, type: 'STATIC_PAGE', title: 'What is REST?', visibleFrom: inDays(2, 8, 0),
     body: 'REST is an architectural style for APIs.\n\nResources are identified by URLs, and the '
       + 'HTTP methods (GET, POST, PUT, PATCH, DELETE) say what to do with them.',
   },
@@ -291,10 +296,15 @@ export const contents: (Content & { courseId: number })[] = [
   },
   { id: 22, courseId: 1, moduleId: 2, position: 2, type: 'QUIZ', title: 'Containers quiz', maxAttempts: 1,
     description: 'One question about Docker Compose. You have only one attempt.', deadline: null },
-  // DAT250, module 3 (module 4 has no content)
+  // DAT250, module 3
   {
     id: 31, courseId: 1, moduleId: 3, position: 0, type: 'STATIC_PAGE', title: 'Messaging with RabbitMQ',
     body: 'Queues, exchanges and bindings.',
+  },
+  // DAT250, module 4: no visible date of its own, so it is visible when the module is.
+  {
+    id: 41, courseId: 1, moduleId: 4, position: 0, type: 'STATIC_PAGE', title: 'Deploying to the cloud',
+    body: 'Container registries, managed databases and secrets.',
   },
   {
     id: 103, courseId: 1, moduleId: 3, position: 1, type: 'ASSIGNMENT', title: 'Assignment 2: Messaging',
@@ -328,3 +338,4 @@ export const contents: (Content & { courseId: number })[] = [
     body: 'Your first Java program.',
   },
 ]
+

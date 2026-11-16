@@ -140,3 +140,18 @@
   flex-direction: column;
   gap: var(--space-5);
 }
+
+/* Status: "Published" or "Unpublished", from the visible date. */
+.manage-publish-label {
+  font-family: var(--font-ui);
+  font-size: var(--text-small);
+}
+
+.manage-publish-label.is-published {
+  font-weight: var(--font-weight-bold);
+}
+
+.manage-publish-label.is-unpublished {
+  font-style: italic;
+}
+

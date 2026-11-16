@@ -41,7 +41,7 @@ export default function CourseContentPage({ section, label }: CourseContentPageP
       <Breadcrumbs items={crumbs} />
       {found
         ? (
-          <ContentView summary={found.item} isTeacher={isTeacher} />
+          <ContentView summary={found.item} isTeacher={isTeacher} module={found.module} />
         )
         : content.isPending
           ? <p role="status">Loading…</p>

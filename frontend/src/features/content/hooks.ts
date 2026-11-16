@@ -1,7 +1,7 @@
 import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { ContentId, CourseId, ModuleId } from "../../shared/types";
 import { quizKeys } from "../quizzes/queryKeys";
-import { createContent, deleteContent, getContent, getModuleContent, moveContent, updateContent } from "./api";
+import { createContent, deleteContent, editContent, getContent, getModuleContent, moveContent, updateContent } from "./api";
 import { contentKeys } from "./queryKeys";
 import type { Content, ContentSummary, ContentType } from "./types";
 
@@ -116,6 +116,21 @@ export function useMoveContent() {
 
 // Updates content and refreshes its details and module content list.
 //only for teachers, not for students
+/** Teachers: saves all fields of an unpublished item (proposed), then reloads it and its module. */
+export function useEditContent() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: editContent,
+    onSuccess: async (_result, { contentId, moduleId }) => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: contentKeys.content(contentId) }),
+        queryClient.invalidateQueries({ queryKey: contentKeys.moduleContent(moduleId) }),
+      ]);
+    },
+  });
+}
+
 export function useUpdateContent() {
   const queryClient = useQueryClient();
 

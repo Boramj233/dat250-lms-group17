@@ -92,6 +92,11 @@ export interface GradeReview {
    * until the backend sends it.
    */
   passed?: boolean | null;
+  /**
+   * Proposed: when the grade becomes visible to the student by itself; null when it
+   * waits to be published. Each grade has its own. Missing until the backend sends it.
+   */
+  visibleFrom?: string | null;
   gradedByEnrollmentId: number;
   gradedAt: string;
   releasedByEnrollmentId: number | null;
@@ -125,6 +130,8 @@ export interface SaveGradeInput {
   feedback: string;
   /** Proposed: passed / not passed; null when not decided. */
   passed: boolean | null;
+  /** Proposed: ISO instant (in the future) the grade becomes visible; null to wait for Publish. */
+  visibleFrom: string | null;
   version: number | null;
 }
 
@@ -134,4 +141,10 @@ export interface ReleaseGradeInput {
   /** Cache scope: the content the submission belongs to. */
   contentId: ContentId;
   version: number;
+}
+
+
+/** Proposed: the answer to "publish all": how many grades became visible. */
+export interface ReleaseAllGradesResult {
+  released: number;
 }

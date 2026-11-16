@@ -15,6 +15,7 @@ import { quizPassed } from '../../../quizzes/passRule'
 import DataTable, { type Column } from '../../components/DataTable'
 import MandatoryLabel from '../../components/MandatoryLabel'
 import PassedBadge from '../../components/PassedBadge'
+import VisibleFromTag from '../../components/VisibleFromTag'
 
 export type ContentTypeRow = { item: ContentSummary, module: CourseModule }
 
@@ -79,6 +80,7 @@ export default function ContentTypeTable(
             {item.title}
           </TrailLink>
           {item.active === false && <span className="data-table-tag">Hidden from students</span>}
+          <VisibleFromTag item={item} module={module} className="data-table-tag" />
         </>
       ),
     },

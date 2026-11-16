@@ -7,8 +7,8 @@ import { useModuleView } from '../../moduleContext'
 export default function ModuleContentPage() {
   const { contentId = '' } = useParams()
   const { isTeacher } = useCourseView()
-  const { items } = useModuleView()
+  const { module, items } = useModuleView()
   const summary = items.find(item => String(item.id) === contentId)
   if (!summary) return <p role="alert">This content does not exist in this module.</p>
-  return <ContentView summary={summary} isTeacher={isTeacher} />
+  return <ContentView summary={summary} isTeacher={isTeacher} module={module} />
 }

@@ -11,6 +11,7 @@
 import type { Content, ContentType } from '../src/features/content/types'
 import type { EnrolledCourse } from '../src/features/courses/types'
 import type { UpcomingDeadline } from '../src/features/deadlines/types'
+import { checkContentVisibleFrom, checkModuleStartAgainstContent, isNotYetVisible, isPublished } from '../src/features/content/visibility'
 import { canRequire, checkAvailabilityDates, isAccessible } from '../src/features/modules/prerequisites'
 import { completions, contents, courses, enrollments, groups, modules, quizAttempts, quizQuestions, submissions, users } from './data'
 import { conflict, created, forbidden, noContent, notFound, ok, type MockHandler, type MockMultipart, type MockResult, type MockUser } from './types'
@@ -105,7 +106,7 @@ function gradeReviewResponse(s: MockSubmission) {
   const teacher = enrollments.find(e => e.courseId === content.courseId && e.role === 'TEACHER')
   const teacherEnrollment = teacher ? enrollmentIdOf(teacher.userId, content.courseId) : 0
   return {
-    submissionId: s.id, score: g.score, feedback: g.feedback, passed: g.passed,
+    submissionId: s.id, score: g.score, feedback: g.feedback, passed: g.passed, visibleFrom: g.visibleFrom ?? null,
     gradedByEnrollmentId: teacherEnrollment, gradedAt: g.gradedAt,
     releasedByEnrollmentId: g.releasedAt ? teacherEnrollment : null, releasedAt: g.releasedAt, version: g.version,
   }
@@ -137,6 +138,32 @@ function checkSubmit(user: MockUser, contentId: string, groupId: number | undefi
   const late = content.deadline !== null && Date.now() > Date.parse(content.deadline)
   if (late && !content.allowLateSubmission) return { error: conflict('Submission deadline has passed') }
   return { content, late }
+}
+
+/** Publishes a saved grade at `at`; a graded submission also counts as completed. */
+function publishGrade(s: MockSubmission, at: string) {
+  if (!s.grade || s.grade.releasedAt) return
+  s.grade = { ...s.grade, releasedAt: at, version: s.grade.version + 1 }
+  if (!completions.some(c => c.userId === s.userId && c.contentId === s.contentId)) {
+    completions.push({ userId: s.userId, contentId: s.contentId, completedAt: s.submittedAt })
+  }
+}
+
+/**
+ * Proposed visible dates: a saved grade whose own visibleFrom has passed is published
+ * (at that time). Run before every request, like a scheduled job.
+ */
+function applyVisibleDates(now = Date.now()) {
+  for (const s of submissions) {
+    if (s.grade && !s.grade.releasedAt && s.grade.visibleFrom && Date.parse(s.grade.visibleFrom) <= now) {
+      publishGrade(s, s.grade.visibleFrom)
+    }
+  }
+}
+
+/** The latest submission of each student or group for a content item. */
+function latestSubmissions(contentId: number) {
+  return submissions.filter(s => s.contentId === contentId && sequenceOf(s)[0].id === s.id)
 }
 
 /** Students only see released grades: ReleasedGradeResponse without submissionId. */
@@ -180,7 +207,8 @@ function quizQuestionsResponse(quizId: string | number, forTeacher: boolean) {
 }
 
 function detailResponse(content: Content & { courseId: number }, forTeacher = false) {
-  const base = { id: content.id, moduleId: content.moduleId, title: content.title, position: content.position }
+  const base = { id: content.id, moduleId: content.moduleId, title: content.title, position: content.position,
+    visibleFrom: content.visibleFrom ?? null }
   switch (content.type) {
     case 'STATIC_PAGE':
       return { ...base, courseId: content.courseId, body: content.body }
@@ -199,6 +227,50 @@ function detailResponse(content: Content & { courseId: number }, forTeacher = fa
   }
 }
 
+/**
+ * Students see content that is active and whose visible date (its own, or its module's
+ * start date) has passed. Proposed, like the backend should.
+ */
+function visibleToStudents(content: { active?: boolean, visibleFrom?: string | null, moduleId: number | string }) {
+  const module = modules.find(m => String(m.id) === String(content.moduleId))
+  return content.active !== false && !(module && isNotYetVisible(content, module, Date.now()))
+}
+
+/** Published: students can see it. After that only active, position and required may change. */
+function publishedContent(content: { active?: boolean, visibleFrom?: string | null, moduleId: number | string }) {
+  const module = modules.find(m => String(m.id) === String(content.moduleId))
+  return module ? isPublished(content, module, Date.now()) : true
+}
+
+/** The fields each type may change with PATCH (proposed), besides title and visibleFrom. */
+const EDITABLE_FIELDS: Record<ContentType, string[]> = {
+  STATIC_PAGE: ['body'],
+  ASSIGNMENT: ['instructions', 'deadline', 'allowLateSubmission', 'mandatory', 'groupAssignment', 'acceptedFileTypes'],
+  CODING_EXERCISE: ['instructions', 'deadline', 'allowLateSubmission', 'starterRepositoryUrl', 'starterCode'],
+  QUIZ: ['maxAttempts', 'requiredCorrectAnswers', 'description', 'deadline'],
+}
+
+type QuestionRequest = {
+  questionText: string, position: number, hint: string | null,
+  options: { optionText: string, correct: boolean, position: number }[],
+}
+
+/** Stores a CreateQuizQuestionRequest for a quiz, with new ids for it and its options. */
+function storeQuestion(quizId: number, question: QuestionRequest) {
+  const optionIds = quizQuestions.flatMap(q => q.options.map(o => o.id))
+  const firstOptionId = Math.max(0, ...optionIds) + 1
+  const stored = {
+    id: nextId(quizQuestions),
+    quizId,
+    questionText: question.questionText,
+    position: question.position,
+    hint: question.hint,
+    options: question.options.map((option, index) => ({ ...option, id: firstOptionId + index })),
+  }
+  quizQuestions.push(stored)
+  return stored
+}
+
 /** Handler for GET /api/<...>/:contentId for one content type. */
 function contentDetail(type: ContentType): MockHandler['handle'] {
   return ({ user, params }): MockResult => {
@@ -206,12 +278,12 @@ function contentDetail(type: ContentType): MockHandler['handle'] {
     if (!content) return notFound()
     if (!canReadCourse(user, content.courseId)) return forbidden()
     const teacher = isTeacher(user, content.courseId)
-    if (!teacher && content.active === false) return notFound()
+    if (!teacher && !visibleToStudents(content)) return notFound()
     return ok(detailResponse(content, teacher))
   }
 }
 
-export const handlers: MockHandler[] = [
+const routes: MockHandler[] = [
   {
     method: 'GET',
     path: '/api/users/me',
@@ -237,7 +309,7 @@ export const handlers: MockHandler[] = [
         .flatMap(content =>
           (content.type === 'ASSIGNMENT' || content.type === 'CODING_EXERCISE')
             && content.deadline && Date.parse(content.deadline) > now
-            && courseIds.has(content.courseId) && content.active !== false
+            && courseIds.has(content.courseId) && visibleToStudents(content)
             ? [{
               contentId: content.id,
               type: content.type,
@@ -289,13 +361,14 @@ export const handlers: MockHandler[] = [
       const module = modules.find(m => String(m.id) === params.moduleId && String(m.courseId) === params.courseId)
       if (!module) return notFound()
       if (!canReadCourse(user, params.courseId)) return forbidden()
-      // Students do not see inactive content; teachers of the course do.
+      // Students do not see inactive content or content before its visible date; teachers do.
       const teacher = isTeacher(user, params.courseId)
       return ok(contents
-        .filter(c => c.moduleId === module.id && (teacher || c.active !== false))
+        .filter(c => c.moduleId === module.id && (teacher || visibleToStudents(c)))
         .sort((a, b) => a.position - b.position)
         .map(c => ({ id: c.id, type: BACKEND_TYPE[c.type], title: c.title, position: c.position,
-          requiredForCompletion: c.requiredForCompletion ?? false, active: c.active ?? true })))
+          requiredForCompletion: c.requiredForCompletion ?? false, active: c.active ?? true,
+          visibleFrom: c.visibleFrom ?? null })))
     },
   },
   {
@@ -653,6 +726,7 @@ export const handlers: MockHandler[] = [
       const availableFrom = changes.availableFrom !== undefined ? changes.availableFrom : module.availableFrom ?? null
       const openToAllFrom = changes.openToAllFrom !== undefined ? changes.openToAllFrom : module.openToAllFrom ?? null
       const dateProblem = checkAvailabilityDates(availableFrom, openToAllFrom)
+        ?? checkModuleStartAgainstContent(availableFrom, contents.filter(c => c.moduleId === module.id))
       if (dateProblem) return badRequest(dateProblem)
       module.availableFrom = availableFrom
       module.openToAllFrom = openToAllFrom
@@ -684,6 +758,9 @@ export const handlers: MockHandler[] = [
       if (!isTeacher(user, params.courseId)) return forbidden()
       const fields = body as Record<string, unknown>
       if (!String(fields.title ?? '').trim()) return badRequest('Title is required')
+      // Proposed: visibleFrom (or null to inherit the module's start date), never before it.
+      const visibleProblem = checkContentVisibleFrom((fields.visibleFrom as string | null | undefined) ?? null, module.availableFrom)
+      if (visibleProblem) return badRequest(visibleProblem)
       // Proposed: correct answers to pass, null for none. The questions are added after the
       // quiz is created, so it cannot be checked against their number here.
       const required = fields.requiredCorrectAnswers
@@ -722,7 +799,9 @@ export const handlers: MockHandler[] = [
     },
   },
   {
-    // Proposed (data/content/README.md): title, position and/or body (pages only).
+    // Proposed (src/features/content/README.md): active, position and requiredForCompletion
+    // at any time; every other field (title, visibleFrom and the type's own) only until the
+    // content is published: 409 after.
     method: 'PATCH',
     path: '/api/content/:contentId',
     handle: ({ user, params, body }) => {
@@ -731,8 +810,19 @@ export const handlers: MockHandler[] = [
       if (!isTeacher(user, content.courseId)) return forbidden()
       const changes = body as Partial<{
         title: string, position: number, body: string, requiredForCompletion: boolean, active: boolean,
-      }>
+        visibleFrom: string | null,
+      }> & Record<string, unknown>
+      const contentChanges = Object.keys(changes).filter(key => !['active', 'position', 'requiredForCompletion'].includes(key))
+      if (contentChanges.length > 0 && publishedContent(content)) return conflict('Published content cannot be changed')
       if (changes.title !== undefined && !changes.title.trim()) return badRequest('Title is required')
+      const typeFields = EDITABLE_FIELDS[content.type].filter(key => key in changes && key !== 'body')
+      for (const key of typeFields) (content as unknown as Record<string, unknown>)[key] = changes[key]
+      if (changes.visibleFrom !== undefined) {
+        const module = modules.find(m => String(m.id) === String(content.moduleId))
+        const visibleProblem = checkContentVisibleFrom(changes.visibleFrom, module?.availableFrom)
+        if (visibleProblem) return badRequest(visibleProblem)
+        content.visibleFrom = changes.visibleFrom
+      }
       if (changes.title !== undefined) content.title = changes.title
       if (changes.position !== undefined) content.position = changes.position
       if (changes.requiredForCompletion !== undefined) content.requiredForCompletion = changes.requiredForCompletion
@@ -803,24 +893,31 @@ export const handlers: MockHandler[] = [
       const quiz = contents.find(c => String(c.id) === params.quizId && c.type === 'QUIZ')
       if (!quiz) return notFound()
       if (!isTeacher(user, quiz.courseId)) return forbidden()
-      const question = body as {
-        questionText: string, position: number, hint: string | null,
-        options: { optionText: string, correct: boolean, position: number }[],
-      }
-      const optionIds = quizQuestions.flatMap(q => q.options.map(o => o.id))
-      const firstOptionId = Math.max(0, ...optionIds) + 1
-      const stored = {
-        id: nextId(quizQuestions),
-        quizId: Number(quiz.id),
-        questionText: question.questionText,
-        position: question.position,
-        hint: question.hint,
-        options: question.options.map((option, index) => ({ ...option, id: firstOptionId + index })),
-      }
-      quizQuestions.push(stored)
+      // Questions are added right after the quiz is created, so this is not locked.
+      const stored = storeQuestion(Number(quiz.id), body as QuestionRequest)
       // QuizQuestionResponse: no options, like the backend.
       return created({ id: stored.id, quizId: stored.quizId, questionText: stored.questionText,
         position: stored.position, hint: stored.hint })
+    },
+  },
+  {
+    // Proposed: replaces all of an unpublished quiz's questions (CreateQuizQuestionRequest[]).
+    method: 'PUT',
+    path: '/api/quizzes/:quizId/questions',
+    handle: ({ user, params, body }) => {
+      const quiz = contents.find(c => String(c.id) === params.quizId && c.type === 'QUIZ')
+      if (!quiz) return notFound()
+      if (!isTeacher(user, quiz.courseId)) return forbidden()
+      if (publishedContent(quiz)) return conflict('Published content cannot be changed')
+      const questions = body as QuestionRequest[]
+      if (!Array.isArray(questions) || questions.some(q => !q.questionText?.trim() || !q.options?.some(o => o.correct))) {
+        return badRequest('Every question needs a text and at least one correct answer')
+      }
+      for (let i = quizQuestions.length - 1; i >= 0; i--) {
+        if (quizQuestions[i].quizId === Number(quiz.id)) quizQuestions.splice(i, 1)
+      }
+      questions.forEach(question => storeQuestion(Number(quiz.id), question))
+      return ok(quizQuestionsResponse(quiz.id, true))
     },
   },
   {
@@ -886,28 +983,30 @@ export const handlers: MockHandler[] = [
     },
   },
   {
-    // SaveGradeRequest { score, feedback, passed, version }: version null creates the grade.
-    // `passed` (true, false or null) is proposed.
+    // SaveGradeRequest { score, feedback, passed, visibleFrom, version }: version null creates
+    // the grade. Proposed: `passed` (true, false or null) and `visibleFrom` (a future time or null).
     method: 'PUT',
     path: '/api/submissions/:submissionId/grade',
     handle: ({ user, params, body }) => {
       const submission = teacherSubmission(user, params.submissionId)
       if (isResult(submission)) return submission
-      const { score, feedback, passed = null, version } =
-        body as { score?: number, feedback?: string | null, passed?: boolean | null, version?: number | null }
+      const { score, feedback, passed = null, visibleFrom = null, version } = body as {
+        score?: number, feedback?: string | null, passed?: boolean | null, visibleFrom?: string | null, version?: number | null
+      }
       if (typeof score !== 'number' || score < 0 || score > 100 || Math.round(score * 100) !== score * 100
-        || (feedback?.length ?? 0) > 10000 || (passed !== null && typeof passed !== 'boolean')) {
+        || (feedback?.length ?? 0) > 10000 || (passed !== null && typeof passed !== 'boolean')
+        || (visibleFrom !== null && !(Date.parse(visibleFrom) > Date.now()))) {
         return badRequest('Invalid grade request')
       }
       if (sequenceOf(submission)[0].id !== submission.id) return conflict('A newer submission exists; review the latest version')
       const now = new Date().toISOString()
       if (!submission.grade) {
         if (version !== null && version !== undefined) return conflict('Grade does not exist; refresh before creating')
-        submission.grade = { score, feedback: feedback || null, passed, gradedAt: now, releasedAt: null, version: 0 }
+        submission.grade = { score, feedback: feedback || null, passed, visibleFrom, gradedAt: now, releasedAt: null, version: 0 }
       } else {
         if (submission.grade.releasedAt) return conflict('Released grades cannot be edited')
         if (version !== submission.grade.version) return conflict('Grade changed; refresh before updating')
-        submission.grade = { ...submission.grade, score, feedback: feedback || null, passed, gradedAt: now, version: version + 1 }
+        submission.grade = { ...submission.grade, score, feedback: feedback || null, passed, visibleFrom, gradedAt: now, version: version + 1 }
       }
       return ok(gradeReviewResponse(submission))
     },
@@ -923,12 +1022,22 @@ export const handlers: MockHandler[] = [
       const { version } = body as { version?: number }
       if (version !== submission.grade.version) return conflict('Grade changed; refresh before updating')
       if (submission.grade.releasedAt) return conflict('Grade is already released')
-      submission.grade = { ...submission.grade, releasedAt: new Date().toISOString(), version: version + 1 }
-      // A graded submission also counts as completed.
-      if (!completions.some(c => c.userId === submission.userId && c.contentId === submission.contentId)) {
-        completions.push({ userId: submission.userId, contentId: submission.contentId, completedAt: submission.submittedAt })
-      }
+      publishGrade(submission, new Date().toISOString())
       return ok(gradeReviewResponse(submission))
+    },
+  },
+  {
+    // Proposed: publishes every saved, unpublished grade of the latest submissions now → { released }.
+    method: 'POST',
+    path: '/api/contents/:contentId/grades/release',
+    handle: ({ user, params }) => {
+      const content = contents.find(c => String(c.id) === params.contentId)
+      if (!content) return notFound()
+      if (!isTeacher(user, content.courseId)) return forbidden()
+      const waiting = latestSubmissions(Number(content.id)).filter(s => s.grade && !s.grade.releasedAt)
+      const now = new Date().toISOString()
+      waiting.forEach(s => publishGrade(s, now))
+      return ok({ released: waiting.length })
     },
   },
   { method: 'GET', path: '/api/contents/:contentId', handle: contentDetail('STATIC_PAGE') },
@@ -936,3 +1045,12 @@ export const handlers: MockHandler[] = [
   { method: 'GET', path: '/api/assignments/:contentId', handle: contentDetail('ASSIGNMENT') },
   { method: 'GET', path: '/api/coding-exercises/:contentId', handle: contentDetail('CODING_EXERCISE') },
 ]
+
+/** Every route; grades whose visible date has passed are published first, like a scheduled job would. */
+export const handlers: MockHandler[] = routes.map(route => ({
+  ...route,
+  handle: request => {
+    applyVisibleDates()
+    return route.handle(request)
+  },
+}))

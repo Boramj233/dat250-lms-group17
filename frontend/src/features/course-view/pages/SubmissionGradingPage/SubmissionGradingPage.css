@@ -63,3 +63,7 @@
 .grading-score .passed-badge {
   vertical-align: middle;
 }
+
+.grading-visible-input {
+  max-width: 16rem;
+}
