@@ -11,6 +11,8 @@ import no.hvl.dat250.lms.module.domain.Module;
 import no.hvl.dat250.lms.course.domain.Course;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.BeforeEach;
+import no.hvl.dat250.lms.security.auth.access.CourseAccess;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import no.hvl.dat250.lms.security.WithApiSecurity;
@@ -31,8 +33,18 @@ class ContentControllerTest {
     @Autowired
     private MockMvc mockMvc;
 
-    @MockitoBean
+    @MockitoBean(name = "contentService")
     private ContentService contentService;
+
+    @MockitoBean(name = "courseAccess")
+    private CourseAccess courseAccess;
+
+    @BeforeEach
+    void allowCourseAccessForControllerContractTests() {
+        // Real enrollment decisions are covered by ContentAccessIntegrationTest.
+        when(courseAccess.isTeacher(any(), any())).thenReturn(true);
+        when(courseAccess.isEnrolled(any(), any())).thenReturn(true);
+    }
 
     // Helper: simulate an already-persisted StaticPage
     private StaticPage createTestPage(
@@ -248,7 +260,7 @@ class ContentControllerTest {
     @Test
     void getMissingStaticPageReturns404() throws Exception {
 
-        when(contentService.findStaticPageById(999L))
+        when(contentService.staticPageCourseId(999L))
                 .thenThrow(new NoSuchElementException(
                     "Content not found: 999"
                 ));
@@ -256,6 +268,6 @@ class ContentControllerTest {
         mockMvc.perform(get("/api/contents/999").with(apiUser()))
             .andExpect(status().isNotFound());
 
-        verify(contentService).findStaticPageById(999L);
+        verify(contentService).staticPageCourseId(999L);
     }
 }

@@ -14,6 +14,7 @@ import no.hvl.dat250.lms.security.AuthenticatedUser;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
@@ -92,6 +93,7 @@ public class AssignmentController {
     public void handleInvalidArgument() {
     }
 
+    @PreAuthorize("@courseAccess.isEnrolled(authentication, @assignmentService.courseId(#assignmentId))")
     @GetMapping("/api/assignments/{assignmentId}")
     public AssignmentResponse getAssignment(
             @PathVariable Long assignmentId) {
