@@ -107,7 +107,7 @@ export default function ContentTypeTable(
           if (details?.type !== 'QUIZ') return '…'
           const required = details.requiredCorrectAnswers ?? null
           return required === null
-            ? <span className="data-table-muted">–</span>
+            ? <span className="text-meta">–</span>
             : `${required} of ${details.questions?.length ?? '?'} correct`
         },
       },
@@ -143,7 +143,7 @@ function Deadline({ content }: { content?: Content }) {
 function LateSubmissions({ content }: { content?: Content }) {
   if (!content) return '…'
   if (!isSubmittable(content)) return '–'
-  return <span className="data-table-muted">{content.allowLateSubmission ? 'Accepted' : 'Not accepted'}</span>
+  return <span className="text-meta">{content.allowLateSubmission ? 'Accepted' : 'Not accepted'}</span>
 }
 
 /**
@@ -157,10 +157,10 @@ function QuizStatus({ attempts, loading, quiz }: {
   /** The quiz's details (pass requirement and attempts); undefined while loading. */
   quiz?: QuizContent
 }) {
-  if (!attempts) return loading ? '…' : <span className="data-table-muted">–</span>
-  if (attempts.length === 0) return <span className="data-table-muted">Not started</span>
+  if (!attempts) return loading ? '…' : <span className="text-meta">–</span>
+  if (attempts.length === 0) return <span className="text-meta">Not started</span>
   const best = attempts.reduce((top, attempt) => (attempt.correctCount > top.correctCount ? attempt : top))
-  const bestText = <span className="data-table-muted"> · best {best.correctCount}/{best.totalQuestions}</span>
+  const bestText = <span className="text-meta"> · best {best.correctCount}/{best.totalQuestions}</span>
   if (!quiz) return '…'
 
   const passed = quizPassed(attempts, quiz.requiredCorrectAnswers)
@@ -171,14 +171,14 @@ function QuizStatus({ attempts, loading, quiz }: {
         <span>
           <span className="data-table-strong">Not passed yet</span>
           {bestText}
-          <span className="data-table-muted"> · {left} {left === 1 ? 'attempt' : 'attempts'} left</span>
+          <span className="text-meta"> · {left} {left === 1 ? 'attempt' : 'attempts'} left</span>
         </span>
       )
       : (
         <span>
           <PassedBadge passed={false} />
           {bestText}
-          <span className="data-table-muted"> · no attempts left</span>
+          <span className="text-meta"> · no attempts left</span>
         </span>
       )
   }
@@ -199,7 +199,7 @@ function QuizStatus({ attempts, loading, quiz }: {
 /** Not submitted, submitted (awaiting a grade) or the grade. */
 function Status({ row, loaded }: { row: Row, loaded: boolean }) {
   if (!loaded) return '…'
-  if (!row.grade) return <span className="data-table-muted">Not submitted</span>
+  if (!row.grade) return <span className="text-meta">Not submitted</span>
   if (!row.grade.grade) return 'Submitted'
   return (
     <span className="data-table-strong">

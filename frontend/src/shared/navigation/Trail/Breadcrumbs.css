@@ -34,10 +34,6 @@
   color: var(--color-text);
 }
 
-.breadcrumbs a:focus-visible {
-  outline: var(--focus-ring-width) solid var(--color-primary);
-  outline-offset: var(--space-2);
-}
 
 .breadcrumbs [aria-current='page'] {
   font-weight: var(--font-weight-bold);

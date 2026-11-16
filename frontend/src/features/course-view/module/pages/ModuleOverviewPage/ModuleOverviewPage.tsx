@@ -31,7 +31,7 @@ export default function ModuleOverviewPage() {
               </>
             ),
           },
-          { header: 'Type', cell: item => <span className="data-table-muted">{contentTypeLabel(item.type)}</span> },
+          { header: 'Type', cell: item => <span className="text-meta">{contentTypeLabel(item.type)}</span> },
         ]}
       />
     </>

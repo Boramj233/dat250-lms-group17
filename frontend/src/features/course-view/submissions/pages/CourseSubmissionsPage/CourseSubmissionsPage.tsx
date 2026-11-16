@@ -78,7 +78,7 @@ export default function CourseSubmissionsPage() {
                 header: 'Module',
                 cell: ({ module }) => <TrailLink to={paths.courseModule(course.id, module.id)}>{module.title}</TrailLink>,
               },
-              { header: 'Type', cell: ({ item }) => <span className="data-table-muted">{contentTypeLabel(item.type)}</span> },
+              { header: 'Type', cell: ({ item }) => <span className="text-meta">{contentTypeLabel(item.type)}</span> },
               { header: 'Deadline', cell: ({ details }) => <Deadline content={details} /> },
               {
                 header: 'Answered',
@@ -92,9 +92,9 @@ export default function CourseSubmissionsPage() {
               {
                 header: 'Graded',
                 cell: row => !row.stats ? noCounts : grades.isPending ? '…' : (
-                  <span className={row.stats.graded < row.stats.submissions ? 'data-table-strong' : 'data-table-muted'}>
+                  <span className={row.stats.graded < row.stats.submissions ? 'data-table-strong' : 'text-meta'}>
                     {row.stats.graded}/{row.stats.submissions}
-                    {row.stats.graded > 0 && <span className="data-table-muted"> · {row.stats.released} published</span>}
+                    {row.stats.graded > 0 && <span className="text-meta"> · {row.stats.released} published</span>}
                   </span>
                 ),
               },
@@ -102,7 +102,7 @@ export default function CourseSubmissionsPage() {
             ]}
           />
         )}
-      <p className="data-table-muted">
+      <p className="text-meta">
         Submissions counts the latest submission of each student or group; earlier attempts are on each submission.
       </p>
     </>

@@ -78,7 +78,7 @@
   font-size: var(--text-small);
   font-weight: var(--font-weight-bold);
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: var(--letter-spacing-caps);
 }
 
 /* A light line separates the links above from the course list. */
@@ -100,11 +100,6 @@
 
 .courses-panel-note a {
   color: var(--color-text);
-}
-
-.courses-panel-note a:focus-visible {
-  outline: var(--focus-ring-width) solid var(--color-primary);
-  outline-offset: var(--space-2);
 }
 
 .courses-panel-group h4 {
@@ -151,11 +146,4 @@
 .courses-panel-item.active {
   color: var(--color-on-primary);
   background: var(--color-primary);
-}
-
-.courses-panel-close:focus-visible,
-.courses-panel-all:focus-visible,
-.courses-panel-item:focus-visible {
-  outline: var(--focus-ring-width) solid var(--color-primary);
-  outline-offset: var(--space-2);
 }

@@ -24,7 +24,7 @@ export default function SubmissionHistory({ courseId, contentId, history, curren
             {String(entry.id) === currentId
               ? <strong>{formatDateTime(new Date(entry.submittedAt))}</strong>
               : <Link to={paths.courseSubmission(courseId, contentId, entry.id)}>{formatDateTime(new Date(entry.submittedAt))}</Link>}
-            <span className="submittable-muted">
+            <span className="text-meta">
               {' · '}{submissionKindLabel(entry)}{entry.late && ' · late'}{i === 0 && ' · latest'}
             </span>
           </li>

@@ -76,30 +76,8 @@
   background: var(--color-surface);
 }
 
-.course-group-toggle:focus-visible {
-  outline: var(--focus-ring-width) solid var(--color-primary);
-  outline-offset: var(--space-2);
-}
-
-.course-group-chevron {
-  flex-shrink: 0;
-  transition: transform 0.15s ease;
-}
-
-.course-group.is-open .course-group-chevron {
-  transform: rotate(90deg);
-}
-
 .course-group-name {
   overflow-wrap: anywhere;
-}
-
-.course-group-tag {
-  padding: 0 var(--space-3);
-  border-radius: var(--radius-control);
-  background: var(--color-surface);
-  font-family: var(--font-ui);
-  font-size: var(--text-small);
 }
 
 /* Member count on the right edge. */
@@ -136,10 +114,4 @@
 .course-group-empty {
   margin: 0;
   font-style: italic;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .course-group-chevron {
-    transition: none;
-  }
 }

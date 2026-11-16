@@ -47,31 +47,10 @@
   overflow-wrap: anywhere;
 }
 
-.course-module-toggle:focus-visible,
-.course-module-title:focus-visible {
-  outline: var(--focus-ring-width) solid var(--color-primary);
-  outline-offset: var(--space-2);
-}
-
-/* Points right when closed, down when open. */
-.course-module-chevron {
-  transition: transform 0.15s ease;
-}
-
-.course-module.is-open .course-module-chevron {
-  transform: rotate(90deg);
-}
-
 .course-module-body {
   padding: 0 var(--space-5) var(--space-5);
 }
 
 .course-module-body[hidden] {
   display: none;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .course-module-chevron {
-    transition: none;
-  }
 }

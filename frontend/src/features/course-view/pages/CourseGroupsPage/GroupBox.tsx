@@ -37,13 +37,13 @@ export default function GroupBox(
             aria-controls={`course-group-${id}`}
             onClick={onToggle}
           >
-            <svg className="course-group-chevron" width="18" height="18" viewBox="0 0 24 24"
+            <svg className="disclosure-chevron" width="18" height="18" viewBox="0 0 24 24"
               fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"
               strokeLinejoin="round" aria-hidden="true" focusable="false">
               <path d="M9 6l6 6-6 6" />
             </svg>
             <span className="course-group-name">{label}</span>
-            {mine && <span className="course-group-tag">Your group</span>}
+            {mine && <span className="tag">Your group</span>}
             <span className="course-group-count">{count} {count === 1 ? 'member' : 'members'}</span>
           </button>
         </h2>

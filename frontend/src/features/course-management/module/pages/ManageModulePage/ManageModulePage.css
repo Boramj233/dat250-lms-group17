@@ -26,11 +26,6 @@
   background: var(--color-surface);
 }
 
-.new-content-type:focus-visible {
-  outline: var(--focus-ring-width) solid var(--color-primary);
-  outline-offset: var(--space-2);
-}
-
 .new-content-type-label {
   font-weight: var(--font-weight-bold);
 }
@@ -155,14 +150,13 @@
   font-style: italic;
 }
 
-
 /* Unsaved changes on a row: a coloured left edge; what will happen as a small tag. */
 .manage-content-table tr.is-changed > :first-child {
-  box-shadow: inset var(--space-2) 0 0 var(--color-accent);
+  box-shadow: var(--edge-unsaved);
 }
 
 .manage-content-table tr.is-deleted > :first-child {
-  box-shadow: inset var(--space-2) 0 0 var(--color-danger);
+  box-shadow: var(--edge-removed);
 }
 
 .manage-content-table tr.is-deleted .manage-content-title,
@@ -175,24 +169,13 @@
   background: var(--color-surface);
 }
 
+/* A .tag after the title: the change that is not saved yet. */
 .manage-change {
-  display: inline-block;
   margin-left: var(--space-3);
-  padding: 0 var(--space-3);
-  border-radius: var(--radius-control);
-  background: var(--color-surface);
-  font-family: var(--font-ui);
-  font-size: var(--text-small);
-  font-weight: var(--font-weight-bold);
-}
-
-.manage-change.is-danger {
-  color: var(--color-on-danger);
-  background: var(--color-danger);
 }
 
 /* Availability fields that differ from what is saved: the same accent edge as table rows. */
 .module-availability .is-unsaved {
   padding-left: var(--space-3);
-  box-shadow: inset var(--space-2) 0 0 var(--color-accent);
+  box-shadow: var(--edge-unsaved);
 }

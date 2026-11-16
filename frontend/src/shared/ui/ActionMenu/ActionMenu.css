@@ -24,11 +24,6 @@
   background: var(--color-surface);
 }
 
-.action-menu-button:focus-visible {
-  outline: var(--focus-ring-width) solid var(--color-primary);
-  outline-offset: var(--space-2);
-}
-
 /* The menu opens below the button, aligned to its right edge. */
 .action-menu-list {
   position: absolute;

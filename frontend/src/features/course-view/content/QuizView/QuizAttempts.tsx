@@ -22,7 +22,7 @@ export function AttemptList({ attempts, required, onView }: AttemptListProps) {
         {attempts.map((attempt, index) => (
           <li key={attempt.id} className="quiz-attempt">
             <span className="quiz-attempt-name">Attempt {attempts.length - index}</span>
-            <span className="submittable-muted">{formatDateTime(new Date(attempt.submittedAt))}</span>
+            <span className="text-meta">{formatDateTime(new Date(attempt.submittedAt))}</span>
             <span className="quiz-attempt-score">{attempt.correctCount} of {attempt.totalQuestions} correct</span>
             <PassedBadge passed={attemptPassed(attempt, required)} />
             <button type="button" className="button-secondary quiz-attempt-view" onClick={() => onView(attempt.id)}>
@@ -84,7 +84,7 @@ export function AttemptReview({ quizId, questions, attempts, attemptId, required
           {attempt.correctCount} of {attempt.totalQuestions} correct
           {' '}<PassedBadge passed={attemptPassed(attempt, required)} />
         </p>
-        <p className="submittable-muted">
+        <p className="text-meta">
           Handed in {formatDateTime(new Date(attempt.submittedAt))}
           {' · '}{attempt.correctCount} correct, {wrong} wrong.
           {' '}Your answers are marked; the correct answers are not shown.

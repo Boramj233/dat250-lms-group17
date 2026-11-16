@@ -126,7 +126,7 @@ export default function ContentSubmissionsPage() {
                   },
                   {
                     header: 'Answer',
-                    cell: submission => <span className="data-table-muted">{submissionKindLabel(submission)}</span>,
+                    cell: submission => <span className="text-meta">{submissionKindLabel(submission)}</span>,
                   },
                   {
                     header: 'Score',
@@ -135,7 +135,7 @@ export default function ContentSubmissionsPage() {
                       if (grade === undefined) return '…'
                       return grade
                         ? <span className="data-table-strong">{formatScore(grade.score)}</span>
-                        : <span className="data-table-muted">Not graded</span>
+                        : <span className="text-meta">Not graded</span>
                     },
                   },
                   {
@@ -145,7 +145,7 @@ export default function ContentSubmissionsPage() {
                       if (grade === undefined) return '…'
                       return grade?.passed != null
                         ? <PassedBadge passed={grade.passed} />
-                        : <span className="data-table-muted">–</span>
+                        : <span className="text-meta">–</span>
                     },
                   },
                   {
@@ -154,14 +154,14 @@ export default function ContentSubmissionsPage() {
                     header: 'Visible from',
                     cell: submission => {
                       const grade = gradeOf(submission)
-                      if (!grade) return <span className="data-table-muted">–</span>
+                      if (!grade) return <span className="text-meta">–</span>
                       if (grade.releasedAt) {
                         return formatDateTime(new Date(grade.releasedAt))
                       }
                       const busy = release.isPending && String(release.variables?.submissionId) === String(submission.id)
                       return (
                         <span className="content-submissions-publish">
-                          <span className="data-table-muted">
+                          <span className="text-meta">
                             {grade.visibleFrom ? `Scheduled ${formatDateTime(new Date(grade.visibleFrom))}` : 'Not published'}
                           </span>
                           <button type="button" className="button-secondary data-table-button" disabled={release.isPending}

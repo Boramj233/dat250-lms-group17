@@ -46,6 +46,14 @@ img {
   height: auto;
 }
 
+/* The focus ring for keyboard users, on every link and button. :where() keeps this rule
+   as weak as possible, so a component can still change it with its own :focus-visible
+   rule (e.g. outline: none on a link whose card shows the ring instead). */
+:where(a, button, summary):focus-visible {
+  outline: var(--focus-ring-width) solid var(--color-primary);
+  outline-offset: var(--space-2);
+}
+
 /* Short full-page messages while the login state is being checked. */
 .auth-status {
   margin: 0;
@@ -66,10 +74,65 @@ img {
   border: 0;
 }
 
+/* Secondary text next to the main text: dates, counts, "(you)", "· 3 attempts left".
+   Never bold, also inside a bold label. */
+.text-meta {
+  font-family: var(--font-ui);
+  font-size: var(--text-small);
+  font-weight: normal;
+}
+
+/* A small label next to a name: "Your group", "Mandatory", "Will be deleted". Never in
+   capitals, also inside an uppercase heading. The component adds its own margin. */
+.tag {
+  display: inline-block;
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  font-family: var(--font-ui);
+  font-size: var(--text-small);
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.tag-strong {
+  font-weight: var(--font-weight-bold);
+}
+
+/* Filled, so it stands out, e.g. "Mandatory". */
+.tag-primary {
+  color: var(--color-on-primary);
+  background: var(--color-primary);
+  font-weight: var(--font-weight-bold);
+}
+
+/* A change that removes something, e.g. "Will be deleted". */
+.tag-danger {
+  color: var(--color-on-danger);
+  background: var(--color-danger);
+}
+
+/* The arrow in a button that folds something open (aria-expanded): right when closed,
+   down when open. */
+.disclosure-chevron {
+  flex-shrink: 0;
+  transition: transform 0.15s ease;
+}
+
+[aria-expanded="true"] > .disclosure-chevron {
+  transform: rotate(90deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .disclosure-chevron {
+    transition: none;
+  }
+}
+
 /* Heading of a section on a page, e.g. "Instructions" or "In this course". */
 .section-title {
   margin: var(--space-7) 0 var(--space-5);
   font-size: var(--font-size-md);
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: var(--letter-spacing-caps);
 }

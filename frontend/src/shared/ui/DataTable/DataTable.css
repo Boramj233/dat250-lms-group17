@@ -26,7 +26,7 @@
   font-size: var(--text-small);
   font-weight: var(--font-weight-bold);
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: var(--letter-spacing-caps);
   white-space: nowrap;
 }
 
@@ -42,21 +42,11 @@
   color: var(--color-text);
 }
 
-.data-table a:focus-visible {
-  outline: var(--focus-ring-width) solid var(--color-primary);
-  outline-offset: var(--space-2);
-}
-
 .data-table-empty {
   font-style: italic;
 }
 
-/* Small helpers for cells. */
-.data-table-muted {
-  font-family: var(--font-ui);
-  font-size: var(--text-small);
-}
-
+/* Small helpers for cells (secondary text: .text-meta in global.css). */
 .data-table-strong {
   font-weight: var(--font-weight-bold);
 }
@@ -79,10 +69,6 @@
 .data-table-done svg {
   flex-shrink: 0;
   color: var(--color-accent);
-}
-
-.data-table-done .data-table-muted {
-  font-weight: normal;
 }
 
 .data-table-tag {

@@ -69,9 +69,4 @@
   color: var(--color-on-primary);
 }
 
-.topbar a:focus-visible,
-.sidebar-toggle:focus-visible {
-  outline: var(--focus-ring-width) solid var(--color-primary);
-  outline-offset: var(--space-2);
-}
 

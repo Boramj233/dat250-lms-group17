@@ -90,11 +90,11 @@
 
 /* Unsaved changes on a row: a coloured left edge, and what will happen as a small tag. */
 .member-row.is-changed {
-  box-shadow: inset var(--space-2) 0 0 var(--color-accent);
+  box-shadow: var(--edge-unsaved);
 }
 
 .member-row.is-removed {
-  box-shadow: inset var(--space-2) 0 0 var(--color-danger);
+  box-shadow: var(--edge-removed);
 }
 
 .member-row.is-removed .member-name {
@@ -105,17 +105,7 @@
   text-decoration: line-through;
 }
 
+/* A .tag after the name: the change that is not saved yet. */
 .member-change {
-  display: inline-block;
   margin-left: var(--space-3);
-  padding: 0 var(--space-3);
-  border-radius: var(--radius-control);
-  background: var(--color-surface);
-  font-family: var(--font-ui);
-  font-size: var(--text-small);
-}
-
-.member-change.is-danger {
-  color: var(--color-on-danger);
-  background: var(--color-danger);
 }

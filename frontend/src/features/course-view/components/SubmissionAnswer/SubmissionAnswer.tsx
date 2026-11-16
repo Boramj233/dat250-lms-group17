@@ -39,13 +39,13 @@ export default function SubmissionAnswer({ submission }: { submission: MySubmiss
     <div className="submittable-answer">
       <p className="submittable-label">
         {label}
-        <span className="submittable-muted"> · {formatDateTime(new Date(submission.submittedAt))}</span>
+        <span className="text-meta"> · {formatDateTime(new Date(submission.submittedAt))}</span>
       </p>
       {submission.type === 'FILE' && submission.file && (
         <div className="submittable-file">
           <span>
             <strong>{submission.file.name}</strong>
-            <span className="submittable-muted"> · {formatSize(submission.file.sizeBytes)}</span>
+            <span className="text-meta"> · {formatSize(submission.file.sizeBytes)}</span>
           </span>
           <button type="button" className="button-secondary" onClick={() => void download()} disabled={downloading}>
             {downloading ? 'Downloading…' : 'Download'}

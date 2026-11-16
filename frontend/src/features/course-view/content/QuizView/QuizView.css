@@ -53,7 +53,7 @@
 .quiz-question-number {
   font-weight: var(--font-weight-bold);
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: var(--letter-spacing-caps);
 }
 
 /* The type as a small tag in the type's colour. */

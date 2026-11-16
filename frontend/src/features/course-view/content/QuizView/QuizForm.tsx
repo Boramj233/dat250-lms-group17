@@ -46,7 +46,7 @@ export default function QuizForm({ quizId, questions, preview, onSubmitted, onCa
 
   return (
     <form className="quiz-form" onSubmit={handleSubmit} aria-label={preview ? 'Quiz preview' : 'Quiz'}>
-      {preview && <p className="submittable-note">Preview: this is how students see the quiz. Nothing is saved.</p>}
+      {preview && <p className="text-meta submittable-note">Preview: this is how students see the quiz. Nothing is saved.</p>}
       {questions.map((question, index) => (
         <QuizQuestion
           key={question.id}
@@ -59,7 +59,7 @@ export default function QuizForm({ quizId, questions, preview, onSubmitted, onCa
       ))}
 
       <div className="submittable-card quiz-form-footer">
-        <p className="submittable-muted">
+        <p className="text-meta">
           Answered {answered} of {questions.length}
           {!preview && answered < questions.length && ' · unanswered questions count as wrong'}
         </p>

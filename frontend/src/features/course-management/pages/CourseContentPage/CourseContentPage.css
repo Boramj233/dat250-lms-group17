@@ -8,15 +8,16 @@
   border-radius: var(--radius-md);
 }
 
-/* One module: number, title and item count left, "Manage" right. */
+/* One module: handle, rank, then the name taking the room, then the buttons. */
 .manage-module-row {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: var(--space-3) var(--space-5);
   padding: var(--space-5);
   border-bottom: var(--border-width-sm) solid var(--color-border);
+  background: var(--color-background);
 }
 
 .manage-module-row:last-child {
@@ -25,6 +26,7 @@
 
 .manage-module-name {
   display: flex;
+  flex: 1 1 14rem;
   flex-direction: column;
   gap: var(--space-2);
   min-width: 0;
@@ -38,7 +40,7 @@
 
 .manage-module-number {
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: var(--letter-spacing-caps);
 }
 
 .manage-module-title {
@@ -48,16 +50,6 @@
 
 .manage-module-help {
   margin: 0 0 var(--space-3);
-}
-
-/* Handle, rank, then the name taking the room, then the buttons. */
-.manage-module-row {
-  justify-content: flex-start;
-  background: var(--color-background);
-}
-
-.manage-module-name {
-  flex: 1 1 14rem;
 }
 
 .manage-module-handle {
@@ -98,17 +90,12 @@
 
 /* A module in a new, unsaved place: accent edge and "Was 3". */
 .manage-module-row.is-moved {
-  box-shadow: inset var(--space-2) 0 0 var(--color-accent);
+  box-shadow: var(--edge-unsaved);
 }
 
+/* A .tag after "Module 2": where it was before it was moved. */
 .manage-module-moved {
   margin-left: var(--space-3);
-  padding: 0 var(--space-3);
-  border-radius: var(--radius-control);
-  background: var(--color-surface);
-  font-weight: var(--font-weight-bold);
-  text-transform: none;
-  letter-spacing: normal;
 }
 
 /* The row being dragged: lifted out of the list. */

@@ -7,8 +7,8 @@ import type { Content } from '@domain/content/types'
  */
 export default function MandatoryLabel({ content }: { content?: Content }) {
   if (!content) return '…'
-  if (content.type !== 'ASSIGNMENT' || content.mandatory === undefined) return <span className="data-table-muted">–</span>
+  if (content.type !== 'ASSIGNMENT' || content.mandatory === undefined) return <span className="text-meta">–</span>
   return content.mandatory
     ? <span className="data-table-strong">Mandatory</span>
-    : <span className="data-table-muted">Optional</span>
+    : <span className="text-meta">Optional</span>
 }

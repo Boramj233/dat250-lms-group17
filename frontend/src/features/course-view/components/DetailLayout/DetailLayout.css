@@ -38,7 +38,7 @@
   font-size: var(--text-small);
   font-weight: var(--font-weight-bold);
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: var(--letter-spacing-caps);
 }
 
 .submittable-panel {
@@ -86,7 +86,7 @@
   font-size: var(--text-small);
   font-weight: var(--font-weight-bold);
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: var(--letter-spacing-caps);
 }
 
 .submittable-facts dd {
@@ -104,13 +104,7 @@
   font-size: var(--text-small);
 }
 
-.submittable-muted,
-.submittable-note {
-  font-family: var(--font-ui);
-  font-size: var(--text-small);
-  font-weight: normal;
-}
-
+/* A remark in italics; used together with .text-meta. */
 .submittable-note {
   font-style: italic;
 }

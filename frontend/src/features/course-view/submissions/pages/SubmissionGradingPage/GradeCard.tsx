@@ -60,8 +60,8 @@ export default function GradeCard({ submission, contentId, courseId, grade, isLa
         <p className="grading-score">
           {formatScore(grade.score)} <PassedBadge passed={grade.passed} />
         </p>
-        <div className="submittable-text">{grade.feedback || <span className="submittable-muted">No feedback.</span>}</div>
-        <p className="submittable-note">Visible to the student since {formatDateTime(new Date(grade.releasedAt))}. A published grade cannot be changed.</p>
+        <div className="submittable-text">{grade.feedback || <span className="text-meta">No feedback.</span>}</div>
+        <p className="text-meta submittable-note">Visible to the student since {formatDateTime(new Date(grade.releasedAt))}. A published grade cannot be changed.</p>
       </Card>
     )
   }
@@ -69,7 +69,7 @@ export default function GradeCard({ submission, contentId, courseId, grade, isLa
   if (!isLatest) {
     return (
       <Card id="grade-title" title="Grade and feedback">
-        <p className="submittable-note">
+        <p className="text-meta submittable-note">
           A newer submission exists. Only the latest submission can be graded.
           {newestId !== undefined && <> <Link to={paths.courseSubmission(courseId, contentId, newestId)}>Go to the latest</Link></>}
         </p>
@@ -110,7 +110,7 @@ export default function GradeCard({ submission, contentId, courseId, grade, isLa
           <div className="grading-score-input">
             <input id="grading-score" type="number" inputMode="decimal" min={0} max={MAX_SCORE} step={0.01}
               value={score} onChange={event => setScore(event.target.value)} required />
-            <span className="submittable-muted">/ {MAX_SCORE}</span>
+            <span className="text-meta">/ {MAX_SCORE}</span>
           </div>
           {score.trim() !== '' && !scoreValid && (
             <p className="form-error" role="alert">A number from 0 to {MAX_SCORE}, with at most two decimals.</p>
@@ -164,7 +164,7 @@ export default function GradeCard({ submission, contentId, courseId, grade, isLa
             {release.isPending ? 'Publishing…' : 'Save and publish now'}
           </button>
         </div>
-        <p className="submittable-note">
+        <p className="text-meta submittable-note">
           Save and publish now makes the grade visible right away. A published grade cannot be changed afterwards.
         </p>
       </form>

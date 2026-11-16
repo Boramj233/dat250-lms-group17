@@ -27,7 +27,7 @@
   margin: 0;
   font-size: var(--font-size-md);
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: var(--letter-spacing-caps);
 }
 
 /* Section title left, a button right (e.g. "Manage courses"). */

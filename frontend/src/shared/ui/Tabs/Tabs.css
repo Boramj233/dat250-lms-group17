@@ -27,8 +27,3 @@
   border-bottom-color: var(--color-primary);
   font-weight: var(--font-weight-bold);
 }
-
-.tab:focus-visible {
-  outline: var(--focus-ring-width) solid var(--color-primary);
-  outline-offset: var(--space-2);
-}

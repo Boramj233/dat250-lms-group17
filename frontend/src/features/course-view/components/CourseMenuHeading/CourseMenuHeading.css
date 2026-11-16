@@ -18,13 +18,9 @@
   text-decoration: underline;
 }
 
-.course-menu-heading-title:focus-visible {
-  outline: var(--focus-ring-width) solid var(--color-primary);
-  outline-offset: var(--space-2);
-}
 
 .course-menu-heading-subtitle {
   font-size: var(--text-small);
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: var(--letter-spacing-caps);
 }

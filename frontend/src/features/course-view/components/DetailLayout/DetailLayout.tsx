@@ -65,13 +65,13 @@ export function DeadlineFact({ deadline, now, allowLate }: DeadlineFactProps) {
         {deadline
           ? <>
               {formatDateTime(deadline)}
-              <span className="submittable-muted">
+              <span className="text-meta">
                 {' · '}{deadline < now ? 'passed' : formatTimeLeft(deadline, now)}
               </span>
               {allowLate !== undefined && (
                 <>
                   <br />
-                  <span className="submittable-muted">
+                  <span className="text-meta">
                     {allowLate ? 'Late submissions are accepted' : 'Late submissions are not accepted'}
                   </span>
                 </>

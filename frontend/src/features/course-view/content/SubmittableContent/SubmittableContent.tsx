@@ -45,7 +45,7 @@ export default function SubmittableContent({ content, isTeacher }: SubmittableCo
       }
     >
       <Task content={content} />
-      <p className="submittable-note">
+      <p className="text-meta submittable-note">
         Students hand in their answer here. You see and grade submissions under Submissions.
       </p>
     </DetailLayout>
@@ -113,7 +113,7 @@ function StudentSubmission({ content, deadline, now }: StudentSubmissionProps) {
                   </>
                 : 'Not submitted yet'}
               {history.data && history.data.length > 1 && (
-                <span className="submittable-muted"> · {history.data.length} submissions</span>
+                <span className="text-meta"> · {history.data.length} submissions</span>
               )}
             </dd>
             {latest && latest.groupId !== null && (
@@ -141,7 +141,7 @@ function StudentSubmission({ content, deadline, now }: StudentSubmissionProps) {
       <Task content={content} />
       <Card id="submission-title" title="Your submission">
         {isGroupAssignment && (
-          <p className="submittable-note">
+          <p className="text-meta submittable-note">
             {myGroup
               ? <>Group assignment: you hand in for <strong>{people.groupLabel(myGroup.id)}</strong>, and it counts for everyone in it.</>
               : 'Group assignment: you are not in a group in this course, so you hand in for yourself.'}
@@ -192,14 +192,14 @@ function MandatoryFact({ content }: { content: Submittable }) {
       <dd>
         {content.mandatory
           ? <>
-              <span className="submittable-mandatory">Mandatory</span>
+              <span className="tag tag-primary">Mandatory</span>
               <br />
-              <span className="submittable-muted">Must be approved to complete the course</span>
+              <span className="text-meta">Must be approved to complete the course</span>
             </>
           : <>
               <strong>Optional</strong>
               <br />
-              <span className="submittable-muted">Not required to complete the course</span>
+              <span className="text-meta">Not required to complete the course</span>
             </>}
       </dd>
     </dl>
@@ -221,7 +221,7 @@ function GroupFact({ submission, people, userId }: GroupFactProps) {
         {submission.members.map(member => (
           <li key={member.userId}>
             {people.nameOf(member.userId)}
-            {String(member.userId) === String(userId) && <span className="submittable-muted"> (you)</span>}
+            {String(member.userId) === String(userId) && <span className="text-meta"> (you)</span>}
           </li>
         ))}
       </ul>

@@ -55,10 +55,10 @@ function MyGrades({ courseId, courseTitle }: { courseId: string, courseTitle: st
                 const module = modules.find(m => String(m.id) === String(entry.moduleId))
                 return module
                   ? <TrailLink to={paths.courseModule(entry.courseId, module.id)}>{module.title}</TrailLink>
-                  : <span className="data-table-muted">–</span>
+                  : <span className="text-meta">–</span>
               },
             },
-            { header: 'Type', cell: entry => <span className="data-table-muted">{contentTypeLabel(entry.type)}</span> },
+            { header: 'Type', cell: entry => <span className="text-meta">{contentTypeLabel(entry.type)}</span> },
             {
               header: 'Submitted',
               cell: entry => (
@@ -72,19 +72,19 @@ function MyGrades({ courseId, courseTitle }: { courseId: string, courseTitle: st
               header: 'Score',
               cell: entry => entry.grade
                 ? <span className="data-table-strong">{formatScore(entry.grade.score)}</span>
-                : <span className="data-table-muted">Awaiting grade</span>,
+                : <span className="text-meta">Awaiting grade</span>,
             },
             {
               header: 'Passed',
               cell: entry => entry.grade?.passed != null
                 ? <PassedBadge passed={entry.grade.passed} />
-                : <span className="data-table-muted">–</span>,
+                : <span className="text-meta">–</span>,
             },
             {
               header: 'Feedback',
               cell: entry => entry.grade?.feedback
                 ? <span className="data-table-text">{entry.grade.feedback}</span>
-                : <span className="data-table-muted">–</span>,
+                : <span className="text-meta">–</span>,
             },
           ]}
         />

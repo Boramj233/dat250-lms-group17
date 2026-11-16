@@ -276,9 +276,9 @@ export default function ManageModulePage() {
                           <Link className="manage-content-title" to={paths.manageContent(course.id, module.id, item.id)}>
                             {item.title}
                           </Link>
-                          {deleted && <span className="manage-change is-danger">Will be deleted</span>}
+                          {deleted && <span className="tag tag-strong tag-danger manage-change">Will be deleted</span>}
                           {!deleted && movedTo !== undefined && (
-                            <span className="manage-change">Moves to {moduleLabel(movedTo)}</span>
+                            <span className="tag tag-strong manage-change">Moves to {moduleLabel(movedTo)}</span>
                           )}
                         </th>
                         <td className="manage-content-type">{contentTypeLabel(item.type)}</td>

@@ -77,7 +77,7 @@ export default function ModuleLayout() {
               aria-controls="module-course-menu"
               onClick={() => setCourseMenuOpen(!courseMenuOpen)}
             >
-              <svg className="side-menu-disclosure-chevron" width="16" height="16" viewBox="0 0 24 24"
+              <svg className="disclosure-chevron" width="16" height="16" viewBox="0 0 24 24"
                 fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
                 aria-hidden="true" focusable="false">
                 <path d="M9 6l6 6-6 6" />

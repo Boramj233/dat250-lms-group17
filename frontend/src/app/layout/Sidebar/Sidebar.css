@@ -40,12 +40,6 @@
   font-weight: var(--font-weight-bold);
 }
 
-.sidebar > a:focus-visible,
-.sidebar > .sidebar-item:focus-visible {
-  outline: var(--focus-ring-width) solid var(--color-primary);
-  outline-offset: var(--space-2);
-}
-
 /* The Courses button looks like the links around it. */
 .sidebar > .sidebar-item {
   width: 100%;

@@ -146,7 +146,7 @@ export default function CourseContentPage() {
                     <div className="manage-module-name">
                       <span className="manage-module-number">
                         Module {index + 1}
-                        {moved && <span className="manage-module-moved">Was {savedIndex + 1}</span>}
+                        {moved && <span className="tag tag-strong manage-module-moved">Was {savedIndex + 1}</span>}
                       </span>
                       <span className="manage-module-title">{module.title}</span>
                       <span className="manage-module-count">

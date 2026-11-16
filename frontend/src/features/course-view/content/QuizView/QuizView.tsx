@@ -83,11 +83,11 @@ export default function QuizView({ content, isTeacher }: QuizViewProps) {
                     ? attemptsLeft > 0
                       ? <>
                           <strong>Not passed yet</strong>
-                          <span className="submittable-muted">
+                          <span className="text-meta">
                             {' '}· {attemptsLeft} {attemptsLeft === 1 ? 'attempt' : 'attempts'} left
                           </span>
                         </>
-                      : <><PassedBadge passed={false} /><span className="submittable-muted"> · no attempts left</span></>
+                      : <><PassedBadge passed={false} /><span className="text-meta"> · no attempts left</span></>
                     : 'Not taken yet'}
               </dd>
             </>
@@ -164,7 +164,7 @@ export default function QuizView({ content, isTeacher }: QuizViewProps) {
             {' '}<PassedBadge passed={attemptPassed(mode.score, required)} />
           </p>
           {attemptPassed(mode.score, required) === false && (
-            <p className="submittable-muted">
+            <p className="text-meta">
               You needed {passRequirementText(required ?? 0, mode.score.totalQuestions)} to pass.
               {attemptsLeft > 0
                 ? ` You have ${attemptsLeft} ${attemptsLeft === 1 ? 'attempt' : 'attempts'} left.`

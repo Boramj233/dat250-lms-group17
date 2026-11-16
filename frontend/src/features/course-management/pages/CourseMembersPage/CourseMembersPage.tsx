@@ -130,9 +130,9 @@ export default function CourseMembersPage() {
                   <div className="member-name">
                     <span className="member-full-name">
                       {fullName(member)}{isMe && ' (you)'}
-                      {isRemoved && <span className="member-change is-danger">Will be removed</span>}
+                      {isRemoved && <span className="tag tag-danger member-change">Will be removed</span>}
                       {!isRemoved && roleChanged && (
-                        <span className="member-change">Becomes {ROLE_LABEL[roleOf(member)].toLowerCase()}</span>
+                        <span className="tag member-change">Becomes {ROLE_LABEL[roleOf(member)].toLowerCase()}</span>
                       )}
                     </span>
                     <span className="member-email">{member.email}</span>

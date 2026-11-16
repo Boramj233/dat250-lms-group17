@@ -123,21 +123,6 @@
   background: var(--color-surface);
 }
 
-.side-menu-disclosure-toggle:focus-visible {
-  outline: var(--focus-ring-width) solid var(--color-primary);
-  outline-offset: var(--space-2);
-}
-
-/* Points right when folded, down when open. */
-.side-menu-disclosure-chevron {
-  flex-shrink: 0;
-  transition: transform 0.15s ease;
-}
-
-.side-menu-disclosure-toggle[aria-expanded="true"] .side-menu-disclosure-chevron {
-  transform: rotate(90deg);
-}
-
 .side-menu-disclosure-body {
   display: flex;
   flex-direction: column;
@@ -147,12 +132,6 @@
 
 .side-menu-disclosure-body[hidden] {
   display: none;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .side-menu-disclosure-chevron {
-    transition: none;
-  }
 }
 
 /* A small link back up, e.g. "‹ All modules". */
@@ -240,12 +219,4 @@
 .side-menu-count {
   font-size: var(--text-small);
   font-weight: normal;
-}
-
-.side-menu-toggle:focus-visible,
-.side-menu-back:focus-visible,
-.side-menu-list a:focus-visible,
-.side-menu-heading:focus-visible {
-  outline: var(--focus-ring-width) solid var(--color-primary);
-  outline-offset: var(--space-2);
 }

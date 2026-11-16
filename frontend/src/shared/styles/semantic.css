@@ -26,9 +26,15 @@
   --text-body: var(--font-size-md);
   --text-small: var(--font-size-sm);
   --text-heading: var(--font-size-lg);
+  /* For text in capitals (labels, table headings). */
+  --letter-spacing-caps: 0.04em;
 
   --spacing-content: var(--space-5);
   --radius-control: var(--radius-sm);
+
+  /* Unsaved changes in a list or form: a coloured edge on the left (as box-shadow). */
+  --edge-unsaved: inset var(--space-2) 0 0 var(--color-accent);
+  --edge-removed: inset var(--space-2) 0 0 var(--color-danger);
 
   /* Topbar */
   --topbar-height-mobile: var(--size-14);

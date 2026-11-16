@@ -41,7 +41,7 @@ export default function CoursePeoplePage() {
                 {
                   header: 'Role',
                   cell: member => (
-                    <span className={member.role === 'TEACHER' ? 'data-table-strong' : 'data-table-muted'}>
+                    <span className={member.role === 'TEACHER' ? 'data-table-strong' : 'text-meta'}>
                       {ROLE_LABEL[member.role]}
                     </span>
                   ),

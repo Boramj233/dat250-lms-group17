@@ -65,7 +65,7 @@ export default function SubmissionGradingPage() {
           {email && (
             <>
               <br />
-              <span className="submittable-muted">{email}</span>
+              <span className="text-meta">{email}</span>
             </>
           )}
         </dd>
@@ -85,7 +85,7 @@ export default function SubmissionGradingPage() {
           {formatDateTime(new Date(data.submittedAt))}
           {data.late && <span className="submittable-late"> (late)</span>}
           {history.data && history.data.length > 1 && (
-            <span className="submittable-muted"> · {history.data.length} submissions in all</span>
+            <span className="text-meta"> · {history.data.length} submissions in all</span>
           )}
         </dd>
         <dt>Deadline</dt>
@@ -95,7 +95,7 @@ export default function SubmissionGradingPage() {
           {grade.data ? <strong>{formatScore(grade.data.score)}</strong> : 'Not graded yet'}
           {grade.data && <> <PassedBadge passed={grade.data.passed} /></>}
           {grade.data && (
-            <span className="submittable-muted">
+            <span className="text-meta">
               <br />
               {grade.data.releasedAt
                 ? `Visible to the student since ${formatDateTime(new Date(grade.data.releasedAt))}`
