@@ -7,6 +7,10 @@ import java.util.concurrent.*;
 import jakarta.persistence.EntityManager;
 import no.hvl.dat250.lms.user.domain.User;
 import no.hvl.dat250.lms.content.domain.Assignment;
+import no.hvl.dat250.lms.content.domain.CodingExercise;
+import no.hvl.dat250.lms.content.domain.Content;
+import no.hvl.dat250.lms.content.domain.StaticPage;
+import no.hvl.dat250.lms.content.service.ContentService;
 import no.hvl.dat250.lms.course.domain.*;
 import no.hvl.dat250.lms.enrollment.domain.*;
 import no.hvl.dat250.lms.module.domain.Module;
@@ -17,6 +21,8 @@ import no.hvl.dat250.lms.grade.api.dto.GradeReviewResponse;
 import no.hvl.dat250.lms.grade.repository.GradeRepository;
 import no.hvl.dat250.lms.grade.service.*;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
@@ -43,6 +49,7 @@ class GradeSecurityIntegrationTest {
     @Autowired GradingService grading;
     @Autowired SubmissionService submissions;
     @Autowired GradeRepository grades;
+    @Autowired ContentService contents;
 
     private <T> T save(T entity) { entities.persist(entity); entities.flush(); return entity; }
     private User user() {
@@ -51,6 +58,9 @@ class GradeSecurityIntegrationTest {
     private record Fixture(User owner, User teacher, User outsider, User inactive,
                            User otherStudent, Long contentId, Long submissionId, Long enrollmentId) {}
     private Fixture fixture() {
+        return fixture(false);
+    }
+    private Fixture fixture(boolean coding) {
         return new TransactionTemplate(transactions).execute(status -> {
             Course course = save(new Course("DAT250", "Grading", Term.AUTUMN, 2026));
             Course otherCourse = save(new Course("Other", "Other", Term.AUTUMN, 2026));
@@ -62,21 +72,25 @@ class GradeSecurityIntegrationTest {
             inactiveEnrollment.deactivate();
             save(new Enrollment(other, course, CourseRole.STUDENT));
             Module module = save(new Module(course, "Week", 0));
-            Assignment assignment = save(new Assignment(module, "Report", 0, "Write", null, false));
-            Submission submission = save(new Submission(assignment, student, SubmissionType.TEXT,
+            Content content = coding
+                ? new CodingExercise(module, "Code", 0, "Implement", "https://example.com/starter.git", null, false)
+                : new Assignment(module, "Report", 0, "Write", null, false);
+            save(content);
+            Submission submission = save(new Submission(content, student, SubmissionType.TEXT,
                 "Answer", Instant.parse("2026-01-01T12:00:00Z"), false));
             return new Fixture(owner, teacher, outsider, inactive, other,
-                assignment.getId(), submission.getId(), student.getId());
+                content.getId(), submission.getId(), student.getId());
         });
     }
     private GradeReviewResponse draft(Fixture f) {
         return grading.save(f.submissionId(), f.teacher().getUserId(), new BigDecimal("85.50"), "Good reasoning", null, true);
     }
 
-    @Test
-    void undecidedDraftCannotReleaseAndBothDecisionsCanRelease() throws Exception {
+    @ParameterizedTest(name = "coding={0}")
+    @ValueSource(booleans = {false, true})
+    void undecidedDraftCannotReleaseAndBothDecisionsCanRelease(boolean coding) throws Exception {
         for (boolean passed : new boolean[]{true, false}) {
-            var f = fixture();
+            var f = fixture(coding);
             String base = "/api/submissions/" + f.submissionId() + "/grade";
             String token = TestTokens.bearer(f.teacher());
             mvc.perform(put(base).header("Authorization", token)
@@ -104,10 +118,21 @@ class GradeSecurityIntegrationTest {
         }
     }
 
-    @Test
-    void saveEditReleaseAndStudentVisibility() throws Exception {
-        var f = fixture();
+    @ParameterizedTest(name = "coding={0}")
+    @ValueSource(booleans = {false, true})
+    void saveEditReleaseAndStudentVisibility(boolean coding) throws Exception {
+        var f = fixture(coding);
         String base = "/api/submissions/" + f.submissionId() + "/grade";
+        String teacherToken = TestTokens.bearer(f.teacher());
+        mvc.perform(get("/api/contents/{id}/submissions/review", f.contentId())
+                .header("Authorization", teacherToken))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.content[0].id").value(f.submissionId()));
+        mvc.perform(get("/api/submissions/{id}/review", f.submissionId())
+                .header("Authorization", teacherToken))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.payload").value("Answer"));
+        mvc.perform(get("/api/submissions/{id}/review/history", f.submissionId())
+                .header("Authorization", teacherToken))
+            .andExpect(status().isOk()).andExpect(jsonPath("$[0].id").value(f.submissionId()));
         mvc.perform(put(base).header("Authorization", TestTokens.bearer(f.teacher()))
                 .contentType(MediaType.APPLICATION_JSON).content("{\"score\":85.50,\"feedback\":\"First\"}"))
             .andExpect(status().isOk()).andExpect(jsonPath("$.version").value(0))
@@ -131,6 +156,9 @@ class GradeSecurityIntegrationTest {
             .andExpect(jsonPath("$.feedback").value("Final"))
             .andExpect(jsonPath("$.version").doesNotExist())
             .andExpect(jsonPath("$.gradedByEnrollmentId").doesNotExist());
+        if (coding) {
+            assertFalse(contents.isCompleted(f.contentId(), f.owner().getUserId()));
+        }
         mvc.perform(get(base).header("Authorization", TestTokens.bearer(f.otherStudent())))
             .andExpect(status().isNotFound());
         mvc.perform(put(base).header("Authorization", TestTokens.bearer(f.teacher()))
@@ -138,19 +166,32 @@ class GradeSecurityIntegrationTest {
             .andExpect(status().isConflict());
     }
 
-    @Test
-    void permissionsAreCourseScopedOnAllTeacherEndpoints() throws Exception {
-        var f = fixture();
+    @ParameterizedTest(name = "coding={0}")
+    @ValueSource(booleans = {false, true})
+    void permissionsAreCourseScopedOnAllTeacherEndpoints(boolean coding) throws Exception {
+        var f = fixture(coding);
         draft(f);
         String base = "/api/submissions/" + f.submissionId() + "/grade";
         for (User denied : new User[]{f.owner(), f.otherStudent(), f.outsider(), f.inactive()}) {
             String token = TestTokens.bearer(denied);
+            mvc.perform(get("/api/contents/{id}/submissions/review", f.contentId())
+                .header("Authorization", token)).andExpect(status().isForbidden());
+            mvc.perform(get("/api/submissions/{id}/review", f.submissionId())
+                .header("Authorization", token)).andExpect(status().isForbidden());
+            mvc.perform(get("/api/submissions/{id}/review/history", f.submissionId())
+                .header("Authorization", token)).andExpect(status().isForbidden());
             mvc.perform(get(base + "/review").header("Authorization", token)).andExpect(status().isForbidden());
             mvc.perform(put(base).header("Authorization", token).contentType(MediaType.APPLICATION_JSON)
                 .content("{\"score\":50,\"version\":0}")).andExpect(status().isForbidden());
             mvc.perform(post(base + "/release").header("Authorization", token).contentType(MediaType.APPLICATION_JSON)
                 .content("{\"version\":0}")).andExpect(status().isForbidden());
         }
+        mvc.perform(get("/api/contents/{id}/submissions/review", f.contentId()))
+            .andExpect(status().isUnauthorized());
+        mvc.perform(get("/api/submissions/{id}/review", f.submissionId()))
+            .andExpect(status().isUnauthorized());
+        mvc.perform(get("/api/submissions/{id}/review/history", f.submissionId()))
+            .andExpect(status().isUnauthorized());
         mvc.perform(get(base)).andExpect(status().isUnauthorized());
         mvc.perform(get(base + "/review")).andExpect(status().isUnauthorized());
         mvc.perform(put(base).contentType(MediaType.APPLICATION_JSON).content("{\"score\":50}"))
@@ -159,9 +200,10 @@ class GradeSecurityIntegrationTest {
             .andExpect(status().isUnauthorized());
     }
 
-    @Test
-    void rejectsInvalidScoresFeedbackAndStaleVersions() throws Exception {
-        var f = fixture();
+    @ParameterizedTest(name = "coding={0}")
+    @ValueSource(booleans = {false, true})
+    void rejectsInvalidScoresFeedbackAndStaleVersions(boolean coding) throws Exception {
+        var f = fixture(coding);
         String base = "/api/submissions/" + f.submissionId() + "/grade";
         for (String score : new String[]{"-1", "100.01", "12.345", "null"}) {
             mvc.perform(put(base).header("Authorization", TestTokens.bearer(f.teacher()))
@@ -183,9 +225,10 @@ class GradeSecurityIntegrationTest {
             .andExpect(status().isBadRequest());
     }
 
-    @Test
-    void resubmissionDoesNotInheritGradeAndHistoricalReleaseSurvivesWithdrawal() {
-        var f = fixture();
+    @ParameterizedTest(name = "coding={0}")
+    @ValueSource(booleans = {false, true})
+    void resubmissionDoesNotInheritGradeAndHistoricalReleaseSurvivesWithdrawal(boolean coding) {
+        var f = fixture(coding);
         var grade = draft(f);
         var released = grading.release(f.submissionId(), f.teacher().getUserId(), grade.version());
         Long newer = submissions.submitIndividual(f.contentId(), f.owner().getUserId(), SubmissionType.TEXT, "New answer").getId();
@@ -199,9 +242,10 @@ class GradeSecurityIntegrationTest {
         assertEquals(0L, grading.save(newer, f.teacher().getUserId(), BigDecimal.ZERO, null, null).version());
     }
 
-    @Test
-    void oldUnreleasedGradeCannotBePublishedAfterResubmission() {
-        var f = fixture();
+    @ParameterizedTest(name = "coding={0}")
+    @ValueSource(booleans = {false, true})
+    void oldUnreleasedGradeCannotBePublishedAfterResubmission(boolean coding) {
+        var f = fixture(coding);
         var grade = draft(f);
         submissions.submitIndividual(f.contentId(), f.owner().getUserId(), SubmissionType.TEXT, "New answer");
         assertThrows(GradeConflictException.class, () -> grading.release(f.submissionId(), f.teacher().getUserId(), grade.version()));
@@ -220,9 +264,10 @@ class GradeSecurityIntegrationTest {
         }
     }
 
-    @Test
-    void concurrentCreateHasOneWinnerAndConcurrentReleaseIsIdempotent() throws Exception {
-        var f = fixture();
+    @ParameterizedTest(name = "coding={0}")
+    @ValueSource(booleans = {false, true})
+    void concurrentCreateHasOneWinnerAndConcurrentReleaseIsIdempotent(boolean coding) throws Exception {
+        var f = fixture(coding);
         var created = concurrently(() -> {
             try { draft(f); return true; }
             catch (GradeConflictException conflict) { return false; }
@@ -234,9 +279,10 @@ class GradeSecurityIntegrationTest {
         assertNotNull(releases.get(0).releasedAt());
     }
 
-    @Test
-    void concurrentEditsWithSameVersionCannotOverwriteEachOther() throws Exception {
-        var f = fixture();
+    @ParameterizedTest(name = "coding={0}")
+    @ValueSource(booleans = {false, true})
+    void concurrentEditsWithSameVersionCannotOverwriteEachOther(boolean coding) throws Exception {
+        var f = fixture(coding);
         var grade = draft(f);
         var results = concurrently(() -> {
             try {
@@ -257,21 +303,18 @@ class GradeSecurityIntegrationTest {
             .andExpect(status().isNotFound());
         mvc.perform(get("/api/submissions/99999999/grade/review").header("Authorization", token))
             .andExpect(status().isNotFound());
-        Long coding = new TransactionTemplate(transactions).execute(status -> {
+        Long pageId = new TransactionTemplate(transactions).execute(status -> {
             Assignment assignment = entities.find(Assignment.class, f.contentId());
-            var exercise = save(new no.hvl.dat250.lms.content.domain.CodingExercise(
-                assignment.getModule(), "Code", 1, "Implement", "https://example.com/starter.git", null, false));
-            return save(new Submission(exercise, entities.find(Enrollment.class, f.enrollmentId()),
-                SubmissionType.GIT_URL, "https://example.com/answer.git", Instant.now(), false)).getId();
+            return save(new StaticPage(assignment.getModule(), "Page", 1, "Read")).getId();
         });
-        mvc.perform(put("/api/submissions/{id}/grade", coding).header("Authorization", token)
-                .contentType(MediaType.APPLICATION_JSON).content("{\"score\":50}"))
+        mvc.perform(get("/api/contents/{id}/submissions/review", pageId).header("Authorization", token))
             .andExpect(status().isNotFound());
     }
 
-    @Test
-    void submissionOwnerLockMakesGradingObserveAConcurrentResubmission() throws Exception {
-        var f = fixture();
+    @ParameterizedTest(name = "coding={0}")
+    @ValueSource(booleans = {false, true})
+    void submissionOwnerLockMakesGradingObserveAConcurrentResubmission(boolean coding) throws Exception {
+        var f = fixture(coding);
         var grade = draft(f);
         CountDownLatch accepted = new CountDownLatch(1);
         CountDownLatch allowCommit = new CountDownLatch(1);
