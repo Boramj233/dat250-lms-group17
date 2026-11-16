@@ -2,6 +2,7 @@ import { Link } from 'react-router'
 import { paths } from '../../../shared/paths'
 import { logout } from '../../../shared/auth/auth'
 import { useCurrentUser } from '../../../shared/auth/useAuth'
+import '../../../shared/styles/forms.css'
 import './Topbar.css'
 
 type TopbarProps = {
@@ -46,7 +47,7 @@ export default function Topbar({ sidebarOpen, onToggleSidebar }: TopbarProps) {
             <span className="current-user">
               {currentUser.data.firstName} {currentUser.data.lastName}
             </span>
-            <button type="button" onClick={logout}>Log out</button>
+            <button type="button" className="button-secondary" onClick={logout}>Log out</button>
           </>
         )}
       </nav>

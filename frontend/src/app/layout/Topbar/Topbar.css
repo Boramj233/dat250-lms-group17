@@ -17,15 +17,13 @@
   text-decoration: none;
 }
 
+/* The user's name and the Log out button (button-secondary, as elsewhere). */
 .main-nav {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-3);
-  margin-left: auto;
-}
-
-.main-nav {
   align-items: center;
+  gap: var(--space-3) var(--space-5);
+  margin-left: auto;
 }
 
 .current-user {
