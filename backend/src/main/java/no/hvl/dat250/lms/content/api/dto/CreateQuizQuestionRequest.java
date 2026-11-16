@@ -25,7 +25,9 @@ public record CreateQuizQuestionRequest(
     QuestionType type,
 
     @Size(max = 20)
-    List<@NotBlank @Size(max = 255) String> acceptedAnswers
+    List<@NotBlank @Size(max = 255) String> acceptedAnswers,
+
+    @Valid OrderingInput ordering
 ) {
     public CreateQuizQuestionRequest {
         if (type == null) {
@@ -33,12 +35,22 @@ public record CreateQuizQuestionRequest(
         }
     }
 
-    @AssertTrue(message = "Choice questions need at least two options; fill-in questions must not contain options")
+    @AssertTrue(message = "Choice questions need at least two options; fill-in and ordering questions must not contain options")
     public boolean isOptionsValid() {
-        if (type == QuestionType.FILL_IN_BLANK) {
+        if (type == QuestionType.FILL_IN_BLANK || type == QuestionType.ORDERING) {
             return options == null || options.isEmpty();
         }
         return options != null && options.size() >= 2;
+    }
+
+    public record OrderingInput(
+        @NotNull @Size(min = 2, max = 20) List<@NotNull @Valid ItemInput> items,
+        @NotNull @Size(min = 2, max = 20) List<@NotBlank @Size(max = 64) String> correctOrder) {
+    }
+
+    public record ItemInput(
+        @NotBlank @Size(max = 64) String key,
+        @NotBlank @Size(max = 255) String text) {
     }
 
     public record OptionInput(

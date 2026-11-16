@@ -16,6 +16,8 @@ import no.hvl.dat250.lms.content.domain.Quiz;
 import no.hvl.dat250.lms.content.domain.QuizQuestion;
 import no.hvl.dat250.lms.content.service.QuizService;
 import no.hvl.dat250.lms.content.service.QuizService.OptionDraft;
+import no.hvl.dat250.lms.content.service.QuizService.ItemDraft;
+import no.hvl.dat250.lms.content.service.QuizService.OrderingDraft;
 
 import no.hvl.dat250.lms.content.service.QuizQuestionConflictException;
 import no.hvl.dat250.lms.security.auth.annotations.IsTeacherInCourse;
@@ -73,15 +75,23 @@ public class QuizController {
             ))
             .toList();
 
-        QuizQuestion question = quizService.addQuestion(
-            quizId,
-            request.questionText(),
-            request.position(),
-            request.hint(),
-            options,
-            request.type(),
-            request.acceptedAnswers() == null ? List.of() : request.acceptedAnswers()
-        );
+        QuizQuestion question;
+        if (request.ordering() == null) {
+            question = quizService.addQuestion(
+                quizId,
+                request.questionText(),
+                request.position(),
+                request.hint(),
+                options,
+                request.type(),
+                request.acceptedAnswers() == null ? List.of() : request.acceptedAnswers()
+            );
+        } else {
+            OrderingDraft ordering = new OrderingDraft(request.ordering().items().stream()
+                .map(item -> new ItemDraft(item.key(), item.text())).toList(), request.ordering().correctOrder());
+            question = quizService.addQuestion(quizId, request.questionText(), request.position(),
+                request.hint(), options, request.type(), request.acceptedAnswers(), ordering);
+        }
 
         return ResponseEntity
             .status(HttpStatus.CREATED)

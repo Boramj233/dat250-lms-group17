@@ -2,6 +2,8 @@ package no.hvl.dat250.lms.content.domain;
 
 import jakarta.persistence.*;
 import java.util.Set;
+import java.util.Objects;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 
@@ -33,6 +35,36 @@ public class QuizQuestion {
     @CollectionTable(name = "quiz_accepted_answers", joinColumns = @JoinColumn(name = "question_id"))
     @Column(name = "answer_text", nullable = false, length = 255)
     private Set<String> acceptedAnswers = new HashSet<>();
+
+    @OneToMany(mappedBy = "question", fetch = FetchType.LAZY)
+    private List<QuizItem> items = new ArrayList<>();
+
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(name = "quiz_question_correct_order",
+        joinColumns = @JoinColumn(name = "question_id"),
+        inverseJoinColumns = @JoinColumn(name = "item_id"),
+        uniqueConstraints = @UniqueConstraint(columnNames = {"question_id", "item_id"}))
+    @OrderColumn(name = "order_position", nullable = false)
+    private List<QuizItem> correctOrder = new ArrayList<>();
+
+    public List<QuizItem> getItems() { return List.copyOf(items); }
+    public List<QuizItem> getCorrectOrder() { return List.copyOf(correctOrder); }
+
+    public void configureOrdering(List<QuizItem> items, List<QuizItem> correctOrder) {
+        if (type != QuestionType.ORDERING || !this.items.isEmpty() || !this.correctOrder.isEmpty()) {
+            throw new IllegalStateException("Ordering items can only be initialized once on an ordering question");
+        }
+        if (items == null || correctOrder == null || items.size() < 2 || items.size() > 20
+                || items.stream().anyMatch(item -> item == null || item.getId() == null
+                    || !Objects.equals(item.getQuestion().getId(), id))
+                || new HashSet<>(items).size() != items.size()
+                || correctOrder.size() != items.size()
+                || !new HashSet<>(correctOrder).equals(new HashSet<>(items))) {
+            throw new IllegalArgumentException("Correct order must contain every question item exactly once");
+        }
+        this.items.addAll(items);
+        this.correctOrder.addAll(correctOrder);
+    }
 
     public QuestionType getType() { return type; }
 

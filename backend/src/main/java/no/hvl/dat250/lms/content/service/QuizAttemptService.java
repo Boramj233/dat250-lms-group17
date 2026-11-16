@@ -14,6 +14,8 @@ import no.hvl.dat250.lms.content.domain.ChoiceOption;
 import no.hvl.dat250.lms.content.domain.Quiz;
 import no.hvl.dat250.lms.content.domain.QuizAnswer;
 import no.hvl.dat250.lms.content.domain.QuizAttempt;
+import no.hvl.dat250.lms.content.domain.QuizItem;
+import java.util.UUID;
 
 import no.hvl.dat250.lms.content.repository.QuizAnswerRepository;
 import no.hvl.dat250.lms.content.repository.QuizAttemptRepository;
@@ -146,12 +148,19 @@ public class QuizAttemptService {
                 }
             }
 
+            Map<UUID, QuizItem> itemsById = new HashMap<>();
+            for (QuizItem questionItem : item.question().getItems()) {
+                itemsById.put(questionItem.getId(), questionItem);
+            }
+            List<QuizItem> orderedItems = graded.orderedItemIds().stream().map(itemsById::get).toList();
+
             QuizAnswer answer = new QuizAnswer(
                 attempt,
                 item.question(),
                 selectedOptions,
                 graded.correct(),
-                graded.textAnswer()
+                graded.textAnswer(),
+                orderedItems
             );
 
             answerRepository.save(answer);

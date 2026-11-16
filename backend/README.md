@@ -166,3 +166,85 @@ For existing H2 databases, back up and stop the application before manually appl
 text answers and the accepted-answer table, preserving old questions/answers.
 The script is not automatic; H2 DDL is not atomic. Tests use disposable databases,
 not the developer database.
+
+## Quiz 3B-1 Ordering
+
+Ordering extends the existing question, attempt, Hint and completion flow. It does
+not add Matching, partial credit, frontend components or new concurrency locks.
+Each ordering question has 2–20 distinct display items and one complete correct
+sequence. Creation still requires an active teacher in the Quiz's course:
+
+```http
+POST /api/quizzes/{quizId}/questions
+Content-Type: application/json
+Authorization: Bearer <access-token>
+```
+
+```json
+{
+  "questionText": "Arrange these steps.",
+  "position": 0,
+  "type": "ORDERING",
+  "hint": "Review the process.",
+  "ordering": {
+    "items": [
+      {"key": "a", "text": "Step A"},
+      {"key": "b", "text": "Step B"},
+      {"key": "c", "text": "Step C"}
+    ],
+    "correctOrder": ["b", "c", "a"]
+  }
+}
+```
+
+Keys are temporary teacher-request references (nonblank, unique, at most 64
+characters). Text is nonblank, at most 255 characters, with no identical texts
+within a question after stripping their edges. correctOrder must contain every
+key exactly once. Ordering questions reject options and acceptedAnswers; other
+types reject a non-null ordering definition. Existing 3A authoring requests are
+unchanged, including the default MULTIPLE_CHOICE type.
+
+The server generates random UUIDs for QuizItem; it does not expose the teacher
+keys, an insertion index or the correct position. Quiz detail adds an `items`
+array of `{id, text}` (empty for other types). Ordering items are displayed in
+stable UUID-string order, independent of correctOrder. The display can coincidentally
+match the answer; it is not deliberately forced to be wrong, and no per-attempt
+shuffle state is introduced. Existing student detail still omits hints and keys.
+
+Students submit through the existing whole-quiz attempt endpoint:
+
+```json
+{
+  "answers": [
+    {
+      "questionId": 10,
+      "orderedItemIds": ["<uuid-for-b>", "<uuid-for-c>", "<uuid-for-a>"]
+    }
+  ]
+}
+```
+
+The UUIDs must come from this question's displayed items. Missing/null/empty,
+incomplete, duplicate, extra, invalid or foreign UUIDs return 400 and create no
+attempt. textAnswer and nonempty selectedOptionIds are rejected for Ordering.
+Other types reject nonempty orderedItemIds. Complete but wrongly ordered answers
+are valid submissions and count as incorrect; only exact list equality is correct.
+Original MC empty-selection and FILL blank-text behavior stays unchanged.
+
+Correct sequences and submitted sequences use separate relational join tables
+with `@OrderColumn`; submitted order is never sorted or converted to a Set before
+storage. QuizItem belongs to its question, and no cascade delete is added. Each
+question remains worth one correct/incorrect result, reusing Passing Percentage,
+Content Completion and the existing post-submission wrong-answer Hint behavior.
+Permissions, attempt limits and the post-first-attempt question freeze remain.
+Reading detail also works with OSIV disabled, without relying on a controller
+transaction.
+
+Apply `src/main/resources/db/manual/h2-quiz-ordering.sql` manually only after
+backup and stopping the application, on a schema that already has Quiz 3A.
+It adds quiz_items, quiz_question_correct_order and quiz_answer_ordered_items.
+It also expands question_type to the four-value H2 ENUM: databases created by
+Hibernate can have a native ENUM restricted to the old three types, while the
+older manual 3A script used VARCHAR. The migration handles both and preserves
+existing questions and answers. H2 DDL is not atomic; this is not an automatic
+migration system. Only disposable H2 databases are used in upgrade tests.

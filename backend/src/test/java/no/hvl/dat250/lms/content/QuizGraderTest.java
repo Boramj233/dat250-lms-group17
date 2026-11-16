@@ -3,6 +3,7 @@ package no.hvl.dat250.lms.content;
 
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 
 import no.hvl.dat250.lms.content.domain.ChoiceOption;
 import no.hvl.dat250.lms.content.service.QuizGrader;
@@ -15,6 +16,26 @@ import static org.mockito.Mockito.*;
 class QuizGraderTest {
 
     private final QuizGrader grader = new QuizGrader();
+
+    @Test
+    void orderingRequiresExactSequenceRatherThanSetEquality() {
+        List<UUID> correct = List.of(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID());
+        assertTrue(grader.isOrderCorrect(correct, correct));
+        assertFalse(grader.isOrderCorrect(correct, List.of(correct.get(2), correct.get(1), correct.get(0))));
+    }
+
+    @Test
+    void orderingRejectsMissingDuplicateAndForeignItems() {
+        List<UUID> correct = List.of(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID());
+        assertThrows(IllegalArgumentException.class, () -> grader.isOrderCorrect(correct, null));
+        assertThrows(IllegalArgumentException.class, () -> grader.isOrderCorrect(correct, List.of()));
+        assertThrows(IllegalArgumentException.class, () -> grader.isOrderCorrect(correct, correct.subList(0, 2)));
+        assertThrows(IllegalArgumentException.class, () -> grader.isOrderCorrect(correct,
+            List.of(correct.get(0), correct.get(0), correct.get(2))));
+        assertThrows(IllegalArgumentException.class, () -> grader.isOrderCorrect(correct,
+            List.of(correct.get(0), correct.get(1), UUID.randomUUID())));
+        assertThrows(IllegalStateException.class, () -> grader.isOrderCorrect(List.of(correct.get(0), correct.get(0)), correct));
+    }
 
     @Test
     void textMatchingTrimsEdgesAndIgnoresCaseButPreservesInternalSpaces() {
