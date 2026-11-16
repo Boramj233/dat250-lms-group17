@@ -3,6 +3,7 @@ import { paths } from '../../../../../shared/paths'
 import { useCourseContent, useDeleteContent, useMoveContent, useUpdateContent } from '../../../../content/hooks'
 import type { ContentSummary } from '../../../../content/types'
 import ActionMenu, { type ActionMenuItem } from '../../../../../shared/ui/ActionMenu'
+import { useConfirm } from '../../../../../shared/ui/ConfirmDialog'
 import PageHeader from '../../../../../shared/ui/PageHeader'
 import { CONTENT_TYPES, contentTypeLabel } from '../../../../content/contentTypes'
 import { useManageCourse } from '../../../manageCourseContext'
@@ -25,6 +26,7 @@ export default function ManageModulePage() {
   const updateContent = useUpdateContent()
   // Content counts of all modules, so moved content goes to the end of its new module.
   const allContent = useCourseContent(course.id, modules.map(m => m.id))
+  const [confirm, confirmDialog] = useConfirm()
 
   function actionsFor(item: ContentSummary): ActionMenuItem[] {
     const otherModules = modules
@@ -48,8 +50,13 @@ export default function ManageModulePage() {
       {
         label: 'Delete',
         danger: true,
-        onSelect: () => {
-          if (!window.confirm(`Delete "${item.title}"? This cannot be undone.`)) return
+        onSelect: async () => {
+          const confirmed = await confirm({
+            title: `Delete "${item.title}"?`,
+            message: 'This cannot be undone.',
+            confirmLabel: 'Delete',
+          })
+          if (!confirmed) return
           deleteContent.mutate({ contentId: item.id, moduleId: module.id })
         },
       },
@@ -143,6 +150,7 @@ export default function ManageModulePage() {
       </section>
 
       <ModuleAvailability courseId={course.id} module={module} modules={modules} />
+      {confirmDialog}
     </>
   )
 }

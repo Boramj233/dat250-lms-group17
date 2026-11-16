@@ -5,7 +5,7 @@ import type { UserId } from '../../../../shared/types'
 import PageHeader from '../../../../shared/ui/PageHeader'
 import QueryState from '../../../../shared/ui/QueryState'
 import { useCourseEnrollments } from '../../../courses/hooks'
-import ConfirmDialog from '../../../../shared/ui/ConfirmDialog'
+import ConfirmDialog, { useConfirm } from '../../../../shared/ui/ConfirmDialog'
 import {
   groupName, groupOfUser, SwitchGroupError, useCourseGroups, useDeleteGroup, useJoinGroup, useLeaveGroup, useSwitchGroup,
 } from '../../../groups/hooks'
@@ -40,6 +40,8 @@ export default function CourseGroupsPage() {
   const switchGroup = useSwitchGroup(course.id)
   const busy = join.isPending || leave.isPending || remove.isPending || switchGroup.isPending
   const [pendingSwitch, setPendingSwitch] = useState<PendingSwitch | null>(null)
+  // Leave and Delete; switching group has its own dialog, which stays open while it runs.
+  const [confirm, confirmDialog] = useConfirm()
   const [onlyMine, setOnlyMine] = useState(false)
   const [notice, setNotice] = useState<Notice | null>(null)
   // Ids (strings) of the unfolded groups; all are folded at first.
@@ -90,8 +92,13 @@ export default function CourseGroupsPage() {
     })
   }
 
-  function leaveGroup(group: CourseGroup) {
-    if (!window.confirm(`Leave ${groupName(group)}? You can join a group again afterwards.`)) return
+  async function leaveGroup(group: CourseGroup) {
+    const confirmed = await confirm({
+      title: `Leave ${groupName(group)}?`,
+      message: 'You will no longer be in a group in this course. You can join a group again afterwards.',
+      confirmLabel: `Leave ${groupName(group)}`,
+    })
+    if (!confirmed) return
     setNotice(null)
     leave.mutate({ groupId: group.id, userId: user.userId }, {
       onSuccess: () => setNotice({ kind: 'success', text: `You left ${groupName(group)}.` }),
@@ -99,10 +106,15 @@ export default function CourseGroupsPage() {
     })
   }
 
-  function deleteGroup(group: CourseGroup) {
+  async function deleteGroup(group: CourseGroup) {
     const count = group.memberIds.length
-    const members = count === 0 ? '' : ` Its ${count} ${count === 1 ? 'member' : 'members'} will be without a group.`
-    if (!window.confirm(`Delete ${groupName(group)}?${members} This cannot be undone.`)) return
+    const members = count === 0 ? '' : `Its ${count} ${count === 1 ? 'member' : 'members'} will be without a group. `
+    const confirmed = await confirm({
+      title: `Delete ${groupName(group)}?`,
+      message: `${members}This cannot be undone.`,
+      confirmLabel: 'Delete group',
+    })
+    if (!confirmed) return
     setNotice(null)
     remove.mutate(group.id, {
       onSuccess: () => setNotice({ kind: 'success', text: `${groupName(group)} was deleted.` }),
@@ -240,6 +252,7 @@ export default function CourseGroupsPage() {
           )
         }}
       </QueryState>
+      {confirmDialog}
     </>
   )
 }

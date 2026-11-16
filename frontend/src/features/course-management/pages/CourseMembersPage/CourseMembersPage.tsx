@@ -2,6 +2,7 @@ import { useCurrentUser } from '../../../../shared/auth/useAuth'
 import { useCourseEnrollments, useRemoveCourseEnrollment, useUpdateCourseRole } from '../../../courses/hooks'
 import type { CourseEnrollment, CourseRole } from '../../../courses/types'
 import QueryState from '../../../../shared/ui/QueryState'
+import { useConfirm } from '../../../../shared/ui/ConfirmDialog'
 import { useManageCourse } from '../../manageCourseContext'
 import { ROLE_LABEL } from '../../roleLabels'
 import AddMemberForm from './AddMemberForm'
@@ -21,13 +22,19 @@ export default function CourseMembersPage() {
   const enrollments = useCourseEnrollments(course.id)
   const updateRole = useUpdateCourseRole()
   const remove = useRemoveCourseEnrollment()
+  const [confirm, confirmDialog] = useConfirm()
 
   const members = sortMembers(enrollments.data ?? [])
   const teacherCount = members.filter(member => member.role === 'TEACHER').length
 
-  function removeMember(member: CourseEnrollment) {
+  async function removeMember(member: CourseEnrollment) {
     const name = `${member.firstName} ${member.lastName}`
-    if (!window.confirm(`Remove ${name} from ${course.title}?`)) return
+    const confirmed = await confirm({
+      title: `Remove ${name}?`,
+      message: `${name} will no longer be a member of ${course.title}.`,
+      confirmLabel: 'Remove',
+    })
+    if (!confirmed) return
     remove.mutate({ courseId: course.id, userId: member.userId })
   }
 
@@ -89,6 +96,7 @@ export default function CourseMembersPage() {
           </ul>
         )}
       </QueryState>
+      {confirmDialog}
     </>
   )
 }
