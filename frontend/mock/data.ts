@@ -176,10 +176,13 @@ export const submissions: {
   },
 ]
 
-/** Groups in a course, like the backend's GroupDTO; `name` is proposed (see src/features/groups). */
+/**
+ * Groups in a course, like the backend's GroupDTO; `name` is proposed (see src/features/groups).
+ * A student is in at most one group per course.
+ */
 export const groups: { id: number, courseId: number, groupNumber: number, name?: string, memberIds: number[] }[] = [
   { id: 1, courseId: 1, groupNumber: 7, name: 'Rabbit Runners', memberIds: [1, 5] },
-  { id: 2, courseId: 1, groupNumber: 2, memberIds: [5] },
+  { id: 2, courseId: 1, groupNumber: 2, memberIds: [] },
   { id: 3, courseId: 1, groupNumber: 3, memberIds: [] },
   { id: 4, courseId: 2, groupNumber: 1, memberIds: [1, 5] },
 ]

@@ -516,6 +516,71 @@ export const handlers: MockHandler[] = [
     },
   },
   {
+    // Teachers: { groupNumber } → GroupDTO (201). 400 below 1, 409 when the number is taken.
+    method: 'POST',
+    path: '/api/courses/:courseId/groups',
+    handle: ({ user, params, body }) => {
+      if (!isTeacher(user, params.courseId)) return forbidden()
+      const groupNumber = Number((body as { groupNumber?: number } | undefined)?.groupNumber)
+      if (!Number.isInteger(groupNumber) || groupNumber < 1) return badRequest('Group number must be a positive integer')
+      if (groups.some(g => String(g.courseId) === params.courseId && g.groupNumber === groupNumber)) {
+        return conflict('Group number already exists in this course')
+      }
+      const group = { id: nextId(groups), courseId: Number(params.courseId), groupNumber, memberIds: [] as number[] }
+      groups.push(group)
+      return created({ id: group.id, groupNumber, memberIds: [], name: null, members: [] })
+    },
+  },
+  {
+    // Teachers. 409 when the group has submissions (retained history).
+    method: 'DELETE',
+    path: '/api/courses/:courseId/groups/:groupId',
+    handle: ({ user, params }) => {
+      if (!isTeacher(user, params.courseId)) return forbidden()
+      const index = groups.findIndex(g => String(g.id) === params.groupId && String(g.courseId) === params.courseId)
+      if (index === -1) return notFound()
+      if (submissions.some(s => String(s.groupId) === params.groupId)) return conflict('Group has retained history')
+      groups.splice(index, 1)
+      return noContent()
+    },
+  },
+  {
+    // Body: the bare user id → GroupDTO. Proposed: a student may add themselves (join);
+    // the backend lets only teachers do this today. Only active students; one group per course.
+    method: 'POST',
+    path: '/api/courses/:courseId/groups/:groupId/members',
+    handle: ({ user, params, body }) => {
+      const userId = Number(body)
+      if (!isTeacher(user, params.courseId) && userId !== user.userId) return forbidden()
+      const group = groups.find(g => String(g.id) === params.groupId && String(g.courseId) === params.courseId)
+      if (!group) return notFound()
+      if (!enrollments.some(e => e.userId === userId && String(e.courseId) === params.courseId && e.role === 'STUDENT')) {
+        return forbidden()
+      }
+      if (group.memberIds.includes(userId)) return conflict('User is already a member of this group')
+      if (groups.some(g => String(g.courseId) === params.courseId && g.memberIds.includes(userId))) {
+        return conflict('User already belongs to another group in this course')
+      }
+      group.memberIds.push(userId)
+      return ok({ id: group.id, groupNumber: group.groupNumber, memberIds: group.memberIds,
+        name: group.name ?? null, members: groupMembers(group) })
+    },
+  },
+  {
+    // Proposed: a student may remove themselves (leave); today only teachers may.
+    method: 'DELETE',
+    path: '/api/courses/:courseId/groups/:groupId/members/:userId',
+    handle: ({ user, params }) => {
+      const userId = Number(params.userId)
+      if (!isTeacher(user, params.courseId) && userId !== user.userId) return forbidden()
+      const group = groups.find(g => String(g.id) === params.groupId && String(g.courseId) === params.courseId)
+      if (!group) return notFound()
+      if (!group.memberIds.includes(userId)) return conflict('User is not a member of this group')
+      group.memberIds = group.memberIds.filter(id => id !== userId)
+      return noContent()
+    },
+  },
+  {
     method: 'POST',
     path: '/api/courses/:courseId/enrollments',
     handle: ({ user, params, body }) => {

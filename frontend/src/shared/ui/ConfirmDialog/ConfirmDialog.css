@@ -1,0 +1,41 @@
+/* The <dialog> fills nothing itself; the box inside has the padding, so a click on
+   the dialog element is a click on the backdrop. */
+.confirm-dialog {
+  width: min(32rem, calc(100vw - 2rem));
+  padding: 0;
+  border: var(--border-width-sm) solid var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-text);
+  background: var(--color-background);
+}
+
+.confirm-dialog::backdrop {
+  background: rgb(0 0 0 / 0.45);
+}
+
+.confirm-dialog-box {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  padding: var(--space-7);
+}
+
+.confirm-dialog-title {
+  margin: 0;
+  font-size: var(--font-size-lg);
+}
+
+.confirm-dialog-body p {
+  margin: 0 0 var(--space-3);
+}
+
+.confirm-dialog-body p:last-child {
+  margin-bottom: 0;
+}
+
+.confirm-dialog-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-3);
+}
