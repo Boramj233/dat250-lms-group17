@@ -76,6 +76,10 @@ public class AssignmentService {
 
         assignment.setMandatoryForExam(mandatoryForExam);
 
+        if (contentRepository.existsByModule_IdAndPosition(moduleId, position)) {
+            throw new ContentPositionConflictException("Content position is already occupied in this module");
+        }
+
         return contentRepository.save(assignment);
     }
 

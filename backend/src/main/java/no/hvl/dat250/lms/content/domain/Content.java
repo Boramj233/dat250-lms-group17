@@ -6,7 +6,9 @@ import no.hvl.dat250.lms.module.domain.Module;
 
 
 @Entity
-@Table (name = "contents")
+@Table(name = "contents", uniqueConstraints = @UniqueConstraint(
+    name = "uq_content_module_position", columnNames = {"module_id", "content_position"}))
+@org.hibernate.annotations.Check(name = "ck_content_position_nonnegative", constraints = "content_position >= 0")
 @Inheritance(strategy = InheritanceType.JOINED)
 public abstract class Content {
 
@@ -44,7 +46,7 @@ public abstract class Content {
     protected Content(Module module, String title, int position){
         this.module = module;
         this.title = title;
-        this.position = position;
+        changePosition(position);
     }
 
     public Long getId(){
@@ -53,6 +55,13 @@ public abstract class Content {
 
     public String getTitle() {
         return title;
+    }
+
+    public void changePosition(int position) {
+        if (position < 0) {
+            throw new IllegalArgumentException("Content position must be non-negative");
+        }
+        this.position = position;
     }
 
     public int getPosition() {

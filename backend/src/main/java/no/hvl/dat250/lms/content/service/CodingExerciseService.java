@@ -79,6 +79,10 @@ public class CodingExerciseService {
             allowLateSubmission
         );
 
+        if (contentRepository.existsByModule_IdAndPosition(moduleId, position)) {
+            throw new ContentPositionConflictException("Content position is already occupied in this module");
+        }
+
         return contentRepository.save(exercise);
     }
 

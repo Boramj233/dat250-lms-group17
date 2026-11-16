@@ -533,3 +533,46 @@ separate, so optional Content is not automatically completed.
 Coding Completion reuses GradeCompletionService and the existing Grade query; no new
 table, grading model or migration is required. This phase does not implement Module
 Dependency, Frontend, ordering, automatic execution or GradingMode.
+
+## Content Ordering
+
+An active TEACHER in the course can replace the order of all Content in one Module:
+
+```http
+PUT /api/courses/{courseId}/modules/{moduleId}/contents/order
+Authorization: Bearer <access-token>
+Content-Type: application/json
+
+{"contentIds":[25,11,18]}
+```
+
+The list must contain every Content ID in that Module exactly once, across all four
+Content types. Its order becomes positions 0, 1, 2, ... . Success returns 204; use the
+existing Module Content GET to read the result. Repeating the same order is idempotent.
+An empty Module accepts an empty list. Missing/null/nonpositive/duplicate IDs, missing
+items, unknown IDs and items from another Module return 400 without changing order.
+Missing authentication returns 401; students, inactive teachers and other-course
+teachers receive 403. A teacher authorized for the Course receives 404 for a missing
+Module or one belonging to another Course.
+
+Creation APIs keep their existing position parameter. Nonnegative unused positions
+(including gaps) are accepted; an occupied position returns 409 for every Content type.
+The database enforces UNIQUE(module_id, content_position) and content_position >= 0.
+The availability check supplies a clear conflict before save; the unique constraint
+also protects writes that bypass it or conflict after the check.
+
+Reordering uses one transaction and two flushes: first move items to unused temporary
+nonnegative positions outside the current and final positions, then write the final
+0..n-1 positions. This permits swaps without violating immediate unique constraints.
+No new locks, retries or ordering version model are introduced; concurrent teacher
+edits are not given a stale-order detection guarantee. Content IDs, Module membership,
+Required settings, quiz questions, completion records, submissions and Grades are retained.
+The endpoint does not implement cross-Module moves, editing or visibility.
+
+For an existing H2 schema, back up and stop the application before manually applying
+`src/main/resources/db/manual/h2-content-ordering.sql`. The script normalizes each Module
+by old position then Content ID, resolving duplicate/negative/gapped positions, and adds
+the named constraints. Only position values change. It uses a temporary table and briefly
+drops the named unique constraint when rerun; H2 DDL is not atomic, so run it with the
+application stopped. It is not run automatically. Migration/constraint/restart tests use
+only disposable H2 databases; no actual development database is accessed or reset.
