@@ -30,6 +30,13 @@
   font-weight: var(--font-weight-bold);
 }
 
+/* The "*" after a required field's label. */
+.form-required {
+  margin-left: var(--space-2);
+  color: var(--color-text);
+  font-weight: var(--font-weight-bold);
+}
+
 .form-hint {
   margin: 0;
   font-family: var(--font-ui);

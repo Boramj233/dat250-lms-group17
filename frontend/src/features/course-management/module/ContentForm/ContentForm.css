@@ -36,3 +36,16 @@
   padding: 0;
   border: none;
 }
+
+/* Starter repository and starter code: one required group (at least one of them). */
+.starter-fields {
+  gap: var(--space-5);
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+
+.starter-fields > legend {
+  margin-bottom: var(--space-2);
+  padding: 0;
+}

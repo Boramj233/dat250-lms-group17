@@ -1,4 +1,5 @@
 import type { NewQuizQuestion } from '../../../content/types'
+import RequiredMark from '../../../../shared/ui/RequiredMark'
 import { emptyQuestion } from './quizQuestions'
 
 type QuizQuestionsEditorProps = {
@@ -18,8 +19,8 @@ export default function QuizQuestionsEditor({ questions, onChange }: QuizQuestio
         <fieldset key={index} className="quiz-question-editor">
           <legend className="form-label">Question {index + 1}</legend>
           <div className="form-field">
-            <label htmlFor={`q-${index}-text`}>Question</label>
-            <input id={`q-${index}-text`} value={question.questionText}
+            <label htmlFor={`q-${index}-text`}>Question<RequiredMark /></label>
+            <input id={`q-${index}-text`} value={question.questionText} aria-required="true"
               onChange={event => update(index, { questionText: event.target.value })} />
           </div>
           <div className="form-field">
@@ -27,14 +28,15 @@ export default function QuizQuestionsEditor({ questions, onChange }: QuizQuestio
             <input id={`q-${index}-hint`} value={question.hint ?? ''}
               onChange={event => update(index, { hint: event.target.value })} />
           </div>
-          <p className="form-hint">Answers: tick the correct ones.</p>
+          <p className="form-label">Answers<RequiredMark /></p>
+          <p className="form-hint">Every answer needs a text; tick the correct ones (at least one).</p>
           {question.options.map((option, optionIndex) => (
             <div key={optionIndex} className="quiz-option-editor">
               <input type="checkbox" aria-label={`Answer ${optionIndex + 1} is correct`} checked={option.correct}
                 onChange={event => update(index, {
                   options: question.options.map((o, i) => (i === optionIndex ? { ...o, correct: event.target.checked } : o)),
                 })} />
-              <input aria-label={`Answer ${optionIndex + 1}`} value={option.optionText}
+              <input aria-label={`Answer ${optionIndex + 1}`} aria-required="true" value={option.optionText}
                 placeholder={`Answer ${optionIndex + 1}`}
                 onChange={event => update(index, {
                   options: question.options.map((o, i) => (i === optionIndex ? { ...o, optionText: event.target.value } : o)),

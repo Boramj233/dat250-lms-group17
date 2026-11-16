@@ -6,6 +6,7 @@ import { checkContentVisibleFrom } from '../../../content/visibility'
 import type { CourseModule } from '../../../modules/types'
 import { useLeaveGuard } from '../../../../shared/ui/SaveBar'
 import { combineExtensions, FILE_TYPE_PRESETS, formatExtensions, splitExtensions } from '../../fileTypes'
+import RequiredMark from '../../../../shared/ui/RequiredMark'
 import VisibleFromField from '../VisibleFromField'
 import { emptyQuestion, firstInvalidQuestion, questionsFromContent } from './quizQuestions'
 import QuizQuestionsEditor from './QuizQuestionsEditor'
@@ -109,8 +110,10 @@ export default function ContentForm(
 
   return (
     <form className="form" onSubmit={submit}>
+      <p className="form-hint">Fields marked <span className="form-required">*</span> are required.</p>
+
       <div className="form-field">
-        <label htmlFor="content-title">Title</label>
+        <label htmlFor="content-title">Title<RequiredMark /></label>
         <input id="content-title" required maxLength={255} value={title}
           onChange={event => changed(setTitle)(event.target.value)} />
       </div>
@@ -122,6 +125,7 @@ export default function ContentForm(
         <div className="form-field">
           <label htmlFor="content-body">
             {type === 'STATIC_PAGE' ? 'Text' : type === 'CODING_EXERCISE' ? 'Description' : 'Instructions'}
+            <RequiredMark />
           </label>
           <textarea id="content-body" required maxLength={10000} value={body}
             onChange={event => changed(setBody)(event.target.value)} />
@@ -129,7 +133,10 @@ export default function ContentForm(
       )}
 
       {type === 'CODING_EXERCISE' && (
-        <>
+        // Required as a pair: a repository, starter code, or both.
+        <fieldset className="form-field starter-fields" aria-describedby="starter-hint">
+          <legend className="form-label">Where students start<RequiredMark /></legend>
+          <p id="starter-hint" className="form-hint">At least one: a starter repository, starter code, or both.</p>
           <div className="form-field">
             <label htmlFor="content-starter">Starter repository URL</label>
             <input id="content-starter" type="url" maxLength={2048} value={starterUrl}
@@ -139,9 +146,8 @@ export default function ContentForm(
             <label htmlFor="content-starter-code">Starter code</label>
             <textarea id="content-starter-code" className="code-input" spellCheck={false} value={starterCode}
               onChange={event => changed(setStarterCode)(event.target.value)} />
-            <p className="form-hint">A repository, starter code, or both.</p>
           </div>
-        </>
+        </fieldset>
       )}
 
       {(type === 'ASSIGNMENT' || type === 'CODING_EXERCISE') && (
@@ -200,7 +206,7 @@ export default function ContentForm(
       {type === 'QUIZ' && (
         <>
           <div className="form-field">
-            <label htmlFor="quiz-attempts">Attempts allowed</label>
+            <label htmlFor="quiz-attempts">Attempts allowed<RequiredMark /></label>
             <input id="quiz-attempts" type="number" required min={1} value={maxAttempts}
               onChange={event => changed(setMaxAttempts)(Number(event.target.value))} />
           </div>
