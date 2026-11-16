@@ -57,8 +57,12 @@ Success returns 204. Set `false` to clear the requirement. Missing/null values r
 400; missing authentication returns 401; students, inactive teachers and teachers
 of other courses receive 403. Unknown Assignment IDs and other Content types return
 404. The caller's identity comes from the verified principal, never from the request
-body. Assignment creation also requires an active course teacher; its request body
-is unchanged, and new Assignments start with `mandatoryForExam=false`.
+body. Assignment creation also requires an active course teacher and accepts an
+optional `mandatoryForExam` field in its POST body. `true` creates a mandatory
+Assignment; `false`, null or an omitted field creates a nonmandatory Assignment.
+The 201 response includes the persisted value. PATCH still requires an explicit
+nonnull true/false value; its behavior is unchanged. This API addition requires
+no new database migration and does not affect Content Completion or exam eligibility.
 
 For an existing H2 schema, back up the database and stop the application before
 manually applying `src/main/resources/db/manual/h2-mandatory-assignments.sql`.

@@ -48,6 +48,7 @@ public class AssignmentController {
                 request.instructions(),
                 request.deadline(),
                 request.allowLateSubmission(),
+                Boolean.TRUE.equals(request.mandatoryForExam()),
                 currentUser.userId()
             );
 

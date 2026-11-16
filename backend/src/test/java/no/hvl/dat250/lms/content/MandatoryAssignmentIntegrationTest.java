@@ -19,6 +19,8 @@ import no.hvl.dat250.lms.submission.domain.Submission;
 import no.hvl.dat250.lms.submission.domain.SubmissionType;
 import no.hvl.dat250.lms.user.domain.User;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
@@ -83,6 +85,34 @@ class MandatoryAssignmentIntegrationTest {
         return """
             {"title":"New report","position":1,"instructions":"Write a report","allowLateSubmission":false}
             """;
+    }
+
+    private String createBodyWithMandatory(String value) {
+        String body = createBody().strip();
+        return body.substring(0, body.length() - 1) + ",\"mandatoryForExam\":" + value + "}";
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"true", "false", "null", "omitted"})
+    void creationPersistsOptionalMandatoryFlag(String value) throws Exception {
+        Fixture fixture = fixture();
+        boolean expected = "true".equals(value);
+        String body = "omitted".equals(value) ? createBody() : createBodyWithMandatory(value);
+        mvc.perform(post(createPath(fixture)).header("Authorization", TestTokens.bearer(fixture.teacher()))
+                .contentType(MediaType.APPLICATION_JSON).content(body))
+            .andExpect(status().isCreated()).andExpect(jsonPath("$.mandatoryForExam").value(expected));
+        entities.flush();
+        entities.clear();
+        Assignment stored = entities.createQuery(
+                "select a from Assignment a where a.module.id = :moduleId and a.id <> :existingId", Assignment.class)
+            .setParameter("moduleId", fixture.module().getId())
+            .setParameter("existingId", fixture.assignment().getId())
+            .getSingleResult();
+        assertEquals(expected, stored.isMandatoryForExam());
+        assertFalse(stored.isRequiredForModuleCompletion());
+        mvc.perform(get("/api/assignments/{id}", stored.getId())
+                .header("Authorization", TestTokens.bearer(fixture.student())))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.mandatoryForExam").value(expected));
     }
 
     @Test
@@ -151,7 +181,7 @@ class MandatoryAssignmentIntegrationTest {
                     .contentType(MediaType.APPLICATION_JSON).content("{\"mandatoryForExam\":true}"))
                 .andExpect(status().isForbidden());
             mvc.perform(post(createPath(fixture)).header("Authorization", TestTokens.bearer(denied))
-                    .contentType(MediaType.APPLICATION_JSON).content(createBody()))
+                    .contentType(MediaType.APPLICATION_JSON).content(createBodyWithMandatory("true")))
                 .andExpect(status().isForbidden());
         }
         entities.clear();
