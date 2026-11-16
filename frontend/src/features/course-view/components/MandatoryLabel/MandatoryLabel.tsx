@@ -1,4 +1,4 @@
-import type { Content } from '../../../content/types'
+import type { Content } from '@domain/content/types'
 
 /**
  * "Mandatory" (bold) or "Optional" for an assignment, for table cells and details.

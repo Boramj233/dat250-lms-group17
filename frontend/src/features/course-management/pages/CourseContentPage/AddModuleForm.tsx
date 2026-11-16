@@ -1,8 +1,8 @@
 import { useState, type FormEvent } from 'react'
-import { useCreateModule } from '../../../modules/hooks'
-import type { CourseId } from '../../../../shared/types'
-import RequiredMark from '../../../../shared/ui/RequiredMark'
-import '../../../../shared/styles/forms.css'
+import { useCreateModule } from '@domain/modules/hooks'
+import type { CourseId } from '@shared/types'
+import RequiredMark from '@shared/ui/RequiredMark'
+import '@shared/styles/forms.css'
 
 type AddModuleFormProps = {
   courseId: CourseId

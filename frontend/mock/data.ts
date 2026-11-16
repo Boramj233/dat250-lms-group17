@@ -1,11 +1,11 @@
 // Test data for `npm run dev:mock`. Edit freely: the mock backend reloads this file on
 // the next request, so you only need to refresh the browser.
 //
-// The types come from src/features, so TypeScript tells you when the data no longer
+// The types come from src/domain, so TypeScript tells you when the data no longer
 // matches what the frontend expects from the backend.
-import type { Content } from '../src/features/content/types'
-import type { Course, CourseRole } from '../src/features/courses/types'
-import type { CourseModule } from '../src/features/modules/types'
+import type { Content } from '../src/domain/content/types'
+import type { Course, CourseRole } from '../src/domain/courses/types'
+import type { CourseModule } from '../src/domain/modules/types'
 import type { MockUser } from './types'
 
 /** Delay on every API answer, so loading states are visible. 0 turns it off. */
@@ -184,7 +184,7 @@ export const submissions: {
 ]
 
 /**
- * Groups in a course, like the backend's GroupDTO; `name` is proposed (see src/features/groups).
+ * Groups in a course, like the backend's GroupDTO; `name` is proposed (see src/domain/groups).
  * A student is in at most one group per course.
  */
 export const groups: { id: number, courseId: number, groupNumber: number, name?: string, memberIds: number[] }[] = [

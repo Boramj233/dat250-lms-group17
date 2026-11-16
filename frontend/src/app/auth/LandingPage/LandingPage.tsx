@@ -1,4 +1,4 @@
-import { useLogin } from '../../../shared/auth/useAuth'
+import { useLogin } from '@shared/auth/useAuth'
 import LoginButton from '../LoginButton'
 import './LandingPage.css'
 

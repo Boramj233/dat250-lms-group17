@@ -1,6 +1,6 @@
 import { createContext, useContext } from 'react'
-import type { ContentSummary } from '../../content/types'
-import type { CourseModule } from '../../modules/types'
+import type { ContentSummary } from '@domain/content/types'
+import type { CourseModule } from '@domain/modules/types'
 
 /** What ManageModuleLayout has loaded, for the pages of one module. */
 export type ManageModuleContextValue = {

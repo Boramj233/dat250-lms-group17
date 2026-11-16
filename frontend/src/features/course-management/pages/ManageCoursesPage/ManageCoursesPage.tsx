@@ -1,9 +1,9 @@
-import { paths } from '../../../../shared/paths'
-import { useCurrentUser } from '../../../../shared/auth/useAuth'
-import { useMyCourses } from '../../../courses/hooks'
-import QueryState from '../../../../shared/ui/QueryState'
-import { byNewest, formatTerm } from '../../../courses/courseFormat'
-import { TrailLink, TrailPage } from '../../../../shared/navigation/Trail'
+import { paths } from '@shared/paths'
+import { useCurrentUser } from '@shared/auth/useAuth'
+import { useMyCourses } from '@domain/courses/hooks'
+import QueryState from '@shared/ui/QueryState'
+import { byNewest, formatTerm } from '@domain/courses/courseFormat'
+import { TrailLink, TrailPage } from '@shared/navigation/Trail'
 import './ManageCoursesPage.css'
 
 /**

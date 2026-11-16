@@ -1,6 +1,6 @@
 import { Outlet, useParams } from 'react-router'
-import { useModuleContent } from '../../../../content/hooks'
-import QueryState from '../../../../../shared/ui/QueryState'
+import { useModuleContent } from '@domain/content/hooks'
+import QueryState from '@shared/ui/QueryState'
 import { useManageCourse } from '../../../manageCourseContext'
 import { ManageModuleContext } from '../../manageModuleContext'
 

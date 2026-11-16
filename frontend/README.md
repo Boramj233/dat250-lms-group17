@@ -1,85 +1,106 @@
-﻿# Frontend architecture
+# Frontend architecture
 
-React and TypeScript, organized by feature: everything that belongs to one domain or
-one part of the app (its API calls, hooks, types, components and pages) lives in the
-same folder under `src/features/`.
+React and TypeScript. `src/` has four layers, and each folder answers one question:
+
+- **`domain/`**: what is an X, and how do we fetch, change and interpret it? One folder per
+  data domain (its API calls, React Query hooks, types and rules).
+- **`features/`**: what does the user see? One folder per part of the app they navigate
+  in (its pages and the parts only those pages use).
+- **`shared/`**: what knows nothing about courses, modules or content?
+- **`app/`**: what ties it together (entry point, routes, app shell)?
 
 ```text
 src/
 ├── app/                  entry point, routes, query client
 │   ├── auth/             AuthGate, RequireAccess (route guards), LandingPage, LoginButton
-│   └── layout/           the app shell: AppLayout, Topbar, Sidebar
+│   └── layout/           the app shell: AppLayout, Topbar, Sidebar, CoursesPanel
 ├── shared/               knows nothing about courses, modules or content
 │   ├── api/              apiClient (adds the Bearer token to every call)
 │   ├── auth/             login session and current user: auth, access, useAuth
-│   ├── lib/              dateFormat, safeUrl, useDebounced
+│   ├── lib/              dateFormat, safeUrl, useDebounced, moveItem
 │   ├── navigation/       breadcrumbs (Trail)
 │   ├── styles/           tokens, global styles, forms.css
 │   ├── ui/               QueryState, PageHeader, Pager, Tabs, ActionMenu (the "⋯" menu),
-│   │                     NotFoundPage
+│   │                     ConfirmDialog, SaveBar, RequiredMark, NotFoundPage
 │   ├── paths.ts          URL patterns and link builders
 │   └── types.ts          id types (CourseId, ModuleId, ...)
+├── domain/
+│   ├── <domain>/         one folder per data domain, with as much of this as it needs:
+│   │   ├── api.ts        API calls (no JSX)
+│   │   ├── hooks.ts      React Query hooks; mutations invalidate the cache here
+│   │   ├── queryKeys.ts
+│   │   ├── types.ts
+│   │   ├── *.ts          rules and formatting without JSX (passRule, visibility, ...)
+│   │   ├── README.md     API contract
+│   │   └── components/   small display components for the domain, props only
+│   │
+│   ├── courses/          + courseFormat, CourseCard, CourseGrid, CourseForm
+│   ├── deadlines/        + DeadlineList
+│   ├── modules/          + prerequisites
+│   ├── content/          + contentTypes, visibility
+│   ├── quizzes/          + passRule
+│   ├── assignments/      + scoreFormat
+│   └── grades/, groups/, users/
 └── features/
-    ├── <feature>/        one folder per feature, with as much of this as it needs:
-    │   ├── api.ts        API calls (no JSX)
-    │   ├── hooks.ts      React Query hooks; mutations invalidate the cache here
-    │   ├── queryKeys.ts
-    │   ├── types.ts
-    │   ├── README.md     API contract
-    │   ├── components/   reusable components for this domain, props only
-    │   └── pages/        routed pages and layouts
-    │
     ├── dashboard/        DashboardPage (student and course manager variants)
-    ├── courses/          data + courseFormat + CourseCard, CourseGrid, CourseForm,
-    │                     CoursesPage (all my courses by term)
+    ├── my-courses/       CoursesPage (all my courses by term)
     ├── profile/          ProfilePage (the logged-in user)
     ├── course-view/      one course as its members see it: CourseLayout (collapsible course
     │                     menu, Manage for teachers) and Home, Modules, Assignments, People,
-    │                     Groups, Quizzes, Grades, Files, Code Exercises
+    │                     Groups, Quizzes, Grades, Submissions (teachers), Files, Code Exercises
     │   └── module/       ModuleLayout (module menu: Files, Pages, Assignments, Quizzes,
     │                     Code Exercises), the module overview and one content item
-    ├── deadlines/        data + DeadlineList
-    ├── modules/          data + prerequisites
-    ├── content/, quizzes/, assignments/, grades/, groups/, users/   data only so far
     └── course-management/  course managers: Manage courses, New course,
         │                 ManageCourseLayout (breadcrumbs) and CourseTabsLayout
         │                 (Content, Members, Details)
         └── module/       ManageModuleLayout, the module page ("+ Assignment" …, content
                           with a "⋯" menu), NewContentPage and ContentDetailsPage.
-                          Only setup and configuration; grading belongs elsewhere.
 ```
 
-The module and content pages for students have been removed for now. The
-data for them (`features/courses`, `features/modules`, `features/content`, ...) is
-still there. When they are rebuilt, give them their own feature (for example
-`features/course-view/`, with `module/` inside), with a layout per level that loads
-what its pages share and provides it through a React context.
+Each layout level loads what its pages share and provides it through a React context
+(`course-view/courseContext.ts`, `course-management/manageCourseContext.ts`, ...).
+
+### Imports and path aliases
+
+Every layer has an alias: `@app/…`, `@shared/…`, `@domain/…` and `@features/…` (defined
+in `tsconfig.app.json` under `paths` and in `vite.config.ts` under `resolve.alias`; keep
+the two in sync).
+
+- **Relative imports only inside one slice** (one domain, one feature, or one folder in
+  `shared/`/`app/`): `./types`, `../../manageCourseContext`.
+- **Everything else goes through an alias**, also from one domain to another:
+  `@shared/ui/QueryState`, `@domain/courses/hooks`, `@domain/grades/queryKeys`.
+- `test/*.test.mjs` runs the source with plain Node, which does not know the aliases.
+  Modules the tests load may use aliases for `import type` only (Node strips those);
+  their other imports stay relative, with the `.ts` extension.
+- `mock/` imports `src/` with relative paths (`../src/domain/content/types`).
 
 ### Rules
 
-- **Import downwards only:** `app` → `features` → `shared`. `shared` never imports
-  from `features` or `app`, and `features` never import from `app`.
-- **Features may use each other's data**, meaning `api.ts`, `hooks.ts`,
-  `queryKeys.ts`, `types.ts` and `components/` (for example `dashboard` uses
-  `courses/components/CourseGrid`, and `content/hooks.ts` invalidates `quizzes`
-  keys). Pages and the contexts in a feature are internal:
-  only `app/routes.tsx` imports pages.
+- **Import downwards only:** `app` → `features` → `domain` → `shared`. `shared` never
+  imports from the other layers, `domain` never imports from `features` or `app`, and
+  `features` never import from `app`.
+- **Features never import each other.** What two features need moves down to the domain
+  that owns it (for example `domain/courses/components/CourseGrid`, used by `dashboard`
+  and `my-courses`) or to `shared/` if it knows nothing about the domain. Extract it
+  when it is used the third time, not before.
+- **Domains may use each other's types and query keys** (for example `content/hooks.ts`
+  invalidates `quizzes` keys), not each other's components.
+- **Pages and contexts are internal to their feature:** only `app/routes.tsx` imports
+  pages.
 - **Pages orchestrate, components display.** Pages read route params, contexts and
   data hooks, and pass what the components need as props. Components in
-  `features/*/components` and `shared/ui` never call data hooks, contexts or
-  `useParams`. This keeps them reusable.
+  `domain/*/components`, `features/*/components` and `shared/ui` never call data hooks,
+  contexts or `useParams`. This keeps them reusable.
 - **Loading, error and empty states** go through `QueryState`, page titles through
   `PageHeader`.
-- **Cache invalidation belongs in a feature's `hooks.ts`**: a mutation hook refreshes
+- **Cache invalidation belongs in a domain's `hooks.ts`**: a mutation hook refreshes
   everything it changes, so pages never call `queryClient` themselves.
-- **Something used in two features moves down** to the feature that owns the domain
-  (for example `courses/components`) or to `shared/` if it knows nothing about the
-  domain. Extract it when it is used the third time, not before.
 - **One folder per component**, with the component, its CSS and an `index.ts`
   that re-exports it. Import the folder, not the file inside it:
 
   ```text
-  features/deadlines/components/DeadlineList/
+  domain/deadlines/components/DeadlineList/
   ├── DeadlineList.tsx
   ├── DeadlineList.css
   └── index.ts          export { default } from './DeadlineList'
@@ -87,12 +108,12 @@ what its pages share and provides it through a React context.
 
   ```tsx
   // in features/dashboard/pages/DashboardPage/StudentDashboard.tsx
-  import DeadlineList from '../../../deadlines/components/DeadlineList'
+  import DeadlineList from '@domain/deadlines/components/DeadlineList'
   ```
 
   Hooks, contexts and helpers without JSX (for example `courseFormat.ts`) are plain
-  files at the feature root. Parts that only one page uses live in that page's
-  folder (for example `DashboardPage/StudentDashboard.tsx`).
+  files at the root of their domain or feature. Parts that only one page uses live in
+  that page's folder (for example `DashboardPage/StudentDashboard.tsx`).
 - Use existing style tokens where possible.
 
 Folder placement organizes the source; `src/app/routes.tsx` defines routing.
@@ -114,7 +135,7 @@ Run `npm install` first, then from this directory:
   and teachers get a Manage button in it. Teachers also get Submissions
   (`/submissions`: every assignment and code exercise with answered, submitted and
   graded counts; `/submissions/:contentId` its submissions; `/submissions/:contentId/:submissionId`
-  one submission to grade, see src/features/assignments/README.md). `/courses/:courseId/modules/:moduleId` shows
+  one submission to grade, see src/domain/assignments/README.md). `/courses/:courseId/modules/:moduleId` shows
   one module with its own menu (`/files`, `/pages`, `/assignments`, `/quizzes`,
   `/code-exercises`) and `/<section>/:contentId` (e.g. `/assignments/101`) one item in it.
   The course's lists open their items under themselves instead, with the course menu:

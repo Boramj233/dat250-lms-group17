@@ -1,10 +1,10 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router'
-import { paths } from '../../../../shared/paths'
-import { useCreateCourse } from '../../../courses/hooks'
-import CourseForm from '../../../courses/components/CourseForm'
-import { termOf } from '../../../courses/courseFormat'
-import { TrailLink, TrailPage } from '../../../../shared/navigation/Trail'
+import { paths } from '@shared/paths'
+import { useCreateCourse } from '@domain/courses/hooks'
+import CourseForm from '@domain/courses/components/CourseForm'
+import { termOf } from '@domain/courses/courseFormat'
+import { TrailLink, TrailPage } from '@shared/navigation/Trail'
 
 /**
  * Course managers create a course here. The backend must make the creator a teacher

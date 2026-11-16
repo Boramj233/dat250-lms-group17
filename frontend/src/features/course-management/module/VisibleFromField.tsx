@@ -1,6 +1,6 @@
-import { formatDateTime, toDateTimeLocal } from '../../../shared/lib/dateFormat'
-import type { CourseModule } from '../../modules/types'
-import '../../../shared/styles/forms.css'
+import { formatDateTime, toDateTimeLocal } from '@shared/lib/dateFormat'
+import type { CourseModule } from '@domain/modules/types'
+import '@shared/styles/forms.css'
 
 type VisibleFromFieldProps = {
   /** A datetime-local value; empty inherits the module's start date. */

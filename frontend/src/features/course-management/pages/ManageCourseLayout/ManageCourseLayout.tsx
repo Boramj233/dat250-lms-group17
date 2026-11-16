@@ -1,7 +1,7 @@
 import { Outlet, useParams } from 'react-router'
-import { useCourse, useCourseRole } from '../../../courses/hooks'
-import { useCourseModules } from '../../../modules/hooks'
-import { Breadcrumbs } from '../../../../shared/navigation/Trail'
+import { useCourse, useCourseRole } from '@domain/courses/hooks'
+import { useCourseModules } from '@domain/modules/hooks'
+import { Breadcrumbs } from '@shared/navigation/Trail'
 import { ManageCourseContext, useManageCourse } from '../../manageCourseContext'
 import { useManageBreadcrumbs } from '../../useManageBreadcrumbs'
 

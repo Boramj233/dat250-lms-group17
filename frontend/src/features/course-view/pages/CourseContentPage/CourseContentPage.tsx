@@ -1,7 +1,7 @@
 import { useParams } from 'react-router'
-import { Breadcrumbs } from '../../../../shared/navigation/Trail'
-import { paths, type CourseSection } from '../../../../shared/paths'
-import { useCourseContent } from '../../../content/hooks'
+import { Breadcrumbs } from '@shared/navigation/Trail'
+import { paths, type CourseSection } from '@shared/paths'
+import { useCourseContent } from '@domain/content/hooks'
 import { useCourseView, visibleContent } from '../../courseContext'
 import ContentView from '../ContentView'
 

@@ -1,4 +1,4 @@
-import { passedLabel } from '../../../assignments/scoreFormat'
+import { passedLabel } from '@domain/assignments/scoreFormat'
 import './PassedBadge.css'
 
 type PassedBadgeProps = {

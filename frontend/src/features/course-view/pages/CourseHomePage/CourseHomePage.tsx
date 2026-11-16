@@ -1,5 +1,5 @@
-import PageHeader from '../../../../shared/ui/PageHeader'
-import { formatTerm } from '../../../courses/courseFormat'
+import PageHeader from '@shared/ui/PageHeader'
+import { formatTerm } from '@domain/courses/courseFormat'
 import { useCourseView } from '../../courseContext'
 
 /** The course's start page: title, term and description. */

@@ -1,4 +1,4 @@
-import type { NewQuizQuestion, QuizContentQuestion } from '../../../content/types'
+import type { NewQuizQuestion, QuizContentQuestion } from '@domain/content/types'
 
 /** A new question with two empty answers, the first one marked correct. */
 export const emptyQuestion = (): NewQuizQuestion => ({

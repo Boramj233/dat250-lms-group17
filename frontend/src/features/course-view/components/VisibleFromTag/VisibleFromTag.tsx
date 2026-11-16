@@ -1,8 +1,8 @@
 import { useState } from 'react'
-import { formatDateTime } from '../../../../shared/lib/dateFormat'
-import { effectiveVisibleFrom, isNotYetVisible } from '../../../content/visibility'
-import type { ContentSummary } from '../../../content/types'
-import type { CourseModule } from '../../../modules/types'
+import { formatDateTime } from '@shared/lib/dateFormat'
+import { effectiveVisibleFrom, isNotYetVisible } from '@domain/content/visibility'
+import type { ContentSummary } from '@domain/content/types'
+import type { CourseModule } from '@domain/modules/types'
 
 type VisibleFromTagProps = {
   item: ContentSummary

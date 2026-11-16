@@ -1,5 +1,5 @@
-import type { NewQuizQuestion } from '../../../content/types'
-import RequiredMark from '../../../../shared/ui/RequiredMark'
+import type { NewQuizQuestion } from '@domain/content/types'
+import RequiredMark from '@shared/ui/RequiredMark'
 import { emptyQuestion } from './quizQuestions'
 
 type QuizQuestionsEditorProps = {

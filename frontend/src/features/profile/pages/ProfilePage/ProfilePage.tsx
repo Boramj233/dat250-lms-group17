@@ -1,6 +1,6 @@
-import { useCurrentUser } from '../../../../shared/auth/useAuth'
-import { TrailPage } from '../../../../shared/navigation/Trail'
-import PageHeader from '../../../../shared/ui/PageHeader'
+import { useCurrentUser } from '@shared/auth/useAuth'
+import { TrailPage } from '@shared/navigation/Trail'
+import PageHeader from '@shared/ui/PageHeader'
 import './ProfilePage.css'
 
 /** The logged-in user's account details, as the backend knows them. */

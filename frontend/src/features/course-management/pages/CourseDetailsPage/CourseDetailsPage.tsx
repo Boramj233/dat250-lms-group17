@@ -1,8 +1,8 @@
 import { useState } from 'react'
-import { useUpdateCourse } from '../../../courses/hooks'
-import CourseForm from '../../../courses/components/CourseForm'
-import type { CreateCourseInput } from '../../../courses/types'
-import { useLeaveGuard } from '../../../../shared/ui/SaveBar'
+import { useUpdateCourse } from '@domain/courses/hooks'
+import CourseForm from '@domain/courses/components/CourseForm'
+import type { CreateCourseInput } from '@domain/courses/types'
+import { useLeaveGuard } from '@shared/ui/SaveBar'
 import { useManageCourse } from '../../manageCourseContext'
 
 /**

@@ -1,11 +1,11 @@
 import { useState } from 'react'
-import { useCurrentUser } from '../../../../shared/auth/useAuth'
-import { useMyCourses } from '../../../courses/hooks'
-import { useUpcomingDeadlines } from '../../../deadlines/hooks'
-import QueryState from '../../../../shared/ui/QueryState'
-import CourseGrid from '../../../courses/components/CourseGrid'
-import { byNewest, formatTerm, termOf } from '../../../courses/courseFormat'
-import DeadlineList from '../../../deadlines/components/DeadlineList'
+import { useCurrentUser } from '@shared/auth/useAuth'
+import { useMyCourses } from '@domain/courses/hooks'
+import { useUpcomingDeadlines } from '@domain/deadlines/hooks'
+import QueryState from '@shared/ui/QueryState'
+import CourseGrid from '@domain/courses/components/CourseGrid'
+import { byNewest, formatTerm, termOf } from '@domain/courses/courseFormat'
+import DeadlineList from '@domain/deadlines/components/DeadlineList'
 
 /** This term's courses, and the upcoming deadlines from all courses in one list. */
 export default function StudentDashboard() {

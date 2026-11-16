@@ -1,5 +1,5 @@
-import type { ContentSection } from '../../shared/paths'
-import type { ContentType } from '../content/types'
+import type { ContentSection } from '@shared/paths'
+import type { ContentType } from '@domain/content/types'
 
 /** One menu item and page per content type, in menu order: /…/assignments. */
 export const CONTENT_SECTIONS: {

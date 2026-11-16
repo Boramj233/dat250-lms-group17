@@ -1,5 +1,5 @@
-import { useHasAccess } from '../../../../shared/auth/useAuth'
-import { TrailPage } from '../../../../shared/navigation/Trail'
+import { useHasAccess } from '@shared/auth/useAuth'
+import { TrailPage } from '@shared/navigation/Trail'
 import CourseManagerDashboard from './CourseManagerDashboard'
 import StudentDashboard from './StudentDashboard'
 import './DashboardPage.css'

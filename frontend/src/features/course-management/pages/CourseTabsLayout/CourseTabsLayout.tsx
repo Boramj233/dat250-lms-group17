@@ -1,8 +1,8 @@
 import { Outlet } from 'react-router'
-import { paths } from '../../../../shared/paths'
-import PageHeader from '../../../../shared/ui/PageHeader'
-import Tabs from '../../../../shared/ui/Tabs'
-import { formatTerm } from '../../../courses/courseFormat'
+import { paths } from '@shared/paths'
+import PageHeader from '@shared/ui/PageHeader'
+import Tabs from '@shared/ui/Tabs'
+import { formatTerm } from '@domain/courses/courseFormat'
 import { useManageCourse } from '../../manageCourseContext'
 
 /** The course title and the tabs Content, Members and Details, with the selected tab below. */

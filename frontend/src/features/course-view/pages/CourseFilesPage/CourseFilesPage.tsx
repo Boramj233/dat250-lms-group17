@@ -1,5 +1,5 @@
 import { useContext } from 'react'
-import PageHeader from '../../../../shared/ui/PageHeader'
+import PageHeader from '@shared/ui/PageHeader'
 import DataTable from '../../components/DataTable'
 import { useCourseView } from '../../courseContext'
 import { ModuleViewContext } from '../../module/moduleContext'

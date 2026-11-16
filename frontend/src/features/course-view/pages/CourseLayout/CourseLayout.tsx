@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import { Outlet, useMatch, useParams } from 'react-router'
-import { TrailPage } from '../../../../shared/navigation/Trail'
-import { useCourse, useCourseRole } from '../../../courses/hooks'
-import { useCourseModules } from '../../../modules/hooks'
+import { TrailPage } from '@shared/navigation/Trail'
+import { useCourse, useCourseRole } from '@domain/courses/hooks'
+import { useCourseModules } from '@domain/modules/hooks'
 import { CourseViewContext } from '../../courseContext'
 
 /**

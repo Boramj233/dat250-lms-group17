@@ -1,8 +1,8 @@
 import { useState } from 'react'
-import { apiDownload } from '../../../../shared/api/apiClient'
-import { formatDateTime } from '../../../../shared/lib/dateFormat'
-import { safeHttpUrl } from '../../../../shared/lib/safeUrl'
-import type { MySubmission } from '../../../assignments/types'
+import { apiDownload } from '@shared/api/apiClient'
+import { formatDateTime } from '@shared/lib/dateFormat'
+import { safeHttpUrl } from '@shared/lib/safeUrl'
+import type { MySubmission } from '@domain/assignments/types'
 
 /** "1.2 MB", "340 kB". */
 function formatSize(bytes: number): string {

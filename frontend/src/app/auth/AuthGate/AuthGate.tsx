@@ -1,4 +1,4 @@
-import { useCurrentUser, useLoginRequired } from '../../../shared/auth/useAuth'
+import { useCurrentUser, useLoginRequired } from '@shared/auth/useAuth'
 import LandingPage from '../LandingPage'
 import AppLayout from '../../layout/AppLayout'
 

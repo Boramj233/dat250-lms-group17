@@ -1,5 +1,5 @@
-import type { GradeReview, ReviewSubmission } from '../assignments/types'
-import type { CourseEnrollment } from '../courses/types'
+import type { GradeReview, ReviewSubmission } from '@domain/assignments/types'
+import type { CourseEnrollment } from '@domain/courses/types'
 
 export type SubmissionStats = {
   /** Students who have handed in (themselves or through their group). */

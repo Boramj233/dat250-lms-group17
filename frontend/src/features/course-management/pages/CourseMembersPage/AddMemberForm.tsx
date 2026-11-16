@@ -1,13 +1,13 @@
 import { useState, type FormEvent } from 'react'
-import { useEnrollInCourse } from '../../../courses/hooks'
-import type { CourseEnrollment, CourseRole } from '../../../courses/types'
-import { useUserSearch } from '../../../users/hooks'
-import type { UserLookup } from '../../../users/types'
-import { useDebounced } from '../../../../shared/lib/useDebounced'
-import type { CourseId } from '../../../../shared/types'
+import { useEnrollInCourse } from '@domain/courses/hooks'
+import type { CourseEnrollment, CourseRole } from '@domain/courses/types'
+import { useUserSearch } from '@domain/users/hooks'
+import type { UserLookup } from '@domain/users/types'
+import { useDebounced } from '@shared/lib/useDebounced'
+import type { CourseId } from '@shared/types'
 import { ROLE_LABEL } from '../../roleLabels'
-import RequiredMark from '../../../../shared/ui/RequiredMark'
-import '../../../../shared/styles/forms.css'
+import RequiredMark from '@shared/ui/RequiredMark'
+import '@shared/styles/forms.css'
 
 type AddMemberFormProps = {
   courseId: CourseId

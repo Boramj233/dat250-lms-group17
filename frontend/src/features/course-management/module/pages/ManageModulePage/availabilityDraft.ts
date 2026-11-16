@@ -1,5 +1,5 @@
-import { toDateTimeLocal } from '../../../../../shared/lib/dateFormat'
-import type { CourseModule } from '../../../../modules/types'
+import { toDateTimeLocal } from '@shared/lib/dateFormat'
+import type { CourseModule } from '@domain/modules/types'
 
 /** The availability fields as edited: datetime-local values and module ids (as strings). */
 export type AvailabilityDraft = {

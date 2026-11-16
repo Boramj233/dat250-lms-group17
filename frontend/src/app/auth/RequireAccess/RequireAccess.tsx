@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { Outlet } from 'react-router'
-import type { Access } from '../../../shared/auth/access'
-import { useHasAccess } from '../../../shared/auth/useAuth'
+import type { Access } from '@shared/auth/access'
+import { useHasAccess } from '@shared/auth/useAuth'
 
 type RequireAccessProps = {
   /** Lowest global access that may see the content; higher levels are included. */

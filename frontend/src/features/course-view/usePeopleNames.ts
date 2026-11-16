@@ -1,7 +1,7 @@
-import type { CourseId, GroupId, UserId } from '../../shared/types'
-import { useCourseEnrollments } from '../courses/hooks'
-import { groupName, useCourseGroups } from '../groups/hooks'
-import type { CourseGroup } from '../groups/types'
+import type { CourseId, GroupId, UserId } from '@shared/types'
+import { useCourseEnrollments } from '@domain/courses/hooks'
+import { groupName, useCourseGroups } from '@domain/groups/hooks'
+import type { CourseGroup } from '@domain/groups/types'
 
 /**
  * Names for the ids the backend sends with submissions (studentUserId, groupId,

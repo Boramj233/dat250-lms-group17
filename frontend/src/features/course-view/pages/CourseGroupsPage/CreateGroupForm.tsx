@@ -1,9 +1,9 @@
 import { useState, type FormEvent } from 'react'
-import { ApiError } from '../../../../shared/api/apiClient'
-import type { CourseId } from '../../../../shared/types'
-import { nextGroupNumber, useCreateGroup } from '../../../groups/hooks'
-import type { CourseGroup } from '../../../groups/types'
-import '../../../../shared/styles/forms.css'
+import { ApiError } from '@shared/api/apiClient'
+import type { CourseId } from '@shared/types'
+import { nextGroupNumber, useCreateGroup } from '@domain/groups/hooks'
+import type { CourseGroup } from '@domain/groups/types'
+import '@shared/styles/forms.css'
 
 type CreateGroupFormProps = {
   courseId: CourseId

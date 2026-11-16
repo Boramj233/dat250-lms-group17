@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Outlet, useLocation } from 'react-router'
-import { paths } from '../../../shared/paths'
+import { paths } from '@shared/paths'
 import Sidebar from '../Sidebar'
 import Topbar from '../Topbar'
 import './AppLayout.css'

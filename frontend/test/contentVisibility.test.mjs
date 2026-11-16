@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { checkContentVisibleFrom, checkModuleStartAgainstContent, effectiveVisibleFrom, isNotYetVisible } from '../src/features/content/visibility.ts'
+import { checkContentVisibleFrom, checkModuleStartAgainstContent, effectiveVisibleFrom, isNotYetVisible } from '../src/domain/content/visibility.ts'
 
 const module = { availableFrom: '2026-12-01T08:00:00Z' }
 
@@ -33,7 +33,7 @@ test("a module's start date cannot move past its content's own dates", () => {
 })
 
 test('content is published once its visible date has passed', async () => {
-  const { isPublished } = await import('../src/features/content/visibility.ts')
+  const { isPublished } = await import('../src/domain/content/visibility.ts')
   const now = Date.parse('2026-12-03T00:00:00Z')
   assert.equal(isPublished({}, module, now), true)
   assert.equal(isPublished({ visibleFrom: '2026-12-05T08:00:00Z' }, module, now), false)

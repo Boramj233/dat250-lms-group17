@@ -1,7 +1,7 @@
-import type { CourseSection } from '../../../../shared/paths'
-import PageHeader from '../../../../shared/ui/PageHeader'
-import { useCourseContent } from '../../../content/hooks'
-import type { ContentType } from '../../../content/types'
+import type { CourseSection } from '@shared/paths'
+import PageHeader from '@shared/ui/PageHeader'
+import { useCourseContent } from '@domain/content/hooks'
+import type { ContentType } from '@domain/content/types'
 import { useCourseView, visibleContent } from '../../courseContext'
 import ContentTypeTable from '../ContentTypeTable'
 

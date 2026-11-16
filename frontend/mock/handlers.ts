@@ -8,11 +8,11 @@
 //
 // The responses copy the backend's DTOs (field names, and which fields each one has),
 // so the frontend sees the same shapes as with the real backend.
-import type { Content, ContentType } from '../src/features/content/types'
-import type { EnrolledCourse } from '../src/features/courses/types'
-import type { UpcomingDeadline } from '../src/features/deadlines/types'
-import { checkContentVisibleFrom, checkModuleStartAgainstContent, isNotYetVisible, isPublished } from '../src/features/content/visibility'
-import { canRequire, checkAvailabilityDates, isAccessible } from '../src/features/modules/prerequisites'
+import type { Content, ContentType } from '../src/domain/content/types'
+import type { EnrolledCourse } from '../src/domain/courses/types'
+import type { UpcomingDeadline } from '../src/domain/deadlines/types'
+import { checkContentVisibleFrom, checkModuleStartAgainstContent, isNotYetVisible, isPublished } from '../src/domain/content/visibility'
+import { canRequire, checkAvailabilityDates, isAccessible } from '../src/domain/modules/prerequisites'
 import { completions, contents, courses, enrollments, groups, modules, quizAttempts, quizQuestions, submissions, users } from './data'
 import { conflict, created, forbidden, noContent, notFound, ok, type MockHandler, type MockMultipart, type MockResult, type MockUser } from './types'
 
@@ -372,7 +372,7 @@ const routes: MockHandler[] = [
     },
   },
   {
-    // Proposed endpoint (src/features/content/README.md): CompletedContent[] for the caller.
+    // Proposed endpoint (src/domain/content/README.md): CompletedContent[] for the caller.
     method: 'GET',
     path: '/api/courses/:courseId/completions/me',
     handle: ({ user, params }) => {
@@ -462,7 +462,7 @@ const routes: MockHandler[] = [
     },
   },
   {
-    // Proposed endpoint (src/features/grades/README.md): the latest submission per
+    // Proposed endpoint (src/domain/grades/README.md): the latest submission per
     // assignment / coding exercise, with its published grade or null.
     method: 'GET',
     path: '/api/users/me/grades',
@@ -493,7 +493,7 @@ const routes: MockHandler[] = [
     },
   },
   {
-    // Proposed endpoint (src/features/modules/README.md). The mock calls a module completed
+    // Proposed endpoint (src/domain/modules/README.md). The mock calls a module completed
     // when the user has completed all its content marked requiredForCompletion; with
     // none marked, all its assignments, coding exercises and quizzes (and it has at
     // least one). The backend decides the real rule.
@@ -820,7 +820,7 @@ const routes: MockHandler[] = [
     },
   },
   {
-    // Proposed (src/features/content/README.md): active, position and requiredForCompletion
+    // Proposed (src/domain/content/README.md): active, position and requiredForCompletion
     // at any time; every other field (title, visibleFrom and the type's own) only until the
     // content is published: 409 after.
     method: 'PATCH',
@@ -898,7 +898,7 @@ const routes: MockHandler[] = [
     },
   },
   {
-    // Proposed (src/features/content/README.md): the caller's attempts at a quiz.
+    // Proposed (src/domain/content/README.md): the caller's attempts at a quiz.
     method: 'GET',
     path: '/api/quizzes/:quizId/attempts/me',
     handle: ({ user, params }) => {

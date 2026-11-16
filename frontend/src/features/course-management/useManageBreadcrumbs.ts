@@ -1,10 +1,10 @@
 import { useMatch } from 'react-router'
-import { paths } from '../../shared/paths'
-import { useModuleContent } from '../content/hooks'
-import type { Course } from '../courses/types'
-import type { CourseModule } from '../modules/types'
-import type { BreadcrumbItem } from '../../shared/navigation/Trail'
-import { contentTypeBySlug } from '../content/contentTypes'
+import { paths } from '@shared/paths'
+import { useModuleContent } from '@domain/content/hooks'
+import type { Course } from '@domain/courses/types'
+import type { CourseModule } from '@domain/modules/types'
+import type { BreadcrumbItem } from '@shared/navigation/Trail'
+import { contentTypeBySlug } from '@domain/content/contentTypes'
 
 /**
  * Breadcrumbs for the management pages, from the URL:

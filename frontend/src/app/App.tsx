@@ -1,4 +1,4 @@
-import { isLoginPopup } from '../shared/auth/auth'
+import { isLoginPopup } from '@shared/auth/auth'
 import AppRoutes from './routes'
 
 function App() {

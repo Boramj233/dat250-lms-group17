@@ -1,5 +1,5 @@
-import PageHeader from '../../../../../shared/ui/PageHeader'
-import type { ContentType } from '../../../../content/types'
+import PageHeader from '@shared/ui/PageHeader'
+import type { ContentType } from '@domain/content/types'
 import { useCourseView } from '../../../courseContext'
 import ContentTypeTable from '../../../pages/ContentTypeTable'
 import { useModuleView } from '../../moduleContext'

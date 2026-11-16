@@ -1,8 +1,8 @@
 import { useState } from 'react'
-import type { ContentId } from '../../../../shared/types'
-import { useConfirm } from '../../../../shared/ui/ConfirmDialog'
-import { useReleaseAllGrades } from '../../../assignments/hooks'
-import '../../../../shared/styles/forms.css'
+import type { ContentId } from '@shared/types'
+import { useConfirm } from '@shared/ui/ConfirmDialog'
+import { useReleaseAllGrades } from '@domain/assignments/hooks'
+import '@shared/styles/forms.css'
 
 type GradePublishingProps = {
   contentId: ContentId

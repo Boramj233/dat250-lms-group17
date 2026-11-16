@@ -1,8 +1,8 @@
-import { canRequire } from '../../../../modules/prerequisites'
-import type { CourseModule } from '../../../../modules/types'
-import type { ModuleId } from '../../../../../shared/types'
+import { canRequire } from '@domain/modules/prerequisites'
+import type { CourseModule } from '@domain/modules/types'
+import type { ModuleId } from '@shared/types'
 import type { AvailabilityDraft } from './availabilityDraft'
-import '../../../../../shared/styles/forms.css'
+import '@shared/styles/forms.css'
 
 type ModuleAvailabilityProps = {
   module: CourseModule

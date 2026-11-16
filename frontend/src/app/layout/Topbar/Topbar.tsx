@@ -1,8 +1,8 @@
 import { Link } from 'react-router'
-import { paths } from '../../../shared/paths'
-import { logout } from '../../../shared/auth/auth'
-import { useCurrentUser } from '../../../shared/auth/useAuth'
-import '../../../shared/styles/forms.css'
+import { paths } from '@shared/paths'
+import { logout } from '@shared/auth/auth'
+import { useCurrentUser } from '@shared/auth/useAuth'
+import '@shared/styles/forms.css'
 import './Topbar.css'
 
 type TopbarProps = {

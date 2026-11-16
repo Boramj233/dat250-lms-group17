@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import '../../../../shared/styles/forms.css'
+import '@shared/styles/forms.css'
 import './SideMenuLayout.css'
 
 type SideMenuLayoutProps = {

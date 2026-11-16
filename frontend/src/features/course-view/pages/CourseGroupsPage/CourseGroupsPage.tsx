@@ -1,18 +1,18 @@
 import { useState } from 'react'
-import { ApiError } from '../../../../shared/api/apiClient'
-import { useCurrentUser } from '../../../../shared/auth/useAuth'
-import type { UserId } from '../../../../shared/types'
-import PageHeader from '../../../../shared/ui/PageHeader'
-import QueryState from '../../../../shared/ui/QueryState'
-import { useCourseEnrollments } from '../../../courses/hooks'
-import ConfirmDialog, { useConfirm } from '../../../../shared/ui/ConfirmDialog'
+import { ApiError } from '@shared/api/apiClient'
+import { useCurrentUser } from '@shared/auth/useAuth'
+import type { UserId } from '@shared/types'
+import PageHeader from '@shared/ui/PageHeader'
+import QueryState from '@shared/ui/QueryState'
+import { useCourseEnrollments } from '@domain/courses/hooks'
+import ConfirmDialog, { useConfirm } from '@shared/ui/ConfirmDialog'
 import {
   groupName, groupOfUser, SwitchGroupError, useCourseGroups, useDeleteGroup, useJoinGroup, useLeaveGroup, useSwitchGroup,
-} from '../../../groups/hooks'
-import type { CourseGroup } from '../../../groups/types'
+} from '@domain/groups/hooks'
+import type { CourseGroup } from '@domain/groups/types'
 import { useCourseView } from '../../courseContext'
 import CreateGroupForm from './CreateGroupForm'
-import '../../../../shared/styles/forms.css'
+import '@shared/styles/forms.css'
 import './CourseGroupsPage.css'
 
 const isMember = (group: CourseGroup, userId: UserId) =>
@@ -32,7 +32,7 @@ export default function CourseGroupsPage() {
   const { course, isTeacher } = useCourseView()
   const user = useCurrentUser().data!
   const groups = useCourseGroups(course.id)
-  // Names for members when the backend sends only ids (see features/groups/README.md).
+  // Names for members when the backend sends only ids (see domain/groups/README.md).
   const enrollments = useCourseEnrollments(course.id)
   const join = useJoinGroup(course.id)
   const leave = useLeaveGroup(course.id)

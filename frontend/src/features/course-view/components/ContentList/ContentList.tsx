@@ -1,6 +1,6 @@
 import { Link } from 'react-router'
-import type { ContentSummary } from '../../../content/types'
-import type { CourseModule } from '../../../modules/types'
+import type { ContentSummary } from '@domain/content/types'
+import type { CourseModule } from '@domain/modules/types'
 import VisibleFromTag from '../VisibleFromTag'
 import './ContentList.css'
 

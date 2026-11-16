@@ -1,5 +1,5 @@
 import { useParams } from 'react-router'
-import type { ContentSummary } from '../../content/types'
+import type { ContentSummary } from '@domain/content/types'
 import { useManageModule } from './manageModuleContext'
 
 /** The content item in the URL (:contentId), from the module's content list; undefined if not there. */

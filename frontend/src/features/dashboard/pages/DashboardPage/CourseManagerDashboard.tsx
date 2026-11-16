@@ -1,11 +1,11 @@
-import { paths } from '../../../../shared/paths'
-import { useCurrentUser } from '../../../../shared/auth/useAuth'
-import { useMyCourses } from '../../../courses/hooks'
-import type { EnrolledCourse } from '../../../courses/types'
-import QueryState from '../../../../shared/ui/QueryState'
-import CourseGrid from '../../../courses/components/CourseGrid'
-import { byNewest } from '../../../courses/courseFormat'
-import { TrailLink } from '../../../../shared/navigation/Trail'
+import { paths } from '@shared/paths'
+import { useCurrentUser } from '@shared/auth/useAuth'
+import { useMyCourses } from '@domain/courses/hooks'
+import type { EnrolledCourse } from '@domain/courses/types'
+import QueryState from '@shared/ui/QueryState'
+import CourseGrid from '@domain/courses/components/CourseGrid'
+import { byNewest } from '@domain/courses/courseFormat'
+import { TrailLink } from '@shared/navigation/Trail'
 
 const teaching = (courses: EnrolledCourse[]) =>
   courses.filter(course => course.role === 'TEACHER').sort(byNewest)
