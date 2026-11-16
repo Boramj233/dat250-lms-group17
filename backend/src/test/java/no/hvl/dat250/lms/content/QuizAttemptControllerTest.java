@@ -8,6 +8,7 @@ import no.hvl.dat250.lms.content.api.controllers.QuizAttemptController;
 import no.hvl.dat250.lms.content.api.dto.SubmitQuizRequest;
 import no.hvl.dat250.lms.content.domain.QuizAttempt;
 import no.hvl.dat250.lms.content.service.QuizAttemptService;
+import no.hvl.dat250.lms.content.service.QuizAttemptService.AttemptResult;
 import no.hvl.dat250.lms.security.AuthenticatedUser;
 
 import org.junit.jupiter.api.Test;
@@ -41,11 +42,11 @@ class QuizAttemptControllerTest {
         when(savedAttempt.getCorrectCount()).thenReturn(1);
         when(savedAttempt.getTotalQuestions()).thenReturn(2);
 
-        when(attemptService.submitAttempt(
+        when(attemptService.submitAttemptWithFeedback(
                 eq(7L),
                 eq(5L),
                 anyList()
-        )).thenReturn(savedAttempt);
+        )).thenReturn(new AttemptResult(savedAttempt, List.of()));
 
         QuizAttemptController controller =
             new QuizAttemptController(
@@ -56,7 +57,8 @@ class QuizAttemptControllerTest {
             List.of(
                 new SubmitQuizRequest.Answer(
                     11L,
-                    List.of(21L, 23L)
+                    List.of(21L, 23L),
+                    null
                 )
             )
         );
@@ -68,7 +70,7 @@ class QuizAttemptControllerTest {
         assertEquals(1, response.correctCount());
         assertEquals(2, response.totalQuestions());
 
-        verify(attemptService).submitAttempt(
+        verify(attemptService).submitAttemptWithFeedback(
             eq(7L),
             eq(5L),
             argThat(answers ->

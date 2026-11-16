@@ -74,7 +74,7 @@ class GroupSubmissionIntegrationTest {
 
     @Test void historicalSnapshotSurvivesMembershipChangesAndWithdrawal() throws Exception {
         var f = fixture(); Long first = submit(f, f.a);
-        var grade = grades.save(first, f.teacher, BigDecimal.TEN, "Feedback", null);
+        var grade = grades.save(first, f.teacher, BigDecimal.TEN, "Feedback", null, true);
         grades.release(first, f.teacher, grade.version());
         groups.removeGroupMember(f.course, f.group, f.b);
         groups.addGroupMember(f.course, f.group, f.c);
@@ -103,7 +103,7 @@ class GroupSubmissionIntegrationTest {
         submissions.submitIndividual(f.content, f.a, SubmissionType.TEXT, "Personal");
         assertThrows(GradeConflictException.class,
             () -> grades.save(first, f.teacher, BigDecimal.TEN, null, null));
-        var grade = grades.save(second, f.teacher, BigDecimal.TEN, null, null);
+        var grade = grades.save(second, f.teacher, BigDecimal.TEN, null, null, true);
         grades.release(second, f.teacher, grade.version());
         assertEquals(2, submissions.reviewLatest(f.content, f.teacher, 0, 20).getTotalElements());
         assertEquals(List.of(second, first), submissions.reviewHistory(first, f.teacher).stream().map(r -> r.id()).toList());
@@ -230,7 +230,7 @@ class GroupSubmissionIntegrationTest {
 
     @Test void resubmissionAndFirstReleaseShareGroupLock() throws Exception {
         var f = fixture(); Long first = submit(f, f.a);
-        var grade = grades.save(first, f.teacher, BigDecimal.TEN, null, null);
+        var grade = grades.save(first, f.teacher, BigDecimal.TEN, null, null, true);
         var locked = new java.util.concurrent.CountDownLatch(1);
         var release = new java.util.concurrent.CountDownLatch(1);
         try (var pool = java.util.concurrent.Executors.newFixedThreadPool(2)) {

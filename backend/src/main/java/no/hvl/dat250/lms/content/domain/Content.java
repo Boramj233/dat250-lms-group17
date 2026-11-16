@@ -24,6 +24,18 @@ public abstract class Content {
     @JoinColumn(name = "module_id", nullable = false)
     private Module module;
 
+    @Column(name = "required_for_module_completion", nullable = false)
+    private boolean requiredForModuleCompletion;
+
+    public boolean isRequiredForModuleCompletion() { return requiredForModuleCompletion; }
+
+    public void setRequiredForModuleCompletion(boolean required) {
+        if (required && this instanceof CodingExercise) {
+            throw new IllegalArgumentException("Coding completion is not supported yet");
+        }
+        this.requiredForModuleCompletion = required;
+    }
+
     private Instant visibleFrom;
 
     private Instant visibleUntil;

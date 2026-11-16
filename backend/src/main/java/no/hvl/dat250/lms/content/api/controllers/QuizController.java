@@ -16,7 +16,15 @@ import no.hvl.dat250.lms.content.domain.Quiz;
 import no.hvl.dat250.lms.content.domain.QuizQuestion;
 import no.hvl.dat250.lms.content.service.QuizService;
 import no.hvl.dat250.lms.content.service.QuizService.OptionDraft;
+import no.hvl.dat250.lms.content.service.QuizService.ItemDraft;
+import no.hvl.dat250.lms.content.service.QuizService.OrderingDraft;
+import no.hvl.dat250.lms.content.service.QuizService.MatchingDraft;
+import no.hvl.dat250.lms.content.service.QuizService.MatchDraft;
 
+import no.hvl.dat250.lms.content.service.QuizQuestionConflictException;
+import no.hvl.dat250.lms.security.auth.annotations.IsTeacherInCourse;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -30,6 +38,7 @@ public class QuizController {
         this.quizService = quizService;
     }
 
+    @IsTeacherInCourse
     @PostMapping(
         "/api/courses/{courseId}/modules/{moduleId}/contents/quizzes"
     )
@@ -53,12 +62,13 @@ public class QuizController {
             ));
     }
 
+    @PreAuthorize("@courseAccess.isTeacher(authentication, @quizService.courseId(#quizId))")
     @PostMapping("/api/quizzes/{quizId}/questions")
     public ResponseEntity<QuizQuestionResponse> addQuestion(
             @PathVariable Long quizId,
             @Valid @RequestBody CreateQuizQuestionRequest request) {
 
-        List<OptionDraft> options = request.options()
+        List<OptionDraft> options = request.options() == null ? List.of() : request.options()
             .stream()
             .map(option -> new OptionDraft(
                 option.optionText(),
@@ -67,13 +77,34 @@ public class QuizController {
             ))
             .toList();
 
-        QuizQuestion question = quizService.addQuestion(
-            quizId,
-            request.questionText(),
-            request.position(),
-            request.hint(),
-            options
-        );
+        QuizQuestion question;
+        if (request.matching() != null) {
+            if (request.ordering() != null) {
+                throw new IllegalArgumentException("Ordering and matching definitions cannot be combined");
+            }
+            MatchingDraft matching = new MatchingDraft(
+                request.matching().leftItems().stream().map(item -> new ItemDraft(item.key(), item.text())).toList(),
+                request.matching().rightItems().stream().map(item -> new ItemDraft(item.key(), item.text())).toList(),
+                request.matching().correctMatches().stream()
+                    .map(pair -> new MatchDraft(pair.leftKey(), pair.rightKey())).toList());
+            question = quizService.addQuestion(quizId, request.questionText(), request.position(),
+                request.hint(), options, request.type(), request.acceptedAnswers(), null, matching);
+        } else if (request.ordering() == null) {
+            question = quizService.addQuestion(
+                quizId,
+                request.questionText(),
+                request.position(),
+                request.hint(),
+                options,
+                request.type(),
+                request.acceptedAnswers() == null ? List.of() : request.acceptedAnswers()
+            );
+        } else {
+            OrderingDraft ordering = new OrderingDraft(request.ordering().items().stream()
+                .map(item -> new ItemDraft(item.key(), item.text())).toList(), request.ordering().correctOrder());
+            question = quizService.addQuestion(quizId, request.questionText(), request.position(),
+                request.hint(), options, request.type(), request.acceptedAnswers(), ordering);
+        }
 
         return ResponseEntity
             .status(HttpStatus.CREATED)
@@ -82,6 +113,7 @@ public class QuizController {
             ));
     }
 
+    @PreAuthorize("@courseAccess.isEnrolled(authentication, @quizService.courseId(#quizId))")
     @GetMapping("/api/quizzes/{quizId}")
     public ResponseEntity<QuizDetailResponse> getQuiz(
             @PathVariable Long quizId) {
@@ -91,6 +123,16 @@ public class QuizController {
         return ResponseEntity.ok(
             QuizDetailResponse.from(details)
         );
+    }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<Void> handleForbidden() {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+    }
+
+    @ExceptionHandler(QuizQuestionConflictException.class)
+    public ResponseEntity<Void> handleQuestionConflict() {
+        return ResponseEntity.status(HttpStatus.CONFLICT).build();
     }
 
     @ExceptionHandler(NoSuchElementException.class)

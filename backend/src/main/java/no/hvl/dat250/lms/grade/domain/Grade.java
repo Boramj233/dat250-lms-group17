@@ -20,6 +20,17 @@ public class Grade {
     @Column(nullable = false, precision = 5, scale = 2)
     private BigDecimal score;
 
+    // Drafts may remain undecided; release requires an explicit Pass/Fail decision.
+    @Column(name = "passed")
+    private Boolean passed;
+
+    public Boolean getPassed() { return passed; }
+
+    public void decidePassed(Boolean passed) {
+        if (releasedAt != null) throw new IllegalStateException("Released grades cannot be edited");
+        this.passed = passed;
+    }
+
     @Column(length = 10000)
     private String feedback;
 
@@ -77,6 +88,9 @@ public class Grade {
             throw new IllegalArgumentException("Teacher and timestamp are required");
         }
         if (releasedAt == null) {
+            if (passed == null) {
+                throw new IllegalArgumentException("Choose Pass or Fail before releasing the grade");
+            }
             releasedBy = teacher;
             releasedAt = now;
         }

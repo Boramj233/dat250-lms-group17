@@ -27,7 +27,7 @@ public class GradeController {
             @Valid @RequestBody SaveGradeRequest request,
             @AuthenticationPrincipal AuthenticatedUser currentUser) {
         return response(gradingService.save(submissionId, currentUser.userId(),
-            request.score(), request.feedback(), request.version()));
+            request.score(), request.feedback(), request.version(), request.passed()));
     }
 
     @PostMapping("/release")

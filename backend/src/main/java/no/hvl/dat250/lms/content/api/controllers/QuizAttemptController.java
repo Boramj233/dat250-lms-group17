@@ -7,8 +7,9 @@ import java.util.NoSuchElementException;
 import no.hvl.dat250.lms.content.api.dto.SubmitQuizRequest;
 import no.hvl.dat250.lms.content.api.dto.QuizAttemptResponse;
 
-import no.hvl.dat250.lms.content.domain.QuizAttempt;
+import no.hvl.dat250.lms.content.service.QuizAttemptService.AttemptResult;
 import no.hvl.dat250.lms.content.service.QuizAttemptService;
+import no.hvl.dat250.lms.content.service.QuizGrader.MatchIds;
 import no.hvl.dat250.lms.content.service.QuizSubmissionEvaluator.AnswerInput;
 
 import no.hvl.dat250.lms.security.AuthenticatedUser;
@@ -45,18 +46,22 @@ public class QuizAttemptController {
             .stream()
             .map(answer -> new AnswerInput(
                 answer.questionId(),
-                answer.selectedOptionIds()
+                answer.selectedOptionIds(),
+                answer.textAnswer(),
+                answer.orderedItemIds(),
+                answer.matches() == null ? null : answer.matches().stream()
+                    .map(pair -> new MatchIds(pair.leftItemId(), pair.rightItemId())).toList()
             ))
             .toList();
 
         // Existing business logic handles validation and grading.
-        QuizAttempt attempt = attemptService.submitAttempt(
+        AttemptResult result = attemptService.submitAttemptWithFeedback(
             quizId,
             userId,
             answers
         );
 
-        return QuizAttemptResponse.from(attempt, quizId);
+        return QuizAttemptResponse.from(result, quizId);
     }
 
     @ExceptionHandler(AccessDeniedException.class)

@@ -75,6 +75,7 @@ class GroupSubmissionH2UpgradeTest {
             var submission = new Submission(assignment, owner, SubmissionType.TEXT, "Legacy", now, false);
             session.persist(submission);
             var grade = new Grade(submission, BigDecimal.TEN, "Preserved", grader, now);
+            grade.decidePassed(true);
             grade.release(grader, now); session.persist(grade);
             tx.commit();
             legacyId = submission.getId(); groupId = group.getGroupId(); assignmentId = assignment.getId();
