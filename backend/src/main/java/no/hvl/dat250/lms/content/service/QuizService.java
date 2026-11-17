@@ -14,6 +14,7 @@ import no.hvl.dat250.lms.content.repository.QuizItemRepository;
 import java.util.NoSuchElementException;
 
 import no.hvl.dat250.lms.content.domain.Content;
+import no.hvl.dat250.lms.content.api.dto.QuizAnswerKeyResponse;
 import no.hvl.dat250.lms.content.domain.QuestionType;
 import no.hvl.dat250.lms.content.repository.QuizAttemptRepository;
 import org.hibernate.Hibernate;
@@ -378,6 +379,11 @@ public class QuizService {
             throw new NoSuchElementException("Quiz not found");
         }
         return quiz.getModule().getCourse().getId();
+    }
+
+    @Transactional(readOnly = true)
+    public QuizAnswerKeyResponse findAnswerKey(Long quizId) {
+        return QuizAnswerKeyResponse.from(findQuizWithQuestions(quizId));
     }
 
     @Transactional(readOnly = true)

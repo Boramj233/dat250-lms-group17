@@ -12,6 +12,7 @@ import no.hvl.dat250.lms.content.api.dto.QuizDetailResponse;
 import no.hvl.dat250.lms.content.api.dto.CreateQuizQuestionRequest;
 import no.hvl.dat250.lms.content.api.dto.QuizResponse;
 import no.hvl.dat250.lms.content.api.dto.QuizQuestionResponse;
+import no.hvl.dat250.lms.content.api.dto.QuizAnswerKeyResponse;
 
 import no.hvl.dat250.lms.content.domain.Quiz;
 import no.hvl.dat250.lms.content.domain.QuizQuestion;
@@ -27,6 +28,7 @@ import no.hvl.dat250.lms.security.auth.annotations.IsTeacherInCourse;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.CacheControl;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -133,6 +135,13 @@ public class QuizController {
         return ResponseEntity.ok(
             QuizDetailResponse.from(details)
         );
+    }
+
+    @PreAuthorize("@courseAccess.isTeacher(authentication, @quizService.courseId(#quizId))")
+    @GetMapping("/api/quizzes/{quizId}/answer-key")
+    public ResponseEntity<QuizAnswerKeyResponse> answerKey(@PathVariable Long quizId) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore().cachePrivate())
+            .body(quizService.findAnswerKey(quizId));
     }
 
     @ExceptionHandler(AccessDeniedException.class)

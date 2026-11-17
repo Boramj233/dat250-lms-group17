@@ -94,7 +94,32 @@ public class QuizAttemptService {
         Enrollment student = studentForQuiz(quizId, userId);
         QuizAttempt attempt = attemptRepository.findByIdAndQuiz_IdAndEnrollment_Id(attemptId, quizId, student.getId())
             .orElseThrow(() -> new NoSuchElementException("Attempt not found"));
-        var answers = answerRepository.findByAttempt_IdOrderByQuestion_PositionAsc(attemptId);
+        return attemptDetail(attempt, quizId);
+    }
+
+    @Transactional(readOnly = true)
+    public List<QuizAttemptResponse> findStudentAttempts(Long quizId, Long studentUserId, Long teacherUserId) {
+        if (studentUserId == null || studentUserId <= 0) {
+            throw new IllegalArgumentException("Valid Student User ID is required");
+        }
+        enrollmentService.requireActiveTeacher(teacherUserId, quizService.courseId(quizId));
+        return attemptRepository.findStudentHistory(quizId, studentUserId).stream()
+            .map(attempt -> QuizAttemptResponse.from(attempt, quizId)).toList();
+    }
+
+    @Transactional(readOnly = true)
+    public QuizAttemptDetailResponse reviewAttempt(Long quizId, Long attemptId, Long teacherUserId) {
+        if (attemptId == null || attemptId <= 0) {
+            throw new IllegalArgumentException("Valid Attempt ID is required");
+        }
+        enrollmentService.requireActiveTeacher(teacherUserId, quizService.courseId(quizId));
+        QuizAttempt attempt = attemptRepository.findByIdAndQuiz_Id(attemptId, quizId)
+            .orElseThrow(() -> new NoSuchElementException("Attempt not found"));
+        return attemptDetail(attempt, quizId);
+    }
+
+    private QuizAttemptDetailResponse attemptDetail(QuizAttempt attempt, Long quizId) {
+        var answers = answerRepository.findByAttempt_IdOrderByQuestion_PositionAsc(attempt.getId());
         QuizDetailResponse quiz = QuizDetailResponse.from(quizService.findQuizWithQuestions(quizId));
         return QuizAttemptDetailResponse.from(attempt, quiz, answers);
     }

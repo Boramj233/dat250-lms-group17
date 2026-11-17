@@ -61,6 +61,24 @@ public class QuizAttemptController {
             .body(attemptService.findOwnAttempt(quizId, attemptId, user.userId()));
     }
 
+    @GetMapping("/students/{studentUserId}")
+    public ResponseEntity<List<QuizAttemptResponse>> studentAttempts(
+            @PathVariable Long quizId,
+            @PathVariable Long studentUserId,
+            @AuthenticationPrincipal AuthenticatedUser user) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore().cachePrivate())
+            .body(attemptService.findStudentAttempts(quizId, studentUserId, user.userId()));
+    }
+
+    @GetMapping("/{attemptId}/review")
+    public ResponseEntity<QuizAttemptDetailResponse> reviewAttempt(
+            @PathVariable Long quizId,
+            @PathVariable Long attemptId,
+            @AuthenticationPrincipal AuthenticatedUser user) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore().cachePrivate())
+            .body(attemptService.reviewAttempt(quizId, attemptId, user.userId()));
+    }
+
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public QuizAttemptResponse submit(

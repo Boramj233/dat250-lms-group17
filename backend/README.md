@@ -202,9 +202,39 @@ including after the student has used all attempts. A student's own correct answe
 is naturally still visible as their submitted answer. All queries are read-only,
 consume no attempts and return `Cache-Control: no-store, private`.
 
-No schema migration or frontend change is needed. This phase does not add teacher
-history/answer-key APIs, change answer-release policy, or change withdrawal rules:
-attempts are retained, but inactive students cannot use these queries.
+No schema migration is needed. Attempts are retained, but inactive students cannot
+use these student queries. Teacher queries are separate, as described below.
+
+## Teacher Quiz review and answer key
+
+These read-only endpoints require an active TEACHER enrollment in the Quiz's
+actual course and return `Cache-Control: no-store, private`. Unauthenticated
+requests return 401; students, inactive teachers and other-course teachers return
+403. A missing Quiz or a non-Quiz content ID returns 404.
+
+| Endpoint | Response |
+| --- | --- |
+| `GET /api/quizzes/{quizId}/attempts/students/{studentUserId}` | The target user's stored attempts in this Quiz, using the same summaries and newest-first ordering as `/attempts/me`. |
+| `GET /api/quizzes/{quizId}/attempts/{attemptId}/review` | The same answer/score/Hint detail DTO used by the student endpoint, for any attempt in this Quiz. |
+| `GET /api/quizzes/{quizId}/answer-key` | `quizId` and `questions`, containing question display data, configured Hint and answer keys for all five types. |
+
+`studentUserId` is the local User ID from the course enrollment list, not an
+Enrollment ID. A target with no attempts in this Quiz returns `[]`, including
+unknown/other-course users. Historical attempts remain reviewable after the
+student withdraws or changes role. Review of a missing attempt or one belonging
+to another Quiz returns 404. Scores and correctness are not recalculated.
+
+Each answer-key question contains `question` (the existing safe question DTO),
+`hint`, `correctOptionIds` (MC/True-False), `acceptedAnswers` (Fill-in-the-Blank),
+`correctOrder` (Ordering item IDs in the correct sequence), and `correctMatches`
+(Matching `leftItemId`/`rightItemId` pairs). Unused key lists are empty. Matching
+pair-list order has no grading meaning. Quiz definitions with no questions return
+an empty `questions` list. The configured Hint is returned to the teacher even
+without a student submission; student wrong-question Hint rules stay unchanged.
+
+Answer keys are a separate teacher response. Existing student Quiz/attempt
+responses remain safe, and exhausting retries does not grant access to this
+endpoint. No result-release policy, frontend, schema or Module change is included.
 
 ## Quiz 3B-1 Ordering
 

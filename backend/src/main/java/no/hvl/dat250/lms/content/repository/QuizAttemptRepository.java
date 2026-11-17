@@ -24,6 +24,15 @@ public interface QuizAttemptRepository
 
     Optional<QuizAttempt> findByIdAndQuiz_IdAndEnrollment_Id(Long id, Long quizId, Long enrollmentId);
 
+    Optional<QuizAttempt> findByIdAndQuiz_Id(Long id, Long quizId);
+
+    // Historical ownership does not depend on the student's current enrollment status or role.
+    @org.springframework.data.jpa.repository.Query("""
+        select a from QuizAttempt a where a.quiz.id = :quizId and a.enrollment.user.userId = :studentUserId
+        order by a.submittedAt desc, a.id desc
+        """)
+    List<QuizAttempt> findStudentHistory(Long quizId, Long studentUserId);
+
     // ID breaks ties when attempts have the same submission timestamp.
     @org.springframework.data.jpa.repository.Query("""
         select a from QuizAttempt a where a.enrollment.id = :enrollmentId and a.quiz.id = :quizId

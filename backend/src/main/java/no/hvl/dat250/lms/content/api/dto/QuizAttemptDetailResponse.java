@@ -11,7 +11,7 @@ import no.hvl.dat250.lms.content.domain.QuizAttempt;
 import no.hvl.dat250.lms.content.api.dto.QuizAttemptResponse.HintResponse;
 import no.hvl.dat250.lms.content.api.dto.QuizDetailResponse.QuestionResponse;
 
-/** Own submitted answers and safe question display data; never a standard answer key. */
+/** Submitted answers and safe question display data; never a standard answer key. */
 public record QuizAttemptDetailResponse(
     Long id,
     Long quizId,

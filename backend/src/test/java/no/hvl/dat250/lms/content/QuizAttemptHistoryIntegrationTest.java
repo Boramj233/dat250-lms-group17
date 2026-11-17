@@ -296,6 +296,179 @@ class QuizAttemptHistoryIntegrationTest {
         assertEquals(5, answers.findByAttempt_IdOrderByQuestion_PositionAsc(id).size());
     }
 
+    private String teacherHistory(Fixture fixture, Long studentUserId) {
+        return base(fixture) + "/students/" + studentUserId;
+    }
+
+    private String answerKey(Fixture fixture) {
+        return "/api/quizzes/" + fixture.quizId() + "/answer-key";
+    }
+
+    @Test
+    void teacherCanReadStudentHistoryAndDetailsWithoutChangingResults() throws Exception {
+        Fixture fixture = fixture();
+        Long first = submit(fixture, false);
+        Long second = submit(fixture, true);
+        tx(() -> {
+            entities.createQuery("update QuizAttempt a set a.submittedAt=:time where a.quiz.id=:quizId")
+                .setParameter("time", Instant.parse("2026-01-01T00:00:00Z"))
+                .setParameter("quizId", fixture.quizId()).executeUpdate();
+            return null;
+        });
+        getAs(teacherHistory(fixture, fixture.student().getUserId()), fixture.teacher())
+            .andExpect(status().isOk()).andExpect(jsonPath("$.length()").value(2))
+            .andExpect(jsonPath("$[0].id").value(second)).andExpect(jsonPath("$[1].id").value(first))
+            .andExpect(header().string("Cache-Control", containsString("no-store")));
+        String studentBody = getAs(base(fixture) + "/" + first, fixture.student())
+            .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        var review = getAs(base(fixture) + "/" + first + "/review", fixture.teacher())
+            .andExpect(status().isOk()).andExpect(content().json(studentBody))
+            .andExpect(jsonPath("$.answers.length()").value(5))
+            .andExpect(jsonPath("$.hints.length()").value(3));
+        noAnswerKeys(review);
+        getAs(teacherHistory(fixture, fixture.peer().getUserId()), fixture.teacher())
+            .andExpect(status().isOk()).andExpect(content().json("[]"));
+        getAs(teacherHistory(fixture, Long.MAX_VALUE), fixture.teacher())
+            .andExpect(status().isOk()).andExpect(content().json("[]"));
+        assertEquals(2, attempts.countByEnrollment_IdAndQuiz_Id(fixture.studentEnrollmentId(), fixture.quizId()));
+    }
+
+    @Test
+    void teacherCanReviewRetainedAttemptsAfterStudentWithdrawalAndRoleChange() throws Exception {
+        Fixture fixture = fixture();
+        Long id = submit(fixture, false);
+        tx(() -> {
+            entities.find(Enrollment.class, fixture.studentEnrollmentId()).deactivate();
+            return null;
+        });
+        for (int state = 0; state < 2; state++) {
+            getAs(teacherHistory(fixture, fixture.student().getUserId()), fixture.teacher())
+                .andExpect(status().isOk()).andExpect(jsonPath("$[0].id").value(id));
+            getAs(base(fixture) + "/" + id + "/review", fixture.teacher())
+                .andExpect(status().isOk()).andExpect(jsonPath("$.correctCount").value(0));
+            tx(() -> {
+                Enrollment student = entities.find(Enrollment.class, fixture.studentEnrollmentId());
+                student.reactivate();
+                student.changeRole(CourseRole.TEACHER);
+                return null;
+            });
+        }
+    }
+
+    @Test
+    void teacherAnswerKeyContainsAllFiveTypesAndPreservesCorrectOrderingAndMatching() throws Exception {
+        Fixture fixture = fixture();
+        long previousCount = attempts.count();
+        var response = getAs(answerKey(fixture), fixture.teacher())
+            .andExpect(status().isOk()).andExpect(jsonPath("$.quizId").value(fixture.quizId()))
+            .andExpect(jsonPath("$.questions.length()").value(5))
+            .andExpect(jsonPath("$.questions[0].question.type").value("MULTIPLE_CHOICE"))
+            .andExpect(jsonPath("$.questions[0].correctOptionIds.length()").value(2))
+            .andExpect(jsonPath("$.questions[0].correctOptionIds[0]").value(fixture.correctChoices().get(0)))
+            .andExpect(jsonPath("$.questions[0].correctOptionIds[1]").value(fixture.correctChoices().get(1)))
+            .andExpect(jsonPath("$.questions[0].hint").value("MC hint"))
+            .andExpect(jsonPath("$.questions[1].question.type").value("TRUE_FALSE"))
+            .andExpect(jsonPath("$.questions[1].correctOptionIds[0]").value(fixture.trueChoice()))
+            .andExpect(jsonPath("$.questions[2].question.type").value("FILL_IN_BLANK"))
+            .andExpect(jsonPath("$.questions[2].acceptedAnswers[0]").value(FILL_KEY))
+            .andExpect(jsonPath("$.questions[3].question.type").value("ORDERING"))
+            .andExpect(jsonPath("$.questions[3].correctOrder.length()").value(3))
+            .andExpect(jsonPath("$.questions[3].question.items.length()").value(3))
+            .andExpect(jsonPath("$.questions[4].question.type").value("MATCHING"))
+            .andExpect(jsonPath("$.questions[4].correctMatches.length()").value(2))
+            .andExpect(jsonPath("$.questions[4].question.leftItems.length()").value(2))
+            .andExpect(jsonPath("$.questions[4].question.rightItems.length()").value(2))
+            .andExpect(header().string("Cache-Control", containsString("no-store")))
+            .andExpect(header().string("Cache-Control", containsString("private")));
+        for (int index = 0; index < fixture.correctOrder().size(); index++) {
+            response.andExpect(jsonPath("$.questions[3].correctOrder[" + index + "]")
+                .value(fixture.correctOrder().get(index).toString()));
+        }
+        var matches = fixture.correctMatches().stream()
+            .sorted(Comparator.comparing(pair -> pair.leftItemId().toString())).toList();
+        for (int index = 0; index < matches.size(); index++) {
+            response.andExpect(jsonPath("$.questions[4].correctMatches[" + index + "].leftItemId")
+                    .value(matches.get(index).leftItemId().toString()))
+                .andExpect(jsonPath("$.questions[4].correctMatches[" + index + "].rightItemId")
+                    .value(matches.get(index).rightItemId().toString()));
+        }
+        assertEquals(previousCount, attempts.count());
+        // The existing student Quiz response must remain safe after adding the key endpoint.
+        getAs("/api/quizzes/" + fixture.quizId(), fixture.student()).andExpect(status().isOk())
+            .andExpect(content().string(not(containsString(FILL_KEY))))
+            .andExpect(content().string(not(containsString("\"correctOrder\""))))
+            .andExpect(content().string(not(containsString("\"correctMatches\""))));
+    }
+
+    @Test
+    void teacherQueriesRejectStudentsOtherCourseTeachersAndInactiveTeachers() throws Exception {
+        Fixture fixture = fixture();
+        Fixture other = fixture();
+        Long id = submit(fixture, false);
+        tx(() -> {
+            Enrollment student = entities.find(Enrollment.class, fixture.studentEnrollmentId());
+            entities.createQuery("select e from Enrollment e where e.course.id=:courseId and e.user.userId=:userId", Enrollment.class)
+                .setParameter("courseId", student.getCourse().getId())
+                .setParameter("userId", fixture.teacher().getUserId()).getSingleResult().deactivate();
+            return null;
+        });
+        for (User denied : List.of(fixture.student(), fixture.peer(), other.teacher(), other.student(), fixture.teacher())) {
+            for (String path : List.of(teacherHistory(fixture, fixture.student().getUserId()),
+                    base(fixture) + "/" + id + "/review", answerKey(fixture))) {
+                getAs(path, denied).andExpect(status().isForbidden());
+            }
+        }
+    }
+
+    @Test
+    void teacherQueriesRequireAuthentication() throws Exception {
+        Fixture fixture = fixture();
+        Long id = submit(fixture, false);
+        for (String path : List.of(teacherHistory(fixture, fixture.student().getUserId()),
+                base(fixture) + "/" + id + "/review", answerKey(fixture))) {
+            mvc.perform(get(path)).andExpect(status().isUnauthorized());
+            mvc.perform(get(path).header("Authorization", "Bearer invalid")).andExpect(status().isUnauthorized());
+        }
+    }
+
+    @Test
+    void teacherCannotReadAttemptFromAnotherQuizOrCourse() throws Exception {
+        Fixture fixture = fixture();
+        Fixture other = fixture();
+        Long otherAttempt = submit(other, false);
+        Long secondQuizId = tx(() -> {
+            Quiz quiz = entities.find(Quiz.class, fixture.quizId());
+            return save(new Quiz(quiz.getModule(), "Second quiz", 1, 2)).getId();
+        });
+        Long ownAttempt = submit(fixture, false);
+        getAs(base(fixture) + "/" + otherAttempt + "/review", fixture.teacher()).andExpect(status().isNotFound());
+        getAs("/api/quizzes/" + secondQuizId + "/attempts/" + ownAttempt + "/review", fixture.teacher())
+            .andExpect(status().isNotFound());
+        getAs(base(fixture) + "/" + Long.MAX_VALUE + "/review", fixture.teacher()).andExpect(status().isNotFound());
+        getAs(teacherHistory(fixture, other.student().getUserId()), fixture.teacher())
+            .andExpect(status().isOk()).andExpect(content().json("[]"));
+        // A foreign quiz ID cannot borrow the caller's teacher role from another course.
+        getAs(base(other) + "/" + otherAttempt + "/review", fixture.teacher()).andExpect(status().isForbidden());
+    }
+
+    @Test
+    void teacherQueriesRejectMissingQuizWrongContentTypeAndInvalidTargetIds() throws Exception {
+        Fixture fixture = fixture();
+        Long pageId = tx(() -> {
+            Quiz quiz = entities.find(Quiz.class, fixture.quizId());
+            return save(new StaticPage(quiz.getModule(), "Page", 1, "Body")).getId();
+        });
+        for (Long quizId : List.of(Long.MAX_VALUE, pageId)) {
+            String prefix = "/api/quizzes/" + quizId;
+            for (String suffix : List.of("/answer-key", "/attempts/students/" + fixture.student().getUserId(),
+                    "/attempts/1/review")) {
+                getAs(prefix + suffix, fixture.teacher()).andExpect(status().isNotFound());
+            }
+        }
+        getAs(teacherHistory(fixture, 0L), fixture.teacher()).andExpect(status().isBadRequest());
+        getAs(base(fixture) + "/0/review", fixture.teacher()).andExpect(status().isBadRequest());
+    }
+
     @Test
     void invalidSubmissionDoesNotIncreaseUsedCount() throws Exception {
         Fixture fixture = fixture();
