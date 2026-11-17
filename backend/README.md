@@ -724,3 +724,60 @@ shortened or removed. Grades, release state, member snapshots and Completion evi
 are retained. Title/instructions/starter code, ordering, Required and mandatoryForExam
 are unchanged. Basic editing PUT endpoints remain separate. No migration, new lock
 framework, Quiz settings, visibility or frontend changes are included.
+
+## Content Visibility
+
+An active teacher in the Content's actual course can replace its start restriction:
+
+```http
+PUT /api/contents/{contentId}/visibility
+Content-Type: application/json
+
+{"visibleFrom":"2026-12-01T08:00:00Z"}
+```
+
+This endpoint supports StaticPage, Assignment, CodingExercise and Quiz. Success is
+200 with `{contentId, visibleFrom, visibleUntil}`. `visibleFrom: null` or an omitted
+field (`{}`) clears the start restriction. Use an ISO timestamp with a timezone;
+times are stored as Instant. Invalid timestamps return 400, unauthenticated calls
+401, non-course/inactive teachers and students 403, and missing Content 404. The
+teacher's identity comes from the verified principal. Only visibleFrom is editable;
+an existing visibleUntil is preserved, and a nonnull start must be strictly before
+that end (otherwise 400). Content summaries and all four detail/creation response
+DTOs also include visibleFrom and visibleUntil.
+
+The window is `[visibleFrom, visibleUntil)`: the start is inclusive, the end is
+exclusive, and either null bound is unrestricted. Existing rows with both null
+remain available. No scheduler is needed: each operation checks server time.
+
+- Student Content lists omit items outside the window without renumbering positions;
+  same-course active teachers see the full list and can preview all four detail
+  endpoints before release.
+- Direct student detail requests outside the window return 403, even with a known ID.
+- Quiz submission outside the window returns 403 without creating an Attempt.
+- Individual/Group TEXT and GIT_URL submissions for Assignment/CodingExercise are
+  checked in the existing acceptance transaction after refreshing Content rules.
+- Assignment FILE preflight checks visibility before storage upload. Final acceptance
+  checks again after the upload; a now-hidden submission is rejected and the existing
+  rollback cleanup removes the uploaded object.
+- StaticPage completion writes (including clearing completion) and the student HTTP
+  completion-status endpoint are unavailable outside the window (403). Stored page
+  completion is preserved.
+
+Visibility editing reuses the existing Content row lock shared by submission
+acceptance/settings editing. It adds no new locking mechanism or lock order in
+submission flows; file upload remains outside SQL transactions. Visibility is independent of
+submission deadlines, ordering, requiredForModuleCompletion and mandatoryForExam.
+
+Historical Attempts, answers/Hints, Submissions/files, released Grades, late flags
+and Group member snapshots are retained. Their existing history/review/download
+endpoints keep their original ownership, enrollment and release checks; hiding a
+Content does not revoke access to its owned historical records. New interactions
+are restricted, but historical scores and completion evidence are never recalculated.
+
+Internal ContentService.requireContent(), findContentsByModule() and isCompleted()
+keep their existing contracts. HTTP browsing uses a separate filtered list method;
+a hidden required Content stays required and is not silently removed from Module
+completion evaluation. This feature does not implement Module access/dependency,
+Content Delete, visibleUntil editing or frontend changes. Existing mapped columns
+are reused, so no database migration is added or automatically executed.

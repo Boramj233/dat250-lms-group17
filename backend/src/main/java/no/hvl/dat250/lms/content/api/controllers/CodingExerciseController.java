@@ -102,7 +102,11 @@ public class CodingExerciseController {
     public void handleBadRequest() {
     }
 
-    @PreAuthorize("@courseAccess.isEnrolled(authentication, @codingExerciseService.courseId(#exerciseId))")
+    @PreAuthorize("""
+        @courseAccess.isEnrolled(authentication, @codingExerciseService.courseId(#exerciseId))
+        and (@courseAccess.isTeacher(authentication, @codingExerciseService.courseId(#exerciseId))
+            or @contentService.isVisible(#exerciseId))
+        """)
     @GetMapping("/api/coding-exercises/{exerciseId}")
     public CodingExerciseResponse get(
             @PathVariable Long exerciseId) {

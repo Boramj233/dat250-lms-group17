@@ -115,7 +115,11 @@ public class AssignmentController {
     public void handleInvalidArgument() {
     }
 
-    @PreAuthorize("@courseAccess.isEnrolled(authentication, @assignmentService.courseId(#assignmentId))")
+    @PreAuthorize("""
+        @courseAccess.isEnrolled(authentication, @assignmentService.courseId(#assignmentId))
+        and (@courseAccess.isTeacher(authentication, @assignmentService.courseId(#assignmentId))
+            or @contentService.isVisible(#assignmentId))
+        """)
     @GetMapping("/api/assignments/{assignmentId}")
     public AssignmentResponse getAssignment(
             @PathVariable Long assignmentId) {

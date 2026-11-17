@@ -13,7 +13,9 @@ public record AssignmentResponse(
     String instructions,
     Instant deadline,
     boolean allowLateSubmission,
-    boolean mandatoryForExam
+    boolean mandatoryForExam,
+    Instant visibleFrom,
+    Instant visibleUntil
 
 ) {
 
@@ -28,7 +30,9 @@ public record AssignmentResponse(
             assignment.getInstructions(),
             assignment.getDeadline(),
             assignment.isAllowLateSubmission(),
-            assignment.isMandatoryForExam()
+            assignment.isMandatoryForExam(),
+            assignment.getVisibleFrom(),
+            assignment.getVisibleUntil()
         );
     }
 }

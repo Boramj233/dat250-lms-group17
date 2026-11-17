@@ -126,6 +126,10 @@ public class SubmissionService {
         // 6. Calculate lateness using refreshed rules and the server clock.
         Instant now = clock.instant();
 
+        if (!content.isVisibleAt(now)) {
+            throw new AccessDeniedException("Content outside visibility window");
+        }
+
         boolean late = deadline != null
             && now.isAfter(deadline);
 
@@ -167,7 +171,11 @@ public class SubmissionService {
         Long courseId = assignment.getModule().getCourse().getId();
 
         requireStudentEnrollment(userId, courseId);
-        requireDeadlineAccepted(assignment, clock.instant());
+        Instant now = clock.instant();
+        if (!assignment.isVisibleAt(now)) {
+            throw new AccessDeniedException("Content outside visibility window");
+        }
+        requireDeadlineAccepted(assignment, now);
     }
 
     // Joins the upload coordinator's transaction, which also handles commit rollback.
@@ -192,6 +200,9 @@ public class SubmissionService {
 
         assignment = (Assignment) contentService.lockSubmissionContent(contentId);
         Instant now = clock.instant();
+        if (!assignment.isVisibleAt(now)) {
+            throw new AccessDeniedException("Content outside visibility window");
+        }
         boolean late = requireDeadlineAccepted(assignment, now);
 
         Submission submission = Submission.file(

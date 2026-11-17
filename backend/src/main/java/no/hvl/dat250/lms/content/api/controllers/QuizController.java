@@ -125,7 +125,11 @@ public class QuizController {
             ));
     }
 
-    @PreAuthorize("@courseAccess.isEnrolled(authentication, @quizService.courseId(#quizId))")
+    @PreAuthorize("""
+        @courseAccess.isEnrolled(authentication, @quizService.courseId(#quizId))
+        and (@courseAccess.isTeacher(authentication, @quizService.courseId(#quizId))
+            or @contentService.isVisible(#quizId))
+        """)
     @GetMapping("/api/quizzes/{quizId}")
     public ResponseEntity<QuizDetailResponse> getQuiz(
             @PathVariable Long quizId) {

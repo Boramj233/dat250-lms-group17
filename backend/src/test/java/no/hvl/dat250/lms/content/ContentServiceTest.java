@@ -36,7 +36,8 @@ class ContentServiceTest {
     private ContentService createService() {
         return new ContentService(
             contentRepository,
-            moduleService
+            moduleService,
+            mock(no.hvl.dat250.lms.enrollment.service.EnrollmentService.class)
         );
     }
 

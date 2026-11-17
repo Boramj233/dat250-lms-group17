@@ -175,7 +175,7 @@ class ContentControllerTest {
             101L, "Java OOP", 1, "Second page body"
         );
 
-        when(contentService.findContentsByModule(1L, 10L))
+        when(contentService.findContentsForUser(1L, 10L, 1L))
                 .thenReturn(List.of(first, second));
 
         mockMvc.perform(
@@ -191,13 +191,13 @@ class ContentControllerTest {
             .andExpect(jsonPath("$[1].position").value(1))
             .andExpect(jsonPath("$[0].body").doesNotExist());
 
-        verify(contentService).findContentsByModule(1L, 10L);
+        verify(contentService).findContentsForUser(1L, 10L, 1L);
     }
 
     @Test
     void emptyModuleReturnsEmptyList() throws Exception {
 
-        when(contentService.findContentsByModule(1L, 10L))
+        when(contentService.findContentsForUser(1L, 10L, 1L))
                 .thenReturn(List.of());
 
         mockMvc.perform(
@@ -210,7 +210,7 @@ class ContentControllerTest {
     @Test
     void wrongCourseModuleOnGetReturns404() throws Exception {
 
-        when(contentService.findContentsByModule(2L, 10L))
+        when(contentService.findContentsForUser(2L, 10L, 1L))
                 .thenThrow(new NoSuchElementException(
                     "Module not found in course"
                 ));

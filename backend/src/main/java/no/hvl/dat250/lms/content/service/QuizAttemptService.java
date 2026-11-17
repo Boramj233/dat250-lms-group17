@@ -163,6 +163,10 @@ public class QuizAttemptService {
             throw new AccessDeniedException("Active student enrollment required", ex);
         }
 
+        if (!quiz.isVisibleAt(Instant.now())) {
+            throw new AccessDeniedException("Quiz outside visibility window");
+        }
+
         // 3. Check how many attempts are already stored.
         long previousAttempts = attemptRepository
                 .countByEnrollment_IdAndQuiz_Id(

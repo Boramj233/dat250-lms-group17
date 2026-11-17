@@ -7,6 +7,7 @@ import no.hvl.dat250.lms.content.service.ContentCompletionService.Status;
 import no.hvl.dat250.lms.security.AuthenticatedUser;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.http.*;
 import java.util.NoSuchElementException;
@@ -25,6 +26,7 @@ public class ContentCompletionController {
         completion.configure(contentId, user.userId(), request.requiredForModuleCompletion(), request.passingPercentage());
     }
     @GetMapping("/completion")
+    @PreAuthorize("@contentService.isVisible(#contentId)")
     public ResponseEntity<Status> status(@PathVariable Long contentId, @AuthenticationPrincipal AuthenticatedUser user) {
         return ResponseEntity.ok().cacheControl(CacheControl.noStore().cachePrivate()).body(completion.status(contentId, user.userId()));
     }

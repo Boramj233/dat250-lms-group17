@@ -77,6 +77,7 @@ class SubmissionServiceTest {
         Course course = mock(Course.class);
 
         lenient().when(contentService.lockSubmissionContent(30L)).thenReturn(content);
+        lenient().when(content.isVisibleAt(NOW)).thenReturn(true);
         when(contentService.requireContent(30L))
             .thenReturn(content);
 

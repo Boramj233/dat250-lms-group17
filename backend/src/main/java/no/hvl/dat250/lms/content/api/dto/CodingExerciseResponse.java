@@ -15,7 +15,9 @@ public record CodingExerciseResponse(
     String starterRepositoryUrl,
     String starterCode,
     Instant deadline,
-    boolean allowLateSubmission
+    boolean allowLateSubmission,
+    Instant visibleFrom,
+    Instant visibleUntil
 
 ) {
 
@@ -31,7 +33,9 @@ public record CodingExerciseResponse(
             exercise.getStarterRepositoryUrl(),
             exercise.getStarterCode(),
             exercise.getDeadline(),
-            exercise.isAllowLateSubmission()
+            exercise.isAllowLateSubmission(),
+            exercise.getVisibleFrom(),
+            exercise.getVisibleUntil()
         );
     }
 }

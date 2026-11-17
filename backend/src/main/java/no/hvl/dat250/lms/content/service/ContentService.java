@@ -6,6 +6,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.NoSuchElementException;
+import java.time.Instant;
 
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.LockModeType;
@@ -16,6 +17,9 @@ import no.hvl.dat250.lms.content.domain.StaticPage;
 import no.hvl.dat250.lms.content.repository.ContentRepository;
 import no.hvl.dat250.lms.module.domain.Module;
 import no.hvl.dat250.lms.module.service.ModuleService;
+import no.hvl.dat250.lms.enrollment.domain.CourseRole;
+import no.hvl.dat250.lms.enrollment.service.EnrollmentService;
+import org.springframework.security.access.AccessDeniedException;
 
 import org.hibernate.Hibernate;
 import org.springframework.stereotype.Service;
@@ -48,13 +52,45 @@ public class ContentService {
     @PersistenceContext
     private EntityManager entityManager;
     private final ModuleService moduleService;
+    private final EnrollmentService enrollmentService;
 
     public ContentService(
             ContentRepository contentRepository,
-            ModuleService moduleService) {
+            ModuleService moduleService,
+            EnrollmentService enrollmentService) {
 
         this.contentRepository = contentRepository;
         this.moduleService = moduleService;
+        this.enrollmentService = enrollmentService;
+    }
+
+    @Transactional(readOnly = true)
+    public boolean isVisible(Long contentId) {
+        return requireContent(contentId).isVisibleAt(Instant.now());
+    }
+
+    /** HTTP browsing only. The internal complete list remains available to Module callers. */
+    @Transactional(readOnly = true)
+    public List<Content> findContentsForUser(Long courseId, Long moduleId, Long userId) {
+        CourseRole role = enrollmentService.activeCourseRoles(userId).get(courseId);
+        if (role == null) {
+            throw new AccessDeniedException("Active course enrollment required");
+        }
+        List<Content> contents = findContentsByModule(courseId, moduleId);
+        if (role == CourseRole.TEACHER) {
+            return contents;
+        }
+        Instant now = Instant.now();
+        return contents.stream().filter(content -> content.isVisibleAt(now)).toList();
+    }
+
+    @Transactional
+    public Content updateVisibility(Long contentId, Long teacherUserId, Instant visibleFrom) {
+        // Reuse the content row lock used by submission acceptance and settings editing.
+        Content content = lockSubmissionContent(contentId);
+        enrollmentService.requireActiveTeacher(teacherUserId, content.getModule().getCourse().getId());
+        content.changeVisibleFrom(visibleFrom);
+        return content;
     }
 
     // Create a StaticPage in a specific Course and Module.
