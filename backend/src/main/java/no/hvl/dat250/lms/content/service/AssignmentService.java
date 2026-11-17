@@ -20,15 +20,18 @@ public class AssignmentService {
     private final ContentRepository contentRepository;
     private final ModuleService moduleService;
     private final EnrollmentService enrollmentService;
+    private final ContentService contentService;
 
     public AssignmentService(
             ContentRepository contentRepository,
             ModuleService moduleService,
-            EnrollmentService enrollmentService) {
+            EnrollmentService enrollmentService,
+            ContentService contentService) {
 
         this.contentRepository = contentRepository;
         this.moduleService = moduleService;
         this.enrollmentService = enrollmentService;
+        this.contentService = contentService;
     }
 
     @Transactional
@@ -99,6 +102,22 @@ public class AssignmentService {
     public Assignment updateDetails(Long assignmentId, String title, String instructions) {
         Assignment assignment = findAssignment(assignmentId);
         assignment.updateDetails(title, instructions);
+        return assignment;
+    }
+
+    @Transactional
+    public Assignment updateSubmissionSettings(
+            Long assignmentId,
+            Instant deadline,
+            boolean allowLateSubmission,
+            Long teacherUserId) {
+        // Share the submission content lock and refresh rules after any wait.
+        Content content = contentService.lockSubmissionContent(assignmentId);
+        if (!(content instanceof Assignment assignment)) {
+            throw new NoSuchElementException("Assignment not found");
+        }
+        enrollmentService.requireActiveTeacher(teacherUserId, content.getModule().getCourse().getId());
+        assignment.updateSubmissionSettings(deadline, allowLateSubmission);
         return assignment;
     }
 

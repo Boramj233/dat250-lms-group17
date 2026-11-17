@@ -9,6 +9,7 @@ import no.hvl.dat250.lms.content.api.dto.AssignmentResponse;
 import no.hvl.dat250.lms.content.api.dto.CreateAssignmentRequest;
 import no.hvl.dat250.lms.content.api.dto.UpdateAssignmentExamRequirementRequest;
 import no.hvl.dat250.lms.content.api.dto.UpdateAssignmentRequest;
+import no.hvl.dat250.lms.content.api.dto.UpdateSubmissionSettingsRequest;
 import no.hvl.dat250.lms.content.domain.Assignment;
 import no.hvl.dat250.lms.content.service.AssignmentService;
 import no.hvl.dat250.lms.security.AuthenticatedUser;
@@ -64,6 +65,16 @@ public class AssignmentController {
                 ex
             );
         }
+    }
+
+    @PreAuthorize("@courseAccess.isTeacher(authentication, @assignmentService.courseId(#assignmentId))")
+    @PutMapping("/api/assignments/{assignmentId}/submission-settings")
+    public ResponseEntity<AssignmentResponse> updateSubmissionSettings(
+            @PathVariable Long assignmentId,
+            @Valid @RequestBody UpdateSubmissionSettingsRequest request,
+            @AuthenticationPrincipal AuthenticatedUser currentUser) {
+        return ResponseEntity.ok(AssignmentResponse.from(assignmentService.updateSubmissionSettings(
+            assignmentId, request.deadline(), request.allowLateSubmission(), currentUser.userId())));
     }
 
     @PreAuthorize("@courseAccess.isTeacher(authentication, @assignmentService.courseId(#assignmentId))")

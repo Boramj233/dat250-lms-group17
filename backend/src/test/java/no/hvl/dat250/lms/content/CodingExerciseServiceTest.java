@@ -9,6 +9,7 @@ import no.hvl.dat250.lms.content.domain.CodingExercise;
 import no.hvl.dat250.lms.content.domain.StaticPage;
 import no.hvl.dat250.lms.content.repository.ContentRepository;
 import no.hvl.dat250.lms.content.service.CodingExerciseService;
+import no.hvl.dat250.lms.content.service.ContentService;
 import no.hvl.dat250.lms.module.domain.Module;
 import no.hvl.dat250.lms.enrollment.service.EnrollmentService;
 import org.springframework.security.access.AccessDeniedException;
@@ -36,6 +37,9 @@ class CodingExerciseServiceTest {
 
     @Mock
     private EnrollmentService enrollmentService;
+
+    @Mock
+    private ContentService contentService;
 
     @InjectMocks
     private CodingExerciseService exerciseService;

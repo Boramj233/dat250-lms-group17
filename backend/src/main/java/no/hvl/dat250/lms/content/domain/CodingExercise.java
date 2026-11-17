@@ -114,6 +114,11 @@ public class CodingExercise extends Content {
         return starterCode;
     }
 
+    public void updateSubmissionSettings(Instant deadline, boolean allowLateSubmission) {
+        this.deadline = deadline;
+        this.allowLateSubmission = allowLateSubmission;
+    }
+
     public Instant getDeadline() {
         return deadline;
     }
