@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import no.hvl.dat250.lms.content.domain.Content;
 import no.hvl.dat250.lms.course.domain.Course;
 
+import java.time.LocalDateTime;
 import java.util.*;
 
 @Entity
@@ -16,6 +17,12 @@ public class Module {
 
     @Column(nullable = false)
     private String title;
+
+    @Column(name = "available_from")
+    private LocalDateTime availableFrom;
+
+    @Column(name = "available_to_all_from")
+    private LocalDateTime availableToAllFrom;
 
     @Column(name = "module_position", nullable = false)
     private int position;
@@ -55,6 +62,30 @@ public class Module {
 
     public String getTitle() {
         return title;
+    }
+
+    public LocalDateTime getAvailableFrom() {
+        return availableFrom;
+    }
+
+    public LocalDateTime getAvailableToAllFrom() {
+        return availableToAllFrom;
+    }
+
+    public void setAvailability(
+            LocalDateTime availableFrom,
+            LocalDateTime availableToAllFrom) {
+
+        if (availableFrom != null
+                && availableToAllFrom != null
+                && availableToAllFrom.isBefore(availableFrom)) {
+            throw new IllegalArgumentException(
+                    "availableToAllFrom cannot be before availableFrom"
+            );
+        }
+
+        this.availableFrom = availableFrom;
+        this.availableToAllFrom = availableToAllFrom;
     }
 
     public void setPosition(int position) {

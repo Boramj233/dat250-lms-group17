@@ -7,6 +7,7 @@ import java.util.stream.Collectors;
 
 import jakarta.validation.Valid;
 
+import no.hvl.dat250.lms.module.api.dto.UpdateModuleAvailabilityRequest;
 import no.hvl.dat250.lms.module.api.dto.UpdateModuleRequest;
 import no.hvl.dat250.lms.module.domain.Module;
 import no.hvl.dat250.lms.module.api.dto.CreateModuleRequest;
@@ -119,9 +120,35 @@ public class ModuleController {
         );
     }
 
-    // TODO: DeleteModule
-    // What logic should be used when a module is deleted?
-    // what happens to the content and the dependencies?
+    @IsCourseManager
+    @DeleteMapping("/{moduleId}")
+    public ResponseEntity<Void> deleteModule(
+            @PathVariable Long courseId,
+            @PathVariable Long moduleId) {
+
+        moduleService.deleteModule(courseId, moduleId);
+
+        return ResponseEntity.noContent().build();
+    }
+
+    @IsCourseManager
+    @PutMapping("/{moduleId}/availability")
+    public ResponseEntity<ModuleResponse> updateModuleAvailability(
+            @PathVariable Long courseId,
+            @PathVariable Long moduleId,
+            @RequestBody UpdateModuleAvailabilityRequest request) {
+
+        Module module = moduleService.updateModuleAvailability(
+                courseId,
+                moduleId,
+                request.availableFrom(),
+                request.availableToAllFrom()
+        );
+
+        return ResponseEntity.ok(
+                ModuleResponse.from(module, courseId)
+        );
+    }
 
     // ---------------------------------------------------------------- Dependency
 

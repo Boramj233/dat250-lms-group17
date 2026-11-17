@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.security.access.AccessDeniedException;
 
+import java.time.LocalDateTime;
 import java.util.NoSuchElementException;
 
 @Service
@@ -49,6 +50,20 @@ public class ModuleAccessService {
                 .orElseThrow(() -> new NoSuchElementException(
                         "module not found" + moduleId
                 ));
+
+        LocalDateTime now = LocalDateTime.now();
+
+        // Available to everyone after this date
+        if (module.getAvailableToAllFrom() != null
+                && !now.isBefore(module.getAvailableToAllFrom())) {
+            return true;
+        }
+
+        // Not available before the release date
+        if (module.getAvailableFrom() != null
+                && now.isBefore(module.getAvailableFrom())) {
+            return false;
+        }
 
         for (Module dependency : module.getDependencies()) {
             if (!isModuleCompleted(

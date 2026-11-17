@@ -1,5 +1,6 @@
 package no.hvl.dat250.lms.module.service;
 
+import java.time.LocalDateTime;
 import java.util.*;
 
 import no.hvl.dat250.lms.course.domain.Course;
@@ -93,6 +94,57 @@ public class ModuleService {
         }
 
         return moduleRepository.findById(id);
+    }
+
+    @Transactional
+    public Module updateModuleAvailability(
+            Long courseId,
+            Long moduleId,
+            LocalDateTime availableFrom,
+            LocalDateTime availableToAllFrom) {
+
+        Module module = moduleRepository
+                .findByIdAndCourse_Id(moduleId, courseId)
+                .orElseThrow(() ->
+                        new NoSuchElementException(
+                                "Module not found in course"
+                        )
+                );
+
+        module.setAvailability(
+                availableFrom,
+                availableToAllFrom
+        );
+
+        return moduleRepository.save(module);
+    }
+
+    @Transactional
+    public void deleteModule(Long courseId, Long moduleId) {
+
+        // Find the module and verify it belongs to the course
+        Module module = moduleRepository.findById(moduleId)
+                .orElseThrow(() ->
+                        new NoSuchElementException("Module not found")
+                );
+
+        if (!module.getCourse().getId().equals(courseId)) {
+            throw new NoSuchElementException(
+                    "Module not found in this course"
+            );
+        }
+
+        // Remove dependencies from other modules
+        List<Module> dependentModules =
+                moduleRepository.findModulesDependingOn(moduleId);
+
+        for (Module dependent : dependentModules) {
+            dependent.getDependencies().remove(module);
+        }
+
+        // TODO: Delete content associated with this module
+
+        moduleRepository.delete(module);
     }
 
     @Transactional(readOnly = true)
