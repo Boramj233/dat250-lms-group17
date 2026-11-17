@@ -7,6 +7,7 @@ import jakarta.validation.Valid;
 
 import no.hvl.dat250.lms.content.api.dto.CreateCodingExerciseRequest;
 import no.hvl.dat250.lms.content.api.dto.UpdateCodingExerciseRequest;
+import no.hvl.dat250.lms.content.api.dto.UpdateSubmissionSettingsRequest;
 import no.hvl.dat250.lms.content.api.dto.CodingExerciseResponse;
 import no.hvl.dat250.lms.content.domain.CodingExercise;
 import no.hvl.dat250.lms.content.service.CodingExerciseService;
@@ -65,6 +66,16 @@ public class CodingExerciseController {
                 ex
             );
         }
+    }
+
+    @PreAuthorize("@courseAccess.isTeacher(authentication, @codingExerciseService.courseId(#exerciseId))")
+    @PutMapping("/api/coding-exercises/{exerciseId}/submission-settings")
+    public ResponseEntity<CodingExerciseResponse> updateSubmissionSettings(
+            @PathVariable Long exerciseId,
+            @Valid @RequestBody UpdateSubmissionSettingsRequest request,
+            @AuthenticationPrincipal AuthenticatedUser currentUser) {
+        return ResponseEntity.ok(CodingExerciseResponse.from(codingExerciseService.updateSubmissionSettings(
+            exerciseId, request.deadline(), request.allowLateSubmission(), currentUser.userId())));
     }
 
     @PreAuthorize("@courseAccess.isTeacher(authentication, @codingExerciseService.courseId(#exerciseId))")

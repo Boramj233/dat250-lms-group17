@@ -9,6 +9,7 @@ import no.hvl.dat250.lms.content.domain.Assignment;
 import no.hvl.dat250.lms.content.domain.StaticPage;
 import no.hvl.dat250.lms.content.repository.ContentRepository;
 import no.hvl.dat250.lms.content.service.AssignmentService;
+import no.hvl.dat250.lms.content.service.ContentService;
 import no.hvl.dat250.lms.module.domain.Module;
 import no.hvl.dat250.lms.module.service.ModuleService;
 
@@ -36,6 +37,9 @@ class AssignmentServiceTest {
 
     @Mock
     private EnrollmentService enrollmentService;
+
+    @Mock
+    private ContentService contentService;
 
     @InjectMocks
     private AssignmentService assignmentService;

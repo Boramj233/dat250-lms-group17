@@ -621,3 +621,41 @@ endpoints retain their separate paths. No schema migration, new locks or version
 Frontend integration: current proposed `PATCH /api/contents/{id}` and
 `PUT /api/quizzes/{id}/questions` are not implemented by this phase. Use the type-specific
 PUT endpoints above for basic editing; no frontend code is changed here.
+
+## Assignment / CodingExercise Submission Settings
+
+Active course teachers can replace the submission rules through:
+
+- `PUT /api/assignments/{assignmentId}/submission-settings`
+- `PUT /api/coding-exercises/{exerciseId}/submission-settings`
+
+```json
+{"deadline":"2026-12-01T22:00:00Z","allowLateSubmission":false}
+```
+
+Success returns 200 with the existing AssignmentResponse or CodingExerciseResponse.
+The request replaces both settings: deadline may be null or omitted to remove the
+limit; allowLateSubmission must explicitly be true or false (missing/null returns 400).
+Invalid time formats return 400. Past deadlines are allowed. Missing authentication
+returns 401, non-course/inactive teachers and students receive 403, and missing or
+wrong-type resources return 404. Course authorization is derived from the stored resource.
+
+Later submissions use the current rules and existing server Clock: no deadline means
+no time limit; submission exactly at the deadline is on time; after it, allowLateSubmission
+controls acceptance and accepted submissions get late=true. These rules cover individual
+and Group TEXT/GIT_URL submissions, plus Assignment FILE submissions. Deadlines do not
+hide content; visibility remains separate.
+
+The editor reuses ContentService.lockSubmissionContent in its transaction, refreshing
+under the same Content row lock used during final submission acceptance. It rechecks
+active teacher enrollment after obtaining the lock. The existing Owner/Group -> Content
+submission lock order is retained; the editor acquires no Owner/Group locks. An accepted
+submission transaction finishes before a waiting edit, while final acceptance after an
+edit uses the refreshed rules. FILE upload remains outside SQL transactions and final
+acceptance rechecks rules changed during upload, compensating a rejected uploaded object.
+
+Historical Submission.late values are never recalculated when a deadline is extended,
+shortened or removed. Grades, release state, member snapshots and Completion evidence
+are retained. Title/instructions/starter code, ordering, Required and mandatoryForExam
+are unchanged. Basic editing PUT endpoints remain separate. No migration, new lock
+framework, Quiz settings, visibility or frontend changes are included.

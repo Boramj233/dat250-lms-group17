@@ -70,6 +70,11 @@ public class Assignment extends Content {
         return instructions;
     }
 
+    public void updateSubmissionSettings(Instant deadline, boolean allowLateSubmission) {
+        this.deadline = deadline;
+        this.allowLateSubmission = allowLateSubmission;
+    }
+
     public Instant getDeadline() {
         return deadline;
     }

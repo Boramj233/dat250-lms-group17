@@ -22,15 +22,18 @@ public class CodingExerciseService {
     private final ContentRepository contentRepository;
     private final ModuleService moduleService;
     private final EnrollmentService enrollmentService;
+    private final ContentService contentService;
 
     public CodingExerciseService(
             ContentRepository contentRepository,
             ModuleService moduleService,
-            EnrollmentService enrollmentService) {
+            EnrollmentService enrollmentService,
+            ContentService contentService) {
 
         this.contentRepository = contentRepository;
         this.moduleService = moduleService;
         this.enrollmentService = enrollmentService;
+        this.contentService = contentService;
     }
 
     @Transactional
@@ -91,6 +94,22 @@ public class CodingExerciseService {
                                        String starterRepositoryUrl, String starterCode) {
         CodingExercise exercise = findCodingExercise(exerciseId);
         exercise.updateDetails(title, instructions, starterRepositoryUrl, starterCode);
+        return exercise;
+    }
+
+    @Transactional
+    public CodingExercise updateSubmissionSettings(
+            Long exerciseId,
+            Instant deadline,
+            boolean allowLateSubmission,
+            Long teacherUserId) {
+        // Share the submission content lock and refresh rules after any wait.
+        Content content = contentService.lockSubmissionContent(exerciseId);
+        if (!(content instanceof CodingExercise exercise)) {
+            throw new NoSuchElementException("CodingExercise not found");
+        }
+        enrollmentService.requireActiveTeacher(teacherUserId, content.getModule().getCourse().getId());
+        exercise.updateSubmissionSettings(deadline, allowLateSubmission);
         return exercise;
     }
 
