@@ -36,15 +36,8 @@ public class StudentInteractionService {
         StudentInteraction interaction = interactionRepository
                 .findByStudentIdAndContentId(studentId, contentId)
                 .orElseGet(() -> {
-                    User student = userService.findById(studentId)
-                            .orElseThrow(() -> new NoSuchElementException(
-                                    "Student not found"
-                            ));
-
-                    Content content = contentService.findById(contentId)
-                            .orElseThrow(() -> new NoSuchElementException(
-                                    "Content not found"
-                            ));
+                    User student = userService.getUser(studentId);
+                    Content content = contentService.requireContent(contentId);
 
                     return new StudentInteraction(student, content);
                 });

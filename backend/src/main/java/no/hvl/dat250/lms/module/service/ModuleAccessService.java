@@ -34,11 +34,9 @@ public class ModuleAccessService {
                         "Module not found"
                 ));
 
+        // get all contents and check for mandatory later, or filter at get?
+        // module.getDependencyContents();
         List<Content> contents = module.getContents();
-
-        if (contents.isEmpty()) {
-            return false;
-        }
 
         for (Content content : contents) {
             boolean completed = interactionRepository

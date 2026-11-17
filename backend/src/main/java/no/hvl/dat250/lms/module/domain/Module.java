@@ -73,6 +73,8 @@ public class Module {
         return Collections.unmodifiableList(contents);
     }
 
+    // TODO: getContent, addContent, removeContent
+
     public Set<Module> getDependencies() {
         return Collections.unmodifiableSet(dependencies);
     }

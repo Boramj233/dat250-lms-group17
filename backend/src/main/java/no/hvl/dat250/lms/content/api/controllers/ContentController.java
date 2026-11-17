@@ -12,6 +12,7 @@ import no.hvl.dat250.lms.content.api.dto.StaticPageResponse;
 import no.hvl.dat250.lms.content.domain.StaticPage;
 import no.hvl.dat250.lms.content.service.ContentService;
 
+import no.hvl.dat250.lms.interaction.service.StudentInteractionService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -24,8 +25,14 @@ public class ContentController {
 
     private final ContentService contentService;
 
-    public ContentController(ContentService contentService) {
+    private final StudentInteractionService interactionService;
+
+    public ContentController(
+            ContentService contentService,
+            StudentInteractionService interactionService) {
+
         this.contentService = contentService;
+        this.interactionService = interactionService;
     }
 
     @PostMapping(MODULE_CONTENTS_PATH + "/pages")
@@ -63,6 +70,23 @@ public class ContentController {
                 .toList();
 
         return ResponseEntity.ok(contents);
+    }
+
+    @GetMapping(MODULE_CONTENTS_PATH + "/{contentId}/complete")
+    public ResponseEntity<Void> completeContent(
+            @PathVariable Long courseId,
+            @PathVariable Long moduleId,
+            @PathVariable Long contentId
+    ) {
+
+        Long studentId = getAuthenticatedStudentId();
+
+        interactionService.completeContent(
+                studentId,
+                contentId
+        );
+
+        return ResponseEntity.noContent().build();
     }
 
     @ExceptionHandler(NoSuchElementException.class)
