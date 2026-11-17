@@ -74,7 +74,7 @@ class StudentInteractionRepositoryTest {
                 "Test content"
         );
 
-        page.setRequiredForCompletion(required);
+        page.setRequiredForModuleCompletion(required);
 
         entityManager.persist(page);
 
