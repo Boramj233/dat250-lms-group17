@@ -46,7 +46,7 @@ public class StudentInteraction {
         return this.student;
     }
 
-    public Content content() {
+    public Content getContent() {
         return this.content;
     }
 
