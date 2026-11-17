@@ -21,7 +21,7 @@ public interface StudentInteractionRepository
         SELECT COUNT(c)
         FROM Content c
         WHERE c.module.id = :moduleId
-            AND c.requiredForCompletion = true
+            AND c.requiredForModuleCompletion = true
             AND NOT EXISTS (
                 SELECT si.id
                 FROM StudentInteraction si
