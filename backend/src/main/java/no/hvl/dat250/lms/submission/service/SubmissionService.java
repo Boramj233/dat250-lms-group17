@@ -60,6 +60,12 @@ public class SubmissionService {
         this.enrollmentService = enrollmentService;
     }
 
+    /** Includes every owner and version, regardless of grading or release state. */
+    @Transactional(readOnly = true)
+    public boolean hasSubmissions(Long contentId) {
+        return submissionRepository.existsByContent_Id(contentId);
+    }
+
     @Transactional
     public Submission submitIndividual(
             Long contentId,

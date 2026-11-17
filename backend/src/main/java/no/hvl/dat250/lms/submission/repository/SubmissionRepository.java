@@ -14,6 +14,8 @@ import org.springframework.data.repository.query.Param;
 public interface SubmissionRepository
         extends JpaRepository<Submission, Long> {
 
+    boolean existsByContent_Id(Long contentId);
+
     // Existing: history for a specific Enrollment.
     List<Submission>
         findByContent_IdAndSubmittedBy_IdOrderBySubmittedAtDescIdDesc(

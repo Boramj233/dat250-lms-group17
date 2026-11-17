@@ -800,3 +800,59 @@ a hidden required Content stays required and is not silently removed from Module
 completion evaluation. This feature does not implement Module access/dependency,
 Content Delete or frontend changes. Existing mapped columns
 are reused, so no database migration is added or automatically executed.
+
+## Safe Content Delete
+
+```http
+DELETE /api/contents/{contentId}
+Authorization: Bearer <access-token>
+```
+
+Only an active teacher in the Content's actual course may delete it. The endpoint
+supports all four Content types, takes no body and returns 204 with an empty body.
+Unauthenticated requests return 401, students/inactive/other-course teachers 403,
+missing Content (including a repeated delete) 404, invalid IDs 400, and protected
+learning records or database reference conflicts 409. There is no force-delete mode.
+
+Deletion is allowed only when no stored learning records reference the Content:
+
+| Content | What prevents deletion |
+| --- | --- |
+| StaticPage | Any existing StaticPageCompletion record, from any student |
+| Quiz | Any QuizAttempt, passed or failed |
+| Assignment / CodingExercise | Any Submission: individual or Group, any version, TEXT/GIT_URL/FILE, ungraded or graded |
+
+Grade always references a Submission, so the Submission check also protects both
+Grade drafts and released Pass/Fail results. Ownership withdrawal or Group member
+changes do not make these records eligible for deletion. No Submission, Grade,
+Attempt/answer, Completion, member snapshot or stored file is deleted. No object
+storage cleanup is invoked. Checks use currently stored references; the existing
+page-completion model does not retain a separate audit row after completion is
+cancelled by a student.
+
+An unused Quiz may contain all five question types. Its correct Ordering/Matching
+item references are cleared and flushed first, options/items are then removed,
+and question removal cleans up accepted fill answers. Finally, the Quiz and base
+Content rows are removed. These operations run in one transaction; any failure,
+including a final foreign-key conflict, rolls back the entire cleanup. No broad
+cascade-remove mapping is added to learning-history relationships.
+
+ContentDeletionService coordinates the operation, calling SubmissionService for
+submission existence and QuizService for definition cleanup. This avoids a
+ContentService/SubmissionService dependency cycle and keeps repositories inside
+their owning feature. The operation reuses the existing Content row lock and
+checks active teacher enrollment after obtaining it; it acquires no owner/group
+locks. Database foreign keys remain the final guard against references appearing
+after the application checks.
+
+Visibility and Required/mandatory settings alone do not prevent deletion. Other
+Content positions are preserved, so deletion can leave gaps; the freed position
+can be reused, and the existing ordering endpoint can renumber when requested.
+The Module/Course and other Content are not deleted or edited. Removing unused
+Required Content changes the set returned by the normal internal Content list;
+Module aggregation/dependency behavior is still owned by the Module feature.
+
+For Content that already has learning records, close its visibility window instead
+of deleting it. Teacher preview and existing history/grade access remain available.
+No archive flag, database migration, frontend, cross-Module move or Module change
+is included in this API.

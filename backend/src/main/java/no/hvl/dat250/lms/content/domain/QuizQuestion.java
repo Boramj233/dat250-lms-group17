@@ -57,6 +57,12 @@ public class QuizQuestion {
 
     public List<QuizMatch> getCorrectMatches() { return List.copyOf(correctMatches); }
 
+    /** Remove item references before deleting an unused question's definition. */
+    public void clearItemAnswerKeysForDeletion() {
+        correctOrder.clear();
+        correctMatches.clear();
+    }
+
     public void configureMatching(List<QuizItem> items, List<QuizMatch> correctMatches) {
         if (type != QuestionType.MATCHING || !this.items.isEmpty() || !this.correctMatches.isEmpty()) {
             throw new IllegalStateException("Matching items can only be initialized once on a matching question");
