@@ -195,6 +195,13 @@ public class ContentService {
         return content;
     }
 
+    @Transactional
+    public StaticPage updateStaticPage(Long contentId, String title, String body) {
+        StaticPage page = findStaticPageById(contentId);
+        page.updateDetails(title, body);
+        return page;
+    }
+
     @Transactional(readOnly = true)
     public Long staticPageCourseId(Long contentId) {
         return findStaticPageById(contentId).getModule().getCourse().getId();

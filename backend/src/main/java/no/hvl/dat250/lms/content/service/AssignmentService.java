@@ -95,6 +95,13 @@ public class AssignmentService {
         assignment.setMandatoryForExam(mandatoryForExam);
     }
 
+    @Transactional
+    public Assignment updateDetails(Long assignmentId, String title, String instructions) {
+        Assignment assignment = findAssignment(assignmentId);
+        assignment.updateDetails(title, instructions);
+        return assignment;
+    }
+
     @Transactional(readOnly = true)
     public Long courseId(Long assignmentId) {
         return findAssignment(assignmentId).getModule().getCourse().getId();

@@ -8,11 +8,13 @@ import jakarta.validation.Valid;
 import no.hvl.dat250.lms.content.api.dto.AssignmentResponse;
 import no.hvl.dat250.lms.content.api.dto.CreateAssignmentRequest;
 import no.hvl.dat250.lms.content.api.dto.UpdateAssignmentExamRequirementRequest;
+import no.hvl.dat250.lms.content.api.dto.UpdateAssignmentRequest;
 import no.hvl.dat250.lms.content.domain.Assignment;
 import no.hvl.dat250.lms.content.service.AssignmentService;
 import no.hvl.dat250.lms.security.AuthenticatedUser;
 
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -62,6 +64,15 @@ public class AssignmentController {
                 ex
             );
         }
+    }
+
+    @PreAuthorize("@courseAccess.isTeacher(authentication, @assignmentService.courseId(#assignmentId))")
+    @PutMapping("/api/assignments/{assignmentId}")
+    public ResponseEntity<AssignmentResponse> updateAssignment(
+            @PathVariable Long assignmentId,
+            @Valid @RequestBody UpdateAssignmentRequest request) {
+        return ResponseEntity.ok(AssignmentResponse.from(
+            assignmentService.updateDetails(assignmentId, request.title(), request.instructions())));
     }
 
     @PatchMapping("/api/assignments/{assignmentId}/exam-requirement")

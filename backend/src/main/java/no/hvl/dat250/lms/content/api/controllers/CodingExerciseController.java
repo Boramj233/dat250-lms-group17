@@ -6,6 +6,7 @@ import java.util.NoSuchElementException;
 import jakarta.validation.Valid;
 
 import no.hvl.dat250.lms.content.api.dto.CreateCodingExerciseRequest;
+import no.hvl.dat250.lms.content.api.dto.UpdateCodingExerciseRequest;
 import no.hvl.dat250.lms.content.api.dto.CodingExerciseResponse;
 import no.hvl.dat250.lms.content.domain.CodingExercise;
 import no.hvl.dat250.lms.content.service.CodingExerciseService;
@@ -15,6 +16,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -63,6 +65,15 @@ public class CodingExerciseController {
                 ex
             );
         }
+    }
+
+    @PreAuthorize("@courseAccess.isTeacher(authentication, @codingExerciseService.courseId(#exerciseId))")
+    @PutMapping("/api/coding-exercises/{exerciseId}")
+    public ResponseEntity<CodingExerciseResponse> updateCodingExercise(
+            @PathVariable Long exerciseId,
+            @Valid @RequestBody UpdateCodingExerciseRequest request) {
+        return ResponseEntity.ok(CodingExerciseResponse.from(codingExerciseService.updateDetails(
+            exerciseId, request.title(), request.instructions(), request.starterRepositoryUrl(), request.starterCode())));
     }
 
     @ExceptionHandler(NoSuchElementException.class)

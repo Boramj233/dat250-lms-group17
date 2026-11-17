@@ -86,6 +86,14 @@ public class CodingExerciseService {
         return contentRepository.save(exercise);
     }
 
+    @Transactional
+    public CodingExercise updateDetails(Long exerciseId, String title, String instructions,
+                                       String starterRepositoryUrl, String starterCode) {
+        CodingExercise exercise = findCodingExercise(exerciseId);
+        exercise.updateDetails(title, instructions, starterRepositoryUrl, starterCode);
+        return exercise;
+    }
+
     @Transactional(readOnly = true)
     public Long courseId(Long exerciseId) {
         return findCodingExercise(exerciseId).getModule().getCourse().getId();

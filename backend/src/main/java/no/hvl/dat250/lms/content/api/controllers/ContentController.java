@@ -8,6 +8,7 @@ import jakarta.validation.Valid;
 
 import no.hvl.dat250.lms.content.api.dto.CreateStaticPageRequest;
 import no.hvl.dat250.lms.content.api.dto.ReorderContentRequest;
+import no.hvl.dat250.lms.content.api.dto.UpdateStaticPageRequest;
 import no.hvl.dat250.lms.content.api.dto.ContentSummaryResponse;
 import no.hvl.dat250.lms.content.api.dto.StaticPageResponse;
 import no.hvl.dat250.lms.content.domain.StaticPage;
@@ -68,6 +69,16 @@ public class ContentController {
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<Void> handleInvalidArgument() {
         return ResponseEntity.badRequest().build();
+    }
+
+    @PreAuthorize("@courseAccess.isTeacher(authentication, @contentService.staticPageCourseId(#contentId))")
+    @PutMapping("/api/contents/{contentId}")
+    public ResponseEntity<StaticPageResponse> updateStaticPage(
+            @PathVariable Long contentId,
+            @Valid @RequestBody UpdateStaticPageRequest request) {
+        StaticPage page = contentService.updateStaticPage(contentId, request.title(), request.body());
+        return ResponseEntity.ok(StaticPageResponse.from(
+            page, page.getModule().getCourse().getId(), page.getModule().getId()));
     }
 
     @IsEnrolledInCourse
