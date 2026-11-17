@@ -2,6 +2,7 @@ package no.hvl.dat250.lms.module.api.dto;
 
 import no.hvl.dat250.lms.module.domain.Module;
 
+import java.time.LocalDateTime;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -10,7 +11,9 @@ public record ModuleResponse(
     Long courseId,
     String title,
     int position,
-    Set<Long> dependencyIds
+    Set<Long> dependencyIds,
+    LocalDateTime availableFrom,
+    LocalDateTime availableToAllFrom
 ) {
 
     public static ModuleResponse from(
@@ -27,7 +30,9 @@ public record ModuleResponse(
             courseId,
             module.getTitle(),
             module.getPosition(),
-            dependencyIds
+            dependencyIds,
+            module.getAvailableFrom(),
+            module.getAvailableToAllFrom()
         );
     }
 }
