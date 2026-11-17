@@ -6,6 +6,8 @@ import java.util.NoSuchElementException;
 
 import no.hvl.dat250.lms.content.api.dto.SubmitQuizRequest;
 import no.hvl.dat250.lms.content.api.dto.QuizAttemptResponse;
+import no.hvl.dat250.lms.content.api.dto.QuizAttemptCountResponse;
+import no.hvl.dat250.lms.content.api.dto.QuizAttemptDetailResponse;
 
 import no.hvl.dat250.lms.content.service.QuizAttemptService.AttemptResult;
 import no.hvl.dat250.lms.content.service.QuizAttemptService;
@@ -18,6 +20,8 @@ import no.hvl.dat250.lms.content.service.QuizAttemptLimitExceededException;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.CacheControl;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.Valid;
@@ -30,6 +34,31 @@ public class QuizAttemptController {
 
     public QuizAttemptController(QuizAttemptService attemptService) {
         this.attemptService = attemptService;
+    }
+
+    @GetMapping("/me/count")
+    public ResponseEntity<QuizAttemptCountResponse> countOwnAttempts(
+            @PathVariable Long quizId,
+            @AuthenticationPrincipal AuthenticatedUser user) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore().cachePrivate())
+            .body(new QuizAttemptCountResponse(attemptService.countOwnAttempts(quizId, user.userId())));
+    }
+
+    @GetMapping("/me")
+    public ResponseEntity<List<QuizAttemptResponse>> ownAttempts(
+            @PathVariable Long quizId,
+            @AuthenticationPrincipal AuthenticatedUser user) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore().cachePrivate())
+            .body(attemptService.findOwnAttempts(quizId, user.userId()));
+    }
+
+    @GetMapping("/{attemptId}")
+    public ResponseEntity<QuizAttemptDetailResponse> ownAttempt(
+            @PathVariable Long quizId,
+            @PathVariable Long attemptId,
+            @AuthenticationPrincipal AuthenticatedUser user) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore().cachePrivate())
+            .body(attemptService.findOwnAttempt(quizId, attemptId, user.userId()));
     }
 
     @PostMapping

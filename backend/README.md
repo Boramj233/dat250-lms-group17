@@ -157,7 +157,8 @@ Only incorrect questions with a configured nonblank hint appear. Hints do not ca
 answer keys or selected-option correctness. Teachers should write hints as guidance,
 not put the answer itself in the hint text. Correct answers produce no hint. This
 is feedback after a whole-quiz submission, usable for a later attempt, not an
-in-progress answer/hint API. No historical hint endpoint or usage counter is added.
+in-progress answer/hint API. Historical feedback is available through the student
+attempt detail endpoint below.
 
 After the first persisted attempt, adding questions returns 409. This is a simple
 transactional existence check, not a concurrent exam-versioning guarantee. The
@@ -170,6 +171,40 @@ For existing H2 databases, back up and stop the application before manually appl
 text answers and the accepted-answer table, preserving old questions/answers.
 The script is not automatic; H2 DDL is not atomic. Tests use disposable databases,
 not the developer database.
+
+## Student Quiz attempt queries
+
+All three endpoints derive the student from the verified principal and require an
+active STUDENT enrollment in the Quiz's course. They do not accept a target user
+or enrollment ID. Teachers and inactive/other-course students receive 403;
+unauthenticated requests receive 401. A missing Quiz, a non-Quiz content ID, or an
+attempt belonging to another student/Quiz returns 404.
+
+| Endpoint | Response |
+| --- | --- |
+| `GET /api/quizzes/{quizId}/attempts/me/count` | `{"usedAttempts": 2}`; stored attempts only, without a remaining-attempt count. |
+| `GET /api/quizzes/{quizId}/attempts/me` | Attempt summaries (`id`, `quizId`, `submittedAt`, `correctCount`, `totalQuestions`, `hints: []`), newest first; descending ID breaks timestamp ties. |
+| `GET /api/quizzes/{quizId}/attempts/{attemptId}` | The student's attempt score, submitted answers, per-question `correct`, safe question display data and wrong-question Hints. |
+
+An attempt detail has the summary fields plus `answers`. Each answer contains
+`questionId`, `question` (the same safe question DTO used by student Quiz reads),
+`selectedOptionIds`, `textAnswer`, `orderedItemIds`, `matches` (pairs of
+`leftItemId`/`rightItemId`) and `correct`. Unused answer collections are empty;
+unused `textAnswer` is null. Answers are ordered by question position, then ID.
+Submitted text and Ordering order are preserved; Matching pairs represent the
+student's submitted pairings, with no meaningful pair-list order.
+
+Scores and correctness are read from persisted results, never recalculated.
+Only incorrect questions with a currently configured nonblank Hint appear in
+the detail's `hints`; Hint text is not separately snapshotted. No accepted fill
+answers, option correctness, correct order or correct Matching pairs are exposed,
+including after the student has used all attempts. A student's own correct answer
+is naturally still visible as their submitted answer. All queries are read-only,
+consume no attempts and return `Cache-Control: no-store, private`.
+
+No schema migration or frontend change is needed. This phase does not add teacher
+history/answer-key APIs, change answer-release policy, or change withdrawal rules:
+attempts are retained, but inactive students cannot use these queries.
 
 ## Quiz 3B-1 Ordering
 

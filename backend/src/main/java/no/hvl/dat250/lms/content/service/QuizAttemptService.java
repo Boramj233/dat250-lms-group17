@@ -10,6 +10,9 @@ import java.util.NoSuchElementException;
 import java.util.Map;
 import java.util.Set;
 
+import no.hvl.dat250.lms.content.api.dto.QuizAttemptResponse;
+import no.hvl.dat250.lms.content.api.dto.QuizAttemptDetailResponse;
+import no.hvl.dat250.lms.content.api.dto.QuizDetailResponse;
 import no.hvl.dat250.lms.content.domain.ChoiceOption;
 import no.hvl.dat250.lms.content.domain.Quiz;
 import no.hvl.dat250.lms.content.domain.QuizAnswer;
@@ -56,6 +59,44 @@ public class QuizAttemptService {
     }
 
     public record AttemptResult(QuizAttempt attempt, List<QuestionHint> hints) {
+    }
+
+    private Enrollment studentForQuiz(Long quizId, Long userId) {
+        if (quizId == null || quizId <= 0 || userId == null || userId <= 0) {
+            throw new IllegalArgumentException("Valid Quiz ID and User ID are required");
+        }
+        Long courseId = quizService.courseId(quizId);
+        try {
+            return enrollmentService.requireActiveStudent(userId, courseId);
+        } catch (NoSuchElementException | IllegalStateException exception) {
+            throw new AccessDeniedException("Active student enrollment required", exception);
+        }
+    }
+
+    @Transactional(readOnly = true)
+    public long countOwnAttempts(Long quizId, Long userId) {
+        Enrollment student = studentForQuiz(quizId, userId);
+        return attemptRepository.countByEnrollment_IdAndQuiz_Id(student.getId(), quizId);
+    }
+
+    @Transactional(readOnly = true)
+    public List<QuizAttemptResponse> findOwnAttempts(Long quizId, Long userId) {
+        Enrollment student = studentForQuiz(quizId, userId);
+        return attemptRepository.findByEnrollment_IdAndQuiz_IdOrderBySubmittedAtDesc(student.getId(), quizId)
+            .stream().map(attempt -> QuizAttemptResponse.from(attempt, quizId)).toList();
+    }
+
+    @Transactional(readOnly = true)
+    public QuizAttemptDetailResponse findOwnAttempt(Long quizId, Long attemptId, Long userId) {
+        if (attemptId == null || attemptId <= 0) {
+            throw new IllegalArgumentException("Valid Attempt ID is required");
+        }
+        Enrollment student = studentForQuiz(quizId, userId);
+        QuizAttempt attempt = attemptRepository.findByIdAndQuiz_IdAndEnrollment_Id(attemptId, quizId, student.getId())
+            .orElseThrow(() -> new NoSuchElementException("Attempt not found"));
+        var answers = answerRepository.findByAttempt_IdOrderByQuestion_PositionAsc(attemptId);
+        QuizDetailResponse quiz = QuizDetailResponse.from(quizService.findQuizWithQuestions(quizId));
+        return QuizAttemptDetailResponse.from(attempt, quiz, answers);
     }
 
     @Transactional
