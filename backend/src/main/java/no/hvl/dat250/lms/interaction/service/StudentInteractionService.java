@@ -32,7 +32,7 @@ public class StudentInteractionService {
             Long contentId) {
 
         StudentInteraction interaction = interactionRepository
-                .findByStudent_IdAndContent_Id(studentId, contentId)
+                .findByStudent_UserIdAndContent_Id(studentId, contentId)
                 .orElseGet(() -> {
                     User student = userService.getUser(studentId);
                     Content content = contentService.requireContent(contentId);

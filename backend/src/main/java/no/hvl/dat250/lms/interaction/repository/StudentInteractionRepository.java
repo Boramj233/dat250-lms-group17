@@ -10,7 +10,7 @@ import java.util.Optional;
 public interface StudentInteractionRepository
         extends JpaRepository<StudentInteraction, Long> {
 
-    Optional<StudentInteraction> findByStudent_IdAndContent_Id(
+    Optional<StudentInteraction> findByStudent_UserIdAndContent_Id(
             Long studentId,
             Long contentId
     );
@@ -20,13 +20,13 @@ public interface StudentInteractionRepository
     @Query("""
         SELECT COUNT(c)
         FROM Content c
-        WHERE c.module_id = :moduleId
+        WHERE c.module.id = :moduleId
             AND c.requiredForCompletion = true
             AND NOT EXISTS (
                 SELECT si.id
                 FROM StudentInteraction si
                 WHERE si.content = c
-                    AND si.student.id = :studentId
+                    AND si.student.userId = :studentId
                     AND si.completedAt IS NOT NULL
                 )
         """)

@@ -16,6 +16,7 @@ import no.hvl.dat250.lms.module.service.ModuleService;
 
 import no.hvl.dat250.lms.security.AuthenticatedUser;
 import no.hvl.dat250.lms.security.auth.access.CourseAccess;
+import no.hvl.dat250.lms.security.auth.annotations.IsCourseManager;
 import no.hvl.dat250.lms.security.auth.annotations.IsEnrolledInCourse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -42,6 +43,7 @@ public class ModuleController {
 
     // ---------------------------------------------------------------- Module
 
+    @IsCourseManager
     @PostMapping
     public ResponseEntity<ModuleResponse> createModule(
             @PathVariable Long courseId,
@@ -98,6 +100,7 @@ public class ModuleController {
         );
     }
 
+    @IsCourseManager
     @PutMapping("/{moduleId}")
     public ResponseEntity<ModuleResponse> updateModule(
             @PathVariable Long courseId,
@@ -122,6 +125,7 @@ public class ModuleController {
 
     // ---------------------------------------------------------------- Dependency
 
+    @IsCourseManager
     @PostMapping("/{moduleId}/dependencies/{requiredModuleId}")
     public ResponseEntity<ModuleResponse> addDependency(
             @PathVariable Long courseId,
@@ -140,6 +144,7 @@ public class ModuleController {
         );
     }
 
+    @IsEnrolledInCourse
     @GetMapping("/{moduleId}/dependencies")
     public ResponseEntity<Set<Long>> getAllModuleDependencies(
             @PathVariable Long courseId,
@@ -155,6 +160,7 @@ public class ModuleController {
         return ResponseEntity.ok(dependencyIds);
     }
 
+    @IsCourseManager
     @DeleteMapping("/{moduleId}/dependencies/{requiredModuleId}")
     public ResponseEntity<Void> removeDependency(
             @PathVariable Long courseId,
