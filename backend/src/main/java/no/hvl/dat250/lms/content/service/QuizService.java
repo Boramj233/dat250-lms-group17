@@ -14,6 +14,7 @@ import no.hvl.dat250.lms.content.repository.QuizItemRepository;
 import java.util.NoSuchElementException;
 
 import no.hvl.dat250.lms.content.domain.Content;
+import no.hvl.dat250.lms.content.api.dto.QuizAnswerKeyResponse;
 import no.hvl.dat250.lms.content.domain.QuestionType;
 import no.hvl.dat250.lms.content.repository.QuizAttemptRepository;
 import org.hibernate.Hibernate;
@@ -30,6 +31,7 @@ import no.hvl.dat250.lms.module.service.ModuleService;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.annotation.Propagation;
 
 @Service
 public class QuizService {
@@ -87,6 +89,28 @@ public class QuizService {
         Quiz quiz,
         List<QuestionWithOptions> questions
     ) {}
+
+    /** Internal operation in the authorized Content deletion transaction. Never deletes attempts. */
+    @Transactional(propagation = Propagation.MANDATORY)
+    public void deleteUnusedDefinition(Long quizId) {
+        if (attemptRepository.existsByQuiz_Id(quizId)) {
+            throw new ContentDeletionConflictException("Quiz with attempts cannot be deleted");
+        }
+        List<QuizQuestion> questions = questionRepository.findByQuiz_IdOrderByPositionAsc(quizId);
+        for (QuizQuestion question : questions) {
+            question.clearItemAnswerKeysForDeletion();
+        }
+        // Correct order/match rows reference items, so flush their removal before deleting items.
+        questionRepository.flush();
+        for (QuizQuestion question : questions) {
+            optionRepository.deleteAll(optionRepository.findByQuestion_IdOrderByPositionAsc(question.getId()));
+            itemRepository.deleteAll(question.getItems());
+        }
+        itemRepository.flush();
+        // Entity removal also cleans up the question-owned accepted-answer collection.
+        questionRepository.deleteAll(questions);
+        questionRepository.flush();
+    }
 
 
     @Transactional
@@ -378,6 +402,11 @@ public class QuizService {
             throw new NoSuchElementException("Quiz not found");
         }
         return quiz.getModule().getCourse().getId();
+    }
+
+    @Transactional(readOnly = true)
+    public QuizAnswerKeyResponse findAnswerKey(Long quizId) {
+        return QuizAnswerKeyResponse.from(findQuizWithQuestions(quizId));
     }
 
     @Transactional(readOnly = true)

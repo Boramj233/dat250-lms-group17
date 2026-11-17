@@ -1,5 +1,7 @@
 package no.hvl.dat250.lms.content.api.dto;
 
+import java.time.Instant;
+
 import no.hvl.dat250.lms.content.domain.Content;
 import no.hvl.dat250.lms.content.domain.StaticPage;
 import no.hvl.dat250.lms.content.domain.Quiz;
@@ -11,7 +13,9 @@ public record ContentSummaryResponse(
     String type,
     String title,
     int position,
-    boolean requiredForModuleCompletion
+    boolean requiredForModuleCompletion,
+    Instant visibleFrom,
+    Instant visibleUntil
 ) {
 
     public static ContentSummaryResponse from(Content content) {
@@ -22,7 +26,9 @@ public record ContentSummaryResponse(
                 "STATIC_PAGE",
                 content.getTitle(),
                 content.getPosition(),
-                content.isRequiredForModuleCompletion()
+                content.isRequiredForModuleCompletion(),
+                content.getVisibleFrom(),
+                content.getVisibleUntil()
             );
         }
 
@@ -32,7 +38,9 @@ public record ContentSummaryResponse(
                 "QUIZ",
                 content.getTitle(),
                 content.getPosition(),
-                content.isRequiredForModuleCompletion()
+                content.isRequiredForModuleCompletion(),
+                content.getVisibleFrom(),
+                content.getVisibleUntil()
             );
         }
 
@@ -42,7 +50,9 @@ public record ContentSummaryResponse(
                 "Assignment",
                 content.getTitle(),
                 content.getPosition(),
-                content.isRequiredForModuleCompletion()
+                content.isRequiredForModuleCompletion(),
+                content.getVisibleFrom(),
+                content.getVisibleUntil()
             );
         }
 
@@ -52,7 +62,9 @@ public record ContentSummaryResponse(
                 "CODING_EXERCISE",
                 content.getTitle(),
                 content.getPosition(),
-                content.isRequiredForModuleCompletion()
+                content.isRequiredForModuleCompletion(),
+                content.getVisibleFrom(),
+                content.getVisibleUntil()
             );
         }
 

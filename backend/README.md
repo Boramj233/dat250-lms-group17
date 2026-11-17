@@ -157,7 +157,8 @@ Only incorrect questions with a configured nonblank hint appear. Hints do not ca
 answer keys or selected-option correctness. Teachers should write hints as guidance,
 not put the answer itself in the hint text. Correct answers produce no hint. This
 is feedback after a whole-quiz submission, usable for a later attempt, not an
-in-progress answer/hint API. No historical hint endpoint or usage counter is added.
+in-progress answer/hint API. Historical feedback is available through the student
+attempt detail endpoint below.
 
 After the first persisted attempt, adding questions returns 409. This is a simple
 transactional existence check, not a concurrent exam-versioning guarantee. The
@@ -170,6 +171,70 @@ For existing H2 databases, back up and stop the application before manually appl
 text answers and the accepted-answer table, preserving old questions/answers.
 The script is not automatic; H2 DDL is not atomic. Tests use disposable databases,
 not the developer database.
+
+## Student Quiz attempt queries
+
+All three endpoints derive the student from the verified principal and require an
+active STUDENT enrollment in the Quiz's course. They do not accept a target user
+or enrollment ID. Teachers and inactive/other-course students receive 403;
+unauthenticated requests receive 401. A missing Quiz, a non-Quiz content ID, or an
+attempt belonging to another student/Quiz returns 404.
+
+| Endpoint | Response |
+| --- | --- |
+| `GET /api/quizzes/{quizId}/attempts/me/count` | `{"usedAttempts": 2}`; stored attempts only, without a remaining-attempt count. |
+| `GET /api/quizzes/{quizId}/attempts/me` | Attempt summaries (`id`, `quizId`, `submittedAt`, `correctCount`, `totalQuestions`, `hints: []`), newest first; descending ID breaks timestamp ties. |
+| `GET /api/quizzes/{quizId}/attempts/{attemptId}` | The student's attempt score, submitted answers, per-question `correct`, safe question display data and wrong-question Hints. |
+
+An attempt detail has the summary fields plus `answers`. Each answer contains
+`questionId`, `question` (the same safe question DTO used by student Quiz reads),
+`selectedOptionIds`, `textAnswer`, `orderedItemIds`, `matches` (pairs of
+`leftItemId`/`rightItemId`) and `correct`. Unused answer collections are empty;
+unused `textAnswer` is null. Answers are ordered by question position, then ID.
+Submitted text and Ordering order are preserved; Matching pairs represent the
+student's submitted pairings, with no meaningful pair-list order.
+
+Scores and correctness are read from persisted results, never recalculated.
+Only incorrect questions with a currently configured nonblank Hint appear in
+the detail's `hints`; Hint text is not separately snapshotted. No accepted fill
+answers, option correctness, correct order or correct Matching pairs are exposed,
+including after the student has used all attempts. A student's own correct answer
+is naturally still visible as their submitted answer. All queries are read-only,
+consume no attempts and return `Cache-Control: no-store, private`.
+
+No schema migration is needed. Attempts are retained, but inactive students cannot
+use these student queries. Teacher queries are separate, as described below.
+
+## Teacher Quiz review and answer key
+
+These read-only endpoints require an active TEACHER enrollment in the Quiz's
+actual course and return `Cache-Control: no-store, private`. Unauthenticated
+requests return 401; students, inactive teachers and other-course teachers return
+403. A missing Quiz or a non-Quiz content ID returns 404.
+
+| Endpoint | Response |
+| --- | --- |
+| `GET /api/quizzes/{quizId}/attempts/students/{studentUserId}` | The target user's stored attempts in this Quiz, using the same summaries and newest-first ordering as `/attempts/me`. |
+| `GET /api/quizzes/{quizId}/attempts/{attemptId}/review` | The same answer/score/Hint detail DTO used by the student endpoint, for any attempt in this Quiz. |
+| `GET /api/quizzes/{quizId}/answer-key` | `quizId` and `questions`, containing question display data, configured Hint and answer keys for all five types. |
+
+`studentUserId` is the local User ID from the course enrollment list, not an
+Enrollment ID. A target with no attempts in this Quiz returns `[]`, including
+unknown/other-course users. Historical attempts remain reviewable after the
+student withdraws or changes role. Review of a missing attempt or one belonging
+to another Quiz returns 404. Scores and correctness are not recalculated.
+
+Each answer-key question contains `question` (the existing safe question DTO),
+`hint`, `correctOptionIds` (MC/True-False), `acceptedAnswers` (Fill-in-the-Blank),
+`correctOrder` (Ordering item IDs in the correct sequence), and `correctMatches`
+(Matching `leftItemId`/`rightItemId` pairs). Unused key lists are empty. Matching
+pair-list order has no grading meaning. Quiz definitions with no questions return
+an empty `questions` list. The configured Hint is returned to the teacher even
+without a student submission; student wrong-question Hint rules stay unchanged.
+
+Answer keys are a separate teacher response. Existing student Quiz/attempt
+responses remain safe, and exhausting retries does not grant access to this
+endpoint. No result-release policy, frontend, schema or Module change is included.
 
 ## Quiz 3B-1 Ordering
 
@@ -659,3 +724,135 @@ shortened or removed. Grades, release state, member snapshots and Completion evi
 are retained. Title/instructions/starter code, ordering, Required and mandatoryForExam
 are unchanged. Basic editing PUT endpoints remain separate. No migration, new lock
 framework, Quiz settings, visibility or frontend changes are included.
+
+## Content Visibility
+
+An active teacher in the Content's actual course can configure its visibility window:
+
+```http
+PUT /api/contents/{contentId}/visibility
+Content-Type: application/json
+
+{"visibleFrom":"2026-12-01T08:00:00Z","visibleUntil":"2026-12-08T08:00:00Z"}
+```
+
+This endpoint supports StaticPage, Assignment, CodingExercise and Quiz. Success is
+200 with `{contentId, visibleFrom, visibleUntil}`. Use an ISO timestamp with a timezone;
+times are stored as Instant. Invalid timestamps return 400, unauthenticated calls
+401, non-course/inactive teachers and students 403, and missing Content 404. The
+teacher's identity comes from the verified principal. When both bounds are nonnull,
+the start must be strictly before the end (otherwise 400); both new values are
+validated together before either is changed. Invalid updates leave the stored
+window unchanged. Content summaries and all four detail/creation response DTOs
+also include visibleFrom and visibleUntil.
+
+The original start-only request remains compatible. Start is always replaced,
+while end is replaced only when its property is present:
+
+| Request | Start | End |
+| --- | --- | --- |
+| `{"visibleFrom":"..."}` | Set start | Preserve existing end |
+| `{"visibleFrom":null}` or `{}` | Clear start | Preserve existing end |
+| `{"visibleUntil":"..."}` | Clear start (omitted) | Set end |
+| `{"visibleUntil":null}` | Clear start (omitted) | Clear end |
+| Both properties | Set/clear each as supplied | Set/clear each as supplied |
+
+To close access now, send `{"visibleFrom":null,"visibleUntil":"<now-or-past-UTC-instant>"}`.
+Clearing start also permits closing a previously scheduled future window without
+an invalid start/end pair. Keep the elapsed end to leave the Content unavailable
+indefinitely. To reopen without time restrictions, send
+`{"visibleFrom":null,"visibleUntil":null}`. Clearing start alone does not reopen
+Content whose preserved end has already elapsed. No archive/deleted flag is added;
+this closes current access, without deleting or concealing owned historical records.
+
+The window is `[visibleFrom, visibleUntil)`: the start is inclusive, the end is
+exclusive, and either null bound is unrestricted. Existing rows with both null
+remain available. No scheduler is needed: each operation checks server time.
+
+- Student Content lists omit items outside the window without renumbering positions;
+  same-course active teachers see the full list and can preview all four detail
+  endpoints before release.
+- Direct student detail requests outside the window return 403, even with a known ID.
+- Quiz submission outside the window returns 403 without creating an Attempt.
+- Individual/Group TEXT and GIT_URL submissions for Assignment/CodingExercise are
+  checked in the existing acceptance transaction after refreshing Content rules.
+- Assignment FILE preflight checks visibility before storage upload. Final acceptance
+  checks again after the upload; a now-hidden submission is rejected and the existing
+  rollback cleanup removes the uploaded object.
+- StaticPage completion writes (including clearing completion) and the student HTTP
+  completion-status endpoint are unavailable outside the window (403). Stored page
+  completion is preserved.
+
+Visibility editing reuses the existing Content row lock shared by submission
+acceptance/settings editing. It adds no new locking mechanism or lock order in
+submission flows; file upload remains outside SQL transactions. Visibility is independent of
+submission deadlines, ordering, requiredForModuleCompletion and mandatoryForExam.
+
+Historical Attempts, answers/Hints, Submissions/files, released Grades, late flags
+and Group member snapshots are retained. Their existing history/review/download
+endpoints keep their original ownership, enrollment and release checks; hiding a
+Content does not revoke access to its owned historical records. New interactions
+are restricted, but historical scores and completion evidence are never recalculated.
+
+Internal ContentService.requireContent(), findContentsByModule() and isCompleted()
+keep their existing contracts. HTTP browsing uses a separate filtered list method;
+a hidden required Content stays required and is not silently removed from Module
+completion evaluation. This feature does not implement Module access/dependency,
+Content Delete or frontend changes. Existing mapped columns
+are reused, so no database migration is added or automatically executed.
+
+## Safe Content Delete
+
+```http
+DELETE /api/contents/{contentId}
+Authorization: Bearer <access-token>
+```
+
+Only an active teacher in the Content's actual course may delete it. The endpoint
+supports all four Content types, takes no body and returns 204 with an empty body.
+Unauthenticated requests return 401, students/inactive/other-course teachers 403,
+missing Content (including a repeated delete) 404, invalid IDs 400, and protected
+learning records or database reference conflicts 409. There is no force-delete mode.
+
+Deletion is allowed only when no stored learning records reference the Content:
+
+| Content | What prevents deletion |
+| --- | --- |
+| StaticPage | Any existing StaticPageCompletion record, from any student |
+| Quiz | Any QuizAttempt, passed or failed |
+| Assignment / CodingExercise | Any Submission: individual or Group, any version, TEXT/GIT_URL/FILE, ungraded or graded |
+
+Grade always references a Submission, so the Submission check also protects both
+Grade drafts and released Pass/Fail results. Ownership withdrawal or Group member
+changes do not make these records eligible for deletion. No Submission, Grade,
+Attempt/answer, Completion, member snapshot or stored file is deleted. No object
+storage cleanup is invoked. Checks use currently stored references; the existing
+page-completion model does not retain a separate audit row after completion is
+cancelled by a student.
+
+An unused Quiz may contain all five question types. Its correct Ordering/Matching
+item references are cleared and flushed first, options/items are then removed,
+and question removal cleans up accepted fill answers. Finally, the Quiz and base
+Content rows are removed. These operations run in one transaction; any failure,
+including a final foreign-key conflict, rolls back the entire cleanup. No broad
+cascade-remove mapping is added to learning-history relationships.
+
+ContentDeletionService coordinates the operation, calling SubmissionService for
+submission existence and QuizService for definition cleanup. This avoids a
+ContentService/SubmissionService dependency cycle and keeps repositories inside
+their owning feature. The operation reuses the existing Content row lock and
+checks active teacher enrollment after obtaining it; it acquires no owner/group
+locks. Database foreign keys remain the final guard against references appearing
+after the application checks.
+
+Visibility and Required/mandatory settings alone do not prevent deletion. Other
+Content positions are preserved, so deletion can leave gaps; the freed position
+can be reused, and the existing ordering endpoint can renumber when requested.
+The Module/Course and other Content are not deleted or edited. Removing unused
+Required Content changes the set returned by the normal internal Content list;
+Module aggregation/dependency behavior is still owned by the Module feature.
+
+For Content that already has learning records, close its visibility window instead
+of deleting it. Teacher preview and existing history/grade access remain available.
+No archive flag, database migration, frontend, cross-Module move or Module change
+is included in this API.

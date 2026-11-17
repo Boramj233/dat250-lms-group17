@@ -1,6 +1,8 @@
 
 package no.hvl.dat250.lms.content.api.dto;
 
+import java.time.Instant;
+
 import no.hvl.dat250.lms.content.domain.QuestionType;
 import no.hvl.dat250.lms.content.domain.QuizQuestion;
 import no.hvl.dat250.lms.content.domain.QuizItemKind;
@@ -20,7 +22,9 @@ public record QuizDetailResponse(
     int position,
     int maxAttempts,
     int passingPercentage,
-    List<QuestionResponse> questions
+    List<QuestionResponse> questions,
+    Instant visibleFrom,
+    Instant visibleUntil
 ) {
 
     public record QuestionResponse(
@@ -87,7 +91,9 @@ public record QuizDetailResponse(
             quiz.getPosition(),
             quiz.getMaxAttempts(),
             quiz.getPassingPercentage(),
-            questions
+            questions,
+            quiz.getVisibleFrom(),
+            quiz.getVisibleUntil()
         );
     }
 }

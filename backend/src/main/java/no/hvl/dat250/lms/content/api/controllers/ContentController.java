@@ -11,7 +11,12 @@ import no.hvl.dat250.lms.content.api.dto.ReorderContentRequest;
 import no.hvl.dat250.lms.content.api.dto.UpdateStaticPageRequest;
 import no.hvl.dat250.lms.content.api.dto.ContentSummaryResponse;
 import no.hvl.dat250.lms.content.api.dto.StaticPageResponse;
+import no.hvl.dat250.lms.content.api.dto.ContentVisibilityResponse;
+import no.hvl.dat250.lms.content.api.dto.UpdateContentVisibilityRequest;
+import no.hvl.dat250.lms.security.AuthenticatedUser;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import no.hvl.dat250.lms.content.domain.StaticPage;
+import no.hvl.dat250.lms.content.domain.Content;
 import no.hvl.dat250.lms.content.service.ContentService;
 import no.hvl.dat250.lms.interaction.service.StudentInteractionService;
 import no.hvl.dat250.lms.security.AuthenticatedUser;
@@ -41,6 +46,21 @@ public class ContentController {
 
         this.contentService = contentService;
         this.interactionService = interactionService;
+    }
+
+    @PutMapping("/api/contents/{contentId}/visibility")
+    public ResponseEntity<ContentVisibilityResponse> updateVisibility(
+            @PathVariable Long contentId,
+            @Valid @RequestBody UpdateContentVisibilityRequest request,
+            @AuthenticationPrincipal AuthenticatedUser user) {
+        Content content;
+        if (request.hasVisibleUntil()) {
+            content = contentService.updateVisibilityWindow(contentId, user.userId(),
+                request.getVisibleFrom(), request.getVisibleUntil());
+        } else {
+            content = contentService.updateVisibility(contentId, user.userId(), request.getVisibleFrom());
+        }
+        return ResponseEntity.ok(ContentVisibilityResponse.from(content));
     }
 
     @IsTeacherInCourse
@@ -94,11 +114,12 @@ public class ContentController {
     @GetMapping(MODULE_CONTENTS_PATH)
     public ResponseEntity<List<ContentSummaryResponse>> getContents(
             @PathVariable Long courseId,
-            @PathVariable Long moduleId) {
+            @PathVariable Long moduleId,
+            @AuthenticationPrincipal AuthenticatedUser user) {
 
         List<ContentSummaryResponse> contents =
-                contentService.findContentsByModule(
-                    courseId, moduleId
+                contentService.findContentsForUser(
+                    courseId, moduleId, user.userId()
                 )
                 .stream()
                 .map(ContentSummaryResponse::from)
@@ -141,7 +162,11 @@ public class ContentController {
         return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
     }
 
-    @PreAuthorize("@courseAccess.isEnrolled(authentication, @contentService.staticPageCourseId(#contentId))")
+    @PreAuthorize("""
+        @courseAccess.isEnrolled(authentication, @contentService.staticPageCourseId(#contentId))
+        and (@courseAccess.isTeacher(authentication, @contentService.staticPageCourseId(#contentId))
+            or @contentService.isVisible(#contentId))
+        """)
     @GetMapping("/api/contents/{contentId}")
     public ResponseEntity<StaticPageResponse> getStaticPage(
         @PathVariable Long contentId) {

@@ -1,5 +1,7 @@
 package no.hvl.dat250.lms.content.api.dto;
 
+import java.time.Instant;
+
 import no.hvl.dat250.lms.content.domain.Quiz;
 
 public record QuizResponse(
@@ -8,7 +10,9 @@ public record QuizResponse(
     Long moduleId,
     String title,
     int position,
-    int maxAttempts
+    int maxAttempts,
+    Instant visibleFrom,
+    Instant visibleUntil
 ) {
     public static QuizResponse from(
             Quiz quiz,
@@ -21,7 +25,9 @@ public record QuizResponse(
             moduleId,
             quiz.getTitle(),
             quiz.getPosition(),
-            quiz.getMaxAttempts()
+            quiz.getMaxAttempts(),
+            quiz.getVisibleFrom(),
+            quiz.getVisibleUntil()
         );
     }
 }

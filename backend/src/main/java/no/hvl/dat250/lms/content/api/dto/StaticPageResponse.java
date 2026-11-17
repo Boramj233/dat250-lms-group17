@@ -1,5 +1,7 @@
 package no.hvl.dat250.lms.content.api.dto;
 
+import java.time.Instant;
+
 import no.hvl.dat250.lms.content.domain.StaticPage;
 
 public record StaticPageResponse(
@@ -8,7 +10,9 @@ public record StaticPageResponse(
     Long moduleId,
     String title,
     int position,
-    String body
+    String body,
+    Instant visibleFrom,
+    Instant visibleUntil
 ) {
 
     public static StaticPageResponse from(
@@ -22,7 +26,9 @@ public record StaticPageResponse(
             moduleId,
             page.getTitle(),
             page.getPosition(),
-            page.getBody()
+            page.getBody(),
+            page.getVisibleFrom(),
+            page.getVisibleUntil()
         );
     }
 }

@@ -86,6 +86,24 @@ public abstract class Content {
         return visibleFrom;
     }
 
+    public void changeVisibleFrom(Instant visibleFrom) {
+        changeVisibility(visibleFrom, visibleUntil);
+    }
+
+    public void changeVisibility(Instant visibleFrom, Instant visibleUntil) {
+        if (visibleFrom != null && visibleUntil != null && !visibleFrom.isBefore(visibleUntil)) {
+            throw new IllegalArgumentException("Visible from must be before visible until");
+        }
+        this.visibleFrom = visibleFrom;
+        this.visibleUntil = visibleUntil;
+    }
+
+    /** The start is inclusive and the end is exclusive; null means no bound. */
+    public boolean isVisibleAt(Instant now) {
+        return (visibleFrom == null || !now.isBefore(visibleFrom))
+            && (visibleUntil == null || now.isBefore(visibleUntil));
+    }
+
     public Instant getVisibleUntil() {
         return visibleUntil;
     }

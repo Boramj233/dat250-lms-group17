@@ -62,8 +62,7 @@ public class ContentCompletionService {
         Enrollment student = student(content, userId);
         if (!(content instanceof StaticPage page)) throw new IllegalArgumentException("Only pages support manual completion");
         Instant now = Instant.now();
-        if ((page.getVisibleFrom() != null && now.isBefore(page.getVisibleFrom()))
-                || (page.getVisibleUntil() != null && !now.isBefore(page.getVisibleUntil()))) {
+        if (!page.isVisibleAt(now)) {
             throw new AccessDeniedException("Page outside visibility window");
         }
         if (completed) {
