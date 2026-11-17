@@ -9,8 +9,6 @@ import no.hvl.dat250.lms.user.service.UserService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.NoSuchElementException;
-
 @Service
 public class StudentInteractionService {
 
@@ -34,7 +32,7 @@ public class StudentInteractionService {
             Long contentId) {
 
         StudentInteraction interaction = interactionRepository
-                .findByStudentIdAndContentId(studentId, contentId)
+                .findByStudent_IdAndContent_Id(studentId, contentId)
                 .orElseGet(() -> {
                     User student = userService.getUser(studentId);
                     Content content = contentService.requireContent(contentId);
@@ -42,13 +40,20 @@ public class StudentInteractionService {
                     return new StudentInteraction(student, content);
                 });
 
-        // TODO: BEFORE calling markCompleted(), verify:
-        // 1. is the student an authenticated user?
-        // 2. is the student enrolled at this course?
-        // 3. is the content accessible?
-        // 4. have the content-specific requirements been met?
         interaction.markCompleted();
 
         return interactionRepository.save(interaction);
+    }
+
+    // if there are 0 incomplete required contents, return true
+    @Transactional(readOnly = true)
+    public boolean areRequiredContentCompleted(
+            Long moduleId,
+            Long studentId) {
+
+        return interactionRepository.countIncompleteRequiredContent(
+                moduleId,
+                studentId
+        ) == 0;
     }
 }

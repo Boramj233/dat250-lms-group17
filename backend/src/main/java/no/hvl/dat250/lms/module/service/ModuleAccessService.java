@@ -1,27 +1,26 @@
 package no.hvl.dat250.lms.module.service;
 
-import no.hvl.dat250.lms.content.domain.Content;
-import no.hvl.dat250.lms.interaction.repository.StudentInteractionRepository;
+import no.hvl.dat250.lms.interaction.service.StudentInteractionService;
 import no.hvl.dat250.lms.module.repository.ModuleRepository;
 import no.hvl.dat250.lms.module.domain.Module;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.security.access.AccessDeniedException;
 
-import java.util.List;
 import java.util.NoSuchElementException;
 
 @Service
 public class ModuleAccessService {
 
     private final ModuleRepository moduleRepository;
-    private final StudentInteractionRepository interactionRepository;
+    private final StudentInteractionService interactionService;
 
     public ModuleAccessService(
             ModuleRepository moduleRepository,
-            StudentInteractionRepository interactionRepository) {
+            StudentInteractionService interactionService) {
 
         this.moduleRepository = moduleRepository;
-        this.interactionRepository = interactionRepository;
+        this.interactionService = interactionService;
     }
 
     @Transactional(readOnly = true)
@@ -29,27 +28,16 @@ public class ModuleAccessService {
             Long moduleId,
             Long studentId) {
 
-        Module module = moduleRepository.findById(moduleId)
-                .orElseThrow(() -> new NoSuchElementException(
-                        "Module not found"
-                ));
-
-        // get all contents and check for mandatory later, or filter at get?
-        // module.getDependencyContents();
-        List<Content> contents = module.getContents();
-
-        for (Content content : contents) {
-            boolean completed = interactionRepository
-                    .existsByStudentIdAndContentIdAndCompletedAtIsNotNull(
-                            studentId,
-                            content.getId()
-                    );
-            if (!completed) {
-                return false;
-            }
+        if (!moduleRepository.existsById(moduleId)) {
+            throw new NoSuchElementException(
+                    "Module not found" + moduleId
+            );
         }
 
-        return true;
+        return interactionService.areRequiredContentCompleted(
+                moduleId,
+                studentId
+        );
     }
 
     @Transactional(readOnly = true)
@@ -59,7 +47,7 @@ public class ModuleAccessService {
 
         Module module = moduleRepository.findById(moduleId)
                 .orElseThrow(() -> new NoSuchElementException(
-                        "module not found"
+                        "module not found" + moduleId
                 ));
 
         for (Module dependency : module.getDependencies()) {
@@ -71,5 +59,17 @@ public class ModuleAccessService {
         }
 
         return true;
+    }
+
+    @Transactional(readOnly = true)
+    public void requireModuleVisible(
+            Long moduleId,
+            Long studentId) {
+
+        if (!isModuleVisible(moduleId, studentId)) {
+            throw new AccessDeniedException(
+                    "Module prerequisites are not completed"
+            );
+        }
     }
 }

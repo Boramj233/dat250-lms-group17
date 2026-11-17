@@ -16,4 +16,5 @@ public interface ContentRepository
     @Override
     @EntityGraph(attributePaths = {"module", "module.course"})
     Optional<Content> findById(Long id);
+
 }

@@ -13,8 +13,10 @@ import no.hvl.dat250.lms.content.domain.StaticPage;
 import no.hvl.dat250.lms.content.service.ContentService;
 
 import no.hvl.dat250.lms.interaction.service.StudentInteractionService;
+import no.hvl.dat250.lms.security.AuthenticatedUser;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -72,17 +74,22 @@ public class ContentController {
         return ResponseEntity.ok(contents);
     }
 
-    @GetMapping(MODULE_CONTENTS_PATH + "/{contentId}/complete")
+    // Temporary fix for completing content
+    @PostMapping(MODULE_CONTENTS_PATH + "/{contentId}/complete")
     public ResponseEntity<Void> completeContent(
             @PathVariable Long courseId,
             @PathVariable Long moduleId,
-            @PathVariable Long contentId
+            @PathVariable Long contentId,
+            @AuthenticationPrincipal AuthenticatedUser user
     ) {
 
-        Long studentId = getAuthenticatedStudentId();
+        // TODO: BEFORE calling interactionService.completeContent(), verify:
+        // 1. is the student enrolled at this course?
+        // 2. is the content accessible?
+        // 3. have the content-specific requirements been met?
 
         interactionService.completeContent(
-                studentId,
+                user.userId(),
                 contentId
         );
 

@@ -11,10 +11,16 @@ import no.hvl.dat250.lms.module.api.dto.UpdateModuleRequest;
 import no.hvl.dat250.lms.module.domain.Module;
 import no.hvl.dat250.lms.module.api.dto.CreateModuleRequest;
 import no.hvl.dat250.lms.module.api.dto.ModuleResponse;
+import no.hvl.dat250.lms.module.service.ModuleAccessService;
 import no.hvl.dat250.lms.module.service.ModuleService;
 
+import no.hvl.dat250.lms.security.AuthenticatedUser;
+import no.hvl.dat250.lms.security.auth.access.CourseAccess;
+import no.hvl.dat250.lms.security.auth.annotations.IsEnrolledInCourse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -22,9 +28,16 @@ import org.springframework.web.bind.annotation.*;
 public class ModuleController {
 
     private final ModuleService moduleService;
+    private final ModuleAccessService moduleAccessService;
+    private final CourseAccess courseAccess;
 
-    public ModuleController(ModuleService moduleService) {
+    public ModuleController(
+            ModuleService moduleService,
+            ModuleAccessService moduleAccessService,
+            CourseAccess courseAccess) {
         this.moduleService = moduleService;
+        this.moduleAccessService = moduleAccessService;
+        this.courseAccess = courseAccess;
     }
 
     // ---------------------------------------------------------------- Module
@@ -45,6 +58,7 @@ public class ModuleController {
                 .body(ModuleResponse.from(module, courseId));
     }
 
+    @IsEnrolledInCourse
     @GetMapping
     public ResponseEntity<List<ModuleResponse>> getAllModules(
             @PathVariable Long courseId) {
@@ -58,15 +72,26 @@ public class ModuleController {
         return ResponseEntity.ok(modules);
     }
 
+    @IsEnrolledInCourse
     @GetMapping("/{moduleId}")
     public ResponseEntity<ModuleResponse> getModule(
             @PathVariable Long courseId,
-            @PathVariable Long moduleId) {
+            @PathVariable Long moduleId,
+            @AuthenticationPrincipal AuthenticatedUser user,
+            Authentication authentication) {
+
         Module module = moduleService
                 .findModuleInCourse(courseId, moduleId)
                 .orElseThrow(() -> new NoSuchElementException(
-                        "Module not found"
+                        "Module not found" + moduleId
                 ));
+
+        if (courseAccess.isStudent(authentication, courseId)) {
+            moduleAccessService.requireModuleVisible(
+                    moduleId,
+                    user.userId()
+            );
+        }
 
         return ResponseEntity.ok(
                 ModuleResponse.from(module, courseId)
