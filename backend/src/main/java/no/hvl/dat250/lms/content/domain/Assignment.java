@@ -58,6 +58,14 @@ public class Assignment extends Content {
         this.mandatoryForExam = mandatoryForExam;
     }
 
+    public void updateDetails(String title, String instructions) {
+        if (instructions == null || instructions.isBlank() || instructions.length() > 10000) {
+            throw new IllegalArgumentException("Instructions must be nonblank and at most 10000 characters");
+        }
+        changeTitle(title);
+        this.instructions = instructions;
+    }
+
     public String getInstructions() {
         return instructions;
     }

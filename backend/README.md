@@ -576,3 +576,48 @@ the named constraints. Only position values change. It uses a temporary table an
 drops the named unique constraint when rerun; H2 DDL is not atomic, so run it with the
 application stopped. It is not run automatically. Migration/constraint/restart tests use
 only disposable H2 databases; no actual development database is accessed or reset.
+
+## Basic Content Editing
+
+Active course teachers can replace the basic editable fields of an existing Content:
+
+| PUT endpoint | Request fields |
+|---|---|
+| `/api/contents/{contentId}` (StaticPage only) | title, body |
+| `/api/assignments/{assignmentId}` | title, instructions |
+| `/api/coding-exercises/{exerciseId}` | title, instructions, starterRepositoryUrl, optional starterCode |
+| `/api/quizzes/{quizId}` | title |
+
+Success returns 200 with the existing type-specific response DTO (QuizResponse for
+quiz updates). Each PUT supplies the complete editable field set, not a partial patch.
+Missing/null/blank required text returns 400. title is at most 255 characters; body,
+instructions and starterCode are at most 10,000; starterRepositoryUrl remains required
+and at most 2,048. starterCode may be null or omitted to clear it, or empty; its original
+whitespace/newlines are preserved. Other text fields are also stored without trimming.
+
+```http
+PUT /api/coding-exercises/42
+Authorization: Bearer <access-token>
+Content-Type: application/json
+
+{"title":"Greeting","instructions":"Complete greet().","starterRepositoryUrl":"https://example.com/starter","starterCode":"  // TODO\n"}
+```
+
+Authorization uses the resource's actual course and existing CourseAccess checks.
+Missing authentication returns 401; students, inactive teachers and teachers of other
+courses receive 403. Missing IDs and wrong Content types return 404. No global role
+bypasses course enrollment. Services use ordinary transactions and JPA dirty checking;
+internal callers are trusted and must apply their workflow's authorization.
+
+Editing remains allowed after submissions or quiz attempts. It updates the current
+content only: no previous text/instruction/starter-code versions are retained. Existing
+Submission payloads, Grade feedback/Pass/Fail/release, attempts, answer keys and Completion
+are preserved. Quiz title editing does not allow question changes after an attempt.
+
+These requests do not edit position, Module, Required, mandatoryForExam, passingPercentage,
+maxAttempts, deadlines, late-submission rules or visibility. Existing ordering and settings
+endpoints retain their separate paths. No schema migration, new locks or versions are added.
+
+Frontend integration: current proposed `PATCH /api/contents/{id}` and
+`PUT /api/quizzes/{id}/questions` are not implemented by this phase. Use the type-specific
+PUT endpoints above for basic editing; no frontend code is changed here.

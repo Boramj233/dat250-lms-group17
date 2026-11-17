@@ -7,6 +7,7 @@ import java.util.NoSuchElementException;
 import jakarta.validation.Valid;
 
 import no.hvl.dat250.lms.content.api.dto.CreateQuizRequest;
+import no.hvl.dat250.lms.content.api.dto.UpdateQuizRequest;
 import no.hvl.dat250.lms.content.api.dto.QuizDetailResponse;
 import no.hvl.dat250.lms.content.api.dto.CreateQuizQuestionRequest;
 import no.hvl.dat250.lms.content.api.dto.QuizResponse;
@@ -60,6 +61,15 @@ public class QuizController {
             .body(QuizResponse.from(
                 quiz, courseId, moduleId
             ));
+    }
+
+    @PreAuthorize("@courseAccess.isTeacher(authentication, @quizService.courseId(#quizId))")
+    @PutMapping("/api/quizzes/{quizId}")
+    public ResponseEntity<QuizResponse> updateQuiz(
+            @PathVariable Long quizId,
+            @Valid @RequestBody UpdateQuizRequest request) {
+        Quiz quiz = quizService.updateTitle(quizId, request.title());
+        return ResponseEntity.ok(QuizResponse.from(quiz, quiz.getModule().getCourse().getId(), quiz.getModule().getId()));
     }
 
     @PreAuthorize("@courseAccess.isTeacher(authentication, @quizService.courseId(#quizId))")

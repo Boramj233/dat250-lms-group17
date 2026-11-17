@@ -53,6 +53,13 @@ public abstract class Content {
         return id;
     }
 
+    public void changeTitle(String title) {
+        if (title == null || title.isBlank() || title.length() > 255) {
+            throw new IllegalArgumentException("Title must be nonblank and at most 255 characters");
+        }
+        this.title = title;
+    }
+
     public String getTitle() {
         return title;
     }

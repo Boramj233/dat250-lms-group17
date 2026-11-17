@@ -61,6 +61,16 @@ public class CodingExercise extends Content {
 
         super(module, title, position);
 
+        validateDetails(instructions, starterRepositoryUrl, starterCode);
+
+        this.starterCode = starterCode;
+        this.instructions = instructions;
+        this.starterRepositoryUrl = starterRepositoryUrl;
+        this.deadline = deadline;
+        this.allowLateSubmission = allowLateSubmission;
+    }
+
+    private static void validateDetails(String instructions, String starterRepositoryUrl, String starterCode) {
         if (instructions == null || instructions.isBlank()
                 || instructions.length() > 10000) {
             throw new IllegalArgumentException(
@@ -82,11 +92,14 @@ public class CodingExercise extends Content {
             );
         }
 
-        this.starterCode = starterCode;
+    }
+
+    public void updateDetails(String title, String instructions, String starterRepositoryUrl, String starterCode) {
+        validateDetails(instructions, starterRepositoryUrl, starterCode);
+        changeTitle(title);
         this.instructions = instructions;
         this.starterRepositoryUrl = starterRepositoryUrl;
-        this.deadline = deadline;
-        this.allowLateSubmission = allowLateSubmission;
+        this.starterCode = starterCode;
     }
 
     public String getInstructions() {

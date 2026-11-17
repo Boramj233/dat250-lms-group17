@@ -359,6 +359,17 @@ public class QuizService {
         }
     }
 
+    @Transactional
+    public Quiz updateTitle(Long quizId, String title) {
+        Content content = contentRepository.findById(quizId)
+            .orElseThrow(() -> new NoSuchElementException("Quiz not found"));
+        if (!(Hibernate.unproxy(content) instanceof Quiz quiz)) {
+            throw new NoSuchElementException("Quiz not found");
+        }
+        quiz.changeTitle(title);
+        return quiz;
+    }
+
     @Transactional(readOnly = true)
     public Long courseId(Long quizId) {
         Content content = contentRepository.findById(quizId)
