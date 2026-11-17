@@ -9,6 +9,7 @@ import no.hvl.dat250.lms.content.domain.StaticPage;
 import no.hvl.dat250.lms.content.service.ContentService;
 import no.hvl.dat250.lms.module.domain.Module;
 import no.hvl.dat250.lms.course.domain.Course;
+import no.hvl.dat250.lms.interaction.service.StudentInteractionService;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -33,6 +34,9 @@ class ContentControllerTest {
 
     @MockitoBean
     private ContentService contentService;
+
+    @MockitoBean
+    private StudentInteractionService interactionService;
 
     // Helper: simulate an already-persisted StaticPage
     private StaticPage createTestPage(
@@ -257,5 +261,18 @@ class ContentControllerTest {
             .andExpect(status().isNotFound());
 
         verify(contentService).findStaticPageById(999L);
+    }
+
+    @Test
+    void completeContentReturns204() throws Exception {
+
+        mockMvc.perform(post("/api/courses/1/modules/10/contents/100/complete")
+                                .with(apiUser()))
+                .andExpect(status().isNoContent());
+
+        verify(interactionService).completeContent(
+                anyLong(),
+                eq(100L)
+        );
     }
 }
