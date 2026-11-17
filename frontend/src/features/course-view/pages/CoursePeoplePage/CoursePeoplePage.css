@@ -1,0 +1,9 @@
+.course-people-manage {
+  align-self: flex-start;
+}
+
+.course-people-count {
+  margin: var(--space-3) 0 0;
+  font-family: var(--font-ui);
+  font-size: var(--text-small);
+}

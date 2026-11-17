@@ -1,0 +1,179 @@
+/* Shared form styles: import from any component with a form. */
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  max-width: 40rem;
+}
+
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.form-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-5);
+}
+
+.form-row > .form-field {
+  flex: 1 1 10rem;
+}
+
+.form-field label,
+.form-label {
+  font-family: var(--font-ui);
+  font-size: var(--text-small);
+  font-weight: var(--font-weight-bold);
+}
+
+/* The "*" after a required field's label. */
+.form-required {
+  margin-left: var(--space-2);
+  color: var(--color-text);
+  font-weight: var(--font-weight-bold);
+}
+
+.form-hint {
+  margin: 0;
+  font-family: var(--font-ui);
+  font-size: var(--text-small);
+}
+
+.form input:not([type='checkbox']):not([type='radio']),
+.form select,
+.form textarea {
+  width: 100%;
+  min-height: var(--size-control-md);
+  padding: var(--space-3);
+  border: var(--border-width-sm) solid var(--color-border);
+  border-radius: var(--radius-control);
+  color: var(--color-text);
+  background: var(--color-background);
+}
+
+.form textarea {
+  min-height: 8rem;
+  resize: vertical;
+}
+
+.form input:focus-visible,
+.form select:focus-visible,
+.form textarea:focus-visible {
+  outline: var(--focus-ring-width) solid var(--color-primary);
+  outline-offset: 0;
+}
+
+.form-check {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  font-family: var(--font-ui);
+}
+
+.form-check input {
+  width: 1.125rem;
+  height: 1.125rem;
+}
+
+.form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.form-error {
+  margin: 0;
+  padding: var(--space-3) var(--space-5);
+  border-left: var(--space-2) solid var(--color-primary);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  font-family: var(--font-ui);
+  font-size: var(--text-small);
+}
+
+.form-success {
+  margin: 0;
+  font-family: var(--font-ui);
+  font-size: var(--text-small);
+  font-weight: var(--font-weight-bold);
+}
+
+.button-primary,
+.button-secondary,
+.button-danger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  min-height: var(--size-control-md);
+  padding: var(--space-3) var(--space-5);
+  border-radius: var(--radius-control);
+  font-family: var(--font-ui);
+  font-size: var(--text-small);
+  font-weight: var(--font-weight-bold);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.button-primary {
+  border: var(--border-width-sm) solid var(--color-primary);
+  color: var(--color-on-primary);
+  background: var(--color-primary);
+}
+
+.button-primary:hover {
+  background: var(--color-primary-hover);
+}
+
+.button-secondary {
+  border: var(--border-width-sm) solid var(--color-border);
+  color: var(--color-text);
+  background: var(--color-background);
+}
+
+.button-secondary:hover {
+  background: var(--color-surface);
+}
+
+/* Destructive: delete, remove. Used for the final confirmation, so it stands out. */
+.button-danger {
+  border: var(--border-width-sm) solid var(--color-danger);
+  color: var(--color-on-danger);
+  background: var(--color-danger);
+}
+
+.button-danger:hover {
+  filter: brightness(0.92);
+}
+
+.button-primary:disabled,
+.button-secondary:disabled,
+.button-danger:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* Boxes for teacher-only tools on course pages. */
+.teacher-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  margin-top: var(--space-7);
+  padding: var(--space-5);
+  border: var(--border-width-sm) dashed var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+.teacher-panel-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin: 0;
+  font-size: var(--font-size-md);
+}

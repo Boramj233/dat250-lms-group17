@@ -9,8 +9,11 @@ import no.hvl.dat250.lms.content.domain.Assignment;
 import no.hvl.dat250.lms.content.domain.StaticPage;
 import no.hvl.dat250.lms.content.repository.ContentRepository;
 import no.hvl.dat250.lms.content.service.AssignmentService;
+import no.hvl.dat250.lms.content.service.ContentService;
 import no.hvl.dat250.lms.module.domain.Module;
 import no.hvl.dat250.lms.module.service.ModuleService;
+
+import no.hvl.dat250.lms.enrollment.service.EnrollmentService;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -31,6 +34,12 @@ class AssignmentServiceTest {
 
     @Mock
     private ModuleService moduleService;
+
+    @Mock
+    private EnrollmentService enrollmentService;
+
+    @Mock
+    private ContentService contentService;
 
     @InjectMocks
     private AssignmentService assignmentService;
@@ -56,7 +65,9 @@ class AssignmentServiceTest {
             2,
             "Implement JPA entities",
             deadline,
-            false
+            false,
+            true,
+            5L
         );
 
         assertSame(module, result.getModule());
@@ -68,7 +79,9 @@ class AssignmentServiceTest {
         assertEquals(2, result.getPosition());
         assertEquals(deadline, result.getDeadline());
         assertFalse(result.isAllowLateSubmission());
+        assertTrue(result.isMandatoryForExam());
 
+        verify(enrollmentService).requireActiveTeacher(5L, 1L);
         verify(contentRepository).save(result);
     }
 
@@ -87,7 +100,9 @@ class AssignmentServiceTest {
                 2,
                 "Implement JPA entities",
                 null,
-                false
+                false,
+                false,
+                5L
             )
         );
 
@@ -106,7 +121,9 @@ class AssignmentServiceTest {
                 2,
                 "Implement JPA entities",
                 null,
-                false
+                false,
+                false,
+                5L
             )
         );
 

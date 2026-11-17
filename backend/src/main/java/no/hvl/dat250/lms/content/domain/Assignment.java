@@ -22,6 +22,9 @@ public class Assignment extends Content {
     @Column(name = "allow_late_submission", nullable = false)
     private boolean allowLateSubmission;
 
+    @Column(name = "mandatory_for_exam", nullable = false)
+    private boolean mandatoryForExam;
+
     protected Assignment() {
         // Required by JPA
     }
@@ -47,8 +50,29 @@ public class Assignment extends Content {
         this.allowLateSubmission = allowLateSubmission;
     }
 
+    public boolean isMandatoryForExam() {
+        return mandatoryForExam;
+    }
+
+    public void setMandatoryForExam(boolean mandatoryForExam) {
+        this.mandatoryForExam = mandatoryForExam;
+    }
+
+    public void updateDetails(String title, String instructions) {
+        if (instructions == null || instructions.isBlank() || instructions.length() > 10000) {
+            throw new IllegalArgumentException("Instructions must be nonblank and at most 10000 characters");
+        }
+        changeTitle(title);
+        this.instructions = instructions;
+    }
+
     public String getInstructions() {
         return instructions;
+    }
+
+    public void updateSubmissionSettings(Instant deadline, boolean allowLateSubmission) {
+        this.deadline = deadline;
+        this.allowLateSubmission = allowLateSubmission;
     }
 
     public Instant getDeadline() {

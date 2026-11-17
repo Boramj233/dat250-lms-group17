@@ -1,5 +1,18 @@
+import { fileURLToPath } from 'node:url'
 import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
+import { mockBackend } from './mock/server.ts'
+
+// One alias per layer of src/ (see README.md); keep in sync with "paths" in tsconfig.app.json.
+const src = (folder: string) => fileURLToPath(new URL(`./src/${folder}`, import.meta.url))
+const resolve = {
+  alias: {
+    '@app': src('app'),
+    '@shared': src('shared'),
+    '@domain': src('domain'),
+    '@features': src('features'),
+  },
+}
 
 // Everything that belongs to Spring Boot goes through the Vite dev server, so the
 // browser only talks to one address (localhost:5173) and the session cookie works.
@@ -13,15 +26,22 @@ const backend = {
 }
 
 // https://vite.dev/config/
-export default defineConfig({
-  plugins: [react()],
-  server: {
-    proxy: {
-      '/api': backend,
-      '/oauth2': backend,
-      '/login/oauth2': backend,
-      // Exact paths only (same as nginx); keys starting with ^ are regular expressions.
-      '^/(token|logout)$': backend,
+export default defineConfig(({ mode }) => {
+  // `npm run dev:mock`: no backend or Keycloak; mock/ answers instead (see mock/README.md).
+  if (mode === 'mock') {
+    return { plugins: [react(), mockBackend()], resolve }
+  }
+  return {
+    plugins: [react()],
+    resolve,
+    server: {
+      proxy: {
+        '/api': backend,
+        '/oauth2': backend,
+        '/login/oauth2': backend,
+        // Exact paths only (same as nginx); keys starting with ^ are regular expressions.
+        '^/(token|logout)$': backend,
+      },
     },
-  },
+  }
 })

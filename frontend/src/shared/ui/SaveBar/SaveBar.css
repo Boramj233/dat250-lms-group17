@@ -1,0 +1,42 @@
+/* Sticks to the bottom of the window while it is in view of the page's content. */
+.save-bar {
+  position: sticky;
+  bottom: var(--space-3);
+  z-index: 5;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3) var(--space-5);
+  margin-top: var(--space-5);
+  padding: var(--space-3) var(--space-5);
+  border: var(--border-width-sm) solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-background);
+  font-family: var(--font-ui);
+  font-size: var(--text-small);
+}
+
+/* Unsaved changes: a strong left edge, so it is hard to miss. */
+.save-bar.is-dirty {
+  border-left: var(--space-2) solid var(--color-accent);
+  background: var(--color-surface);
+}
+
+.save-bar-status {
+  margin: 0;
+}
+
+.save-bar-saved {
+  font-weight: var(--font-weight-bold);
+}
+
+.save-bar-error {
+  font-weight: var(--font-weight-bold);
+}
+
+.save-bar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}

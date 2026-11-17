@@ -1,0 +1,69 @@
+.grading-form {
+  width: 100%;
+}
+
+/* The score input with "/ 100" after it. */
+.grading-score-input {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.grading-score-input input {
+  max-width: 8rem;
+}
+
+/* A released score, shown large. */
+.grading-score {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+}
+
+/* Earlier attempts, newest first; the shown one in bold. */
+.grading-history {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding-left: var(--space-7);
+}
+
+.grading-history a {
+  color: var(--color-text);
+}
+
+/* Previous, All submissions, Next. */
+.grading-nav {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+  font-family: var(--font-ui);
+}
+
+.grading-nav a {
+  color: var(--color-text);
+}
+
+/* Passed / Not passed / Not decided yet: radio buttons in a row. */
+.grading-passed {
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: var(--space-3) var(--space-7);
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+
+.grading-passed legend {
+  width: 100%;
+  margin-bottom: var(--space-2);
+  padding: 0;
+}
+
+.grading-score .passed-badge {
+  vertical-align: middle;
+}
+
+.grading-visible-input {
+  max-width: 16rem;
+}

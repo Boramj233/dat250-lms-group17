@@ -18,6 +18,10 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import org.springframework.http.MediaType;
+import no.hvl.dat250.lms.security.AuthenticatedUser;
+import org.springframework.security.authentication.TestingAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.web.method.annotation.AuthenticationPrincipalArgumentResolver;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
@@ -39,6 +43,9 @@ class AssignmentHttpTest {
     @BeforeEach
     void setUp() {
 
+        // DTO/controller test only; real filters are covered by MandatoryAssignmentIntegrationTest.
+        SecurityContextHolder.getContext().setAuthentication(
+            new TestingAuthenticationToken(new AuthenticatedUser(5L), null));
         validator = new LocalValidatorFactoryBean();
         validator.afterPropertiesSet();
 
@@ -46,12 +53,14 @@ class AssignmentHttpTest {
             .standaloneSetup(
                 new AssignmentController(assignmentService)
             )
+            .setCustomArgumentResolvers(new AuthenticationPrincipalArgumentResolver())
             .setValidator(validator)
             .build();
     }
 
     @AfterEach
     void tearDown() {
+        SecurityContextHolder.clearContext();
         validator.close();
     }
 
@@ -84,6 +93,7 @@ class AssignmentHttpTest {
             throws Exception {
 
         Assignment assignment = savedAssignment();
+        when(assignment.isMandatoryForExam()).thenReturn(true);
 
         Instant deadline =
             Instant.parse("2026-11-20T23:00:00Z");
@@ -95,7 +105,9 @@ class AssignmentHttpTest {
             eq(2),
             eq("Write a report"),
             eq(deadline),
-            eq(false)
+            eq(false),
+            eq(true),
+            eq(5L)
         )).thenReturn(assignment);
 
         mockMvc.perform(
@@ -107,13 +119,15 @@ class AssignmentHttpTest {
                       "position": 2,
                       "instructions": "Write a report",
                       "deadline": "2026-11-20T23:00:00Z",
-                      "allowLateSubmission": false
+                      "allowLateSubmission": false,
+                      "mandatoryForExam": true
                     }
                     """)
         )
         .andExpect(status().isCreated())
         .andExpect(jsonPath("$.id").value(42))
         .andExpect(jsonPath("$.moduleId").value(10))
+        .andExpect(jsonPath("$.mandatoryForExam").value(true))
         .andExpect(
             jsonPath("$.title").value("JPA Assignment")
         )

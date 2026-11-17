@@ -25,6 +25,14 @@ public class StaticPage extends Content {
         this.body = body;
     }
 
+    public void updateDetails(String title, String body) {
+        if (body == null || body.isBlank() || body.length() > 10000) {
+            throw new IllegalArgumentException("Body must be nonblank and at most 10000 characters");
+        }
+        changeTitle(title);
+        this.body = body;
+    }
+
     public String getBody() {
         return body;
     }

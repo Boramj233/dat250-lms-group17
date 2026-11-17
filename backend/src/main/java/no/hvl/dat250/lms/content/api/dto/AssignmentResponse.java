@@ -12,7 +12,8 @@ public record AssignmentResponse(
     int position,
     String instructions,
     Instant deadline,
-    boolean allowLateSubmission
+    boolean allowLateSubmission,
+    boolean mandatoryForExam
 
 ) {
 
@@ -26,7 +27,8 @@ public record AssignmentResponse(
             assignment.getPosition(),
             assignment.getInstructions(),
             assignment.getDeadline(),
-            assignment.isAllowLateSubmission()
+            assignment.isAllowLateSubmission(),
+            assignment.isMandatoryForExam()
         );
     }
 }

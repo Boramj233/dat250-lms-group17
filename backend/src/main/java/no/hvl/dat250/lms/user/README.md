@@ -43,6 +43,30 @@ removed local profile returns 404. Name changes currently affect local display
 names only; future auth integration must decide whether Keycloak or the local
 profile is authoritative for display names.
 
+## Dashboard endpoints (across all of a user's courses)
+
+Only courses where the user has an active enrollment count.
+
+| Method | Endpoint | Who | Response |
+| --- | --- | --- | --- |
+| GET | `/api/users/me/grades` | the caller | `[{contentId, type, title, courseId, courseTitle, moduleId, submissionId, submittedAt, late, grade}]` |
+| GET | `/api/users/{userId}/upcoming-deadlines` | that user, or ADMIN (else 403) | `[{contentId, type, title, deadline, allowLateSubmission, mandatoryForExam, courseId, courseTitle, moduleId}]` |
+
+- `type` is `ASSIGNMENT` or `CODING_EXERCISE`.
+- Grades: one row per assignment or coding exercise the user handed in, alone or as a
+  member of a group submission, for the latest submission, newest first. `grade` is
+  `{score, feedback, passed, releasedAt}` once the grade is released, else null.
+- Deadlines: deadline after now, soonest first. Students do not get content outside its
+  `visibleFrom`/`visibleUntil` window; teachers of the course do. `mandatoryForExam`
+  is null for coding exercises.
+
+Which courses count, and the user's role in each, comes from the enrollment feature
+(`EnrollmentService.activeCourseRoles`). The content, submission and grade services
+have no per-user queries and their repositories are private to them (ArchitectureTest),
+so `UserDashboardRepository` reads those entities for the given course ids with
+read-only JPQL; it adds no tables. Module dates (`availableFrom`) and grade
+`visibleFrom` are not taken into account yet, since those columns do not exist.
+
 ## Administrator endpoints
 
 All operations below require ADMIN access (`@IsAdmin`).

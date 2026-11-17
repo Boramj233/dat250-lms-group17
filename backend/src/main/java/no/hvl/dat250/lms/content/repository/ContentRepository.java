@@ -13,6 +13,8 @@ public interface ContentRepository
 
     List<Content> findByModule_IdOrderByPositionAsc(Long moduleId);
 
+    boolean existsByModule_IdAndPosition(Long moduleId, int position);
+
     @Override
     @EntityGraph(attributePaths = {"module", "module.course"})
     Optional<Content> findById(Long id);

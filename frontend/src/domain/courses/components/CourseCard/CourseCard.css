@@ -1,0 +1,66 @@
+.course-card {
+  /* The title link is stretched over the card. */
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+  padding: var(--space-5);
+  border: var(--border-width-sm) solid var(--color-border);
+  border-top: var(--space-2) solid var(--color-accent);
+  border-radius: var(--radius-md);
+  background: var(--color-background);
+}
+
+.course-card-title {
+  margin: 0;
+  font-size: var(--font-size-md);
+  overflow-wrap: anywhere;
+}
+
+.course-card-term {
+  margin: 0;
+  font-family: var(--font-ui);
+  font-size: var(--text-small);
+}
+
+.course-card-description {
+  margin: 0;
+  /* Keep the cards the same height: at most three lines of description. */
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  overflow: hidden;
+}
+
+/* The title's link covers the whole card, so the card is one click target. */
+.course-card-link {
+  color: var(--color-text);
+  text-decoration: none;
+}
+
+.course-card-link::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: var(--radius-md);
+}
+
+.course-card:hover {
+  border-color: var(--color-primary);
+  background: var(--color-surface);
+}
+
+.course-card:hover .course-card-link {
+  text-decoration: underline;
+}
+
+.course-card:focus-within {
+  outline: var(--focus-ring-width) solid var(--color-primary);
+  outline-offset: var(--space-2);
+}
+
+.course-card-link:focus-visible {
+  outline: none;
+}

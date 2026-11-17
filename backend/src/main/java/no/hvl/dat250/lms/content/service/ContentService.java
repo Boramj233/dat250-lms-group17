@@ -1,7 +1,15 @@
 package no.hvl.dat250.lms.content.service;
 
 import java.util.List;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 import java.util.NoSuchElementException;
+
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.LockModeType;
+import jakarta.persistence.PersistenceContext;
 
 import no.hvl.dat250.lms.content.domain.Content;
 import no.hvl.dat250.lms.content.domain.StaticPage;
@@ -9,13 +17,36 @@ import no.hvl.dat250.lms.content.repository.ContentRepository;
 import no.hvl.dat250.lms.module.domain.Module;
 import no.hvl.dat250.lms.module.service.ModuleService;
 
+import org.hibernate.Hibernate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class ContentService {
 
+    @org.springframework.beans.factory.annotation.Autowired
+    private ContentCompletionService completion;
+
+    /**
+     * Completion evidence for one Content and a trusted local User ID (not Enrollment ID).
+     * Requires an active STUDENT enrollment in the Content's course. The required flag
+     * does not affect this result; Module callers filter required Content themselves.
+     * Pages use manual completion, quizzes any attempt passing the current threshold,
+     * assignments/coding exercises any historically owned released Grade with passed=true.
+     * Invalid IDs throw IllegalArgumentException; missing Content throws NoSuchElementException;
+     * absent/inactive/non-student enrollment throws AccessDeniedException.
+     * Does not aggregate Module completion or calculate dependency access.
+     */
+    @Transactional(readOnly = true)
+    public boolean isCompleted(Long contentId, Long studentUserId) {
+        return completion.isCompleted(contentId, studentUserId);
+    }
+
     private final ContentRepository contentRepository;
+
+    @PersistenceContext
+    private EntityManager entityManager;
     private final ModuleService moduleService;
 
     public ContentService(
@@ -72,6 +103,10 @@ public class ContentService {
             body
         );
 
+        if (contentRepository.existsByModule_IdAndPosition(moduleId, position)) {
+            throw new ContentPositionConflictException("Content position is already occupied in this module");
+        }
+
         return contentRepository.save(page);
     }
 
@@ -97,6 +132,42 @@ public class ContentService {
             .findByModule_IdOrderByPositionAsc(moduleId);
     }
 
+    @Transactional
+    public void reorder(Long courseId, Long moduleId, List<Long> contentIds) {
+        if (contentIds == null || contentIds.stream().anyMatch(id -> id == null || id <= 0)) {
+            throw new IllegalArgumentException("Content IDs must be a non-null list of positive IDs");
+        }
+        List<Content> contents = findContentsByModule(courseId, moduleId);
+        Map<Long, Content> byId = new HashMap<>();
+        Set<Integer> occupiedPositions = new HashSet<>();
+        for (Content content : contents) {
+            byId.put(content.getId(), content);
+            occupiedPositions.add(content.getPosition());
+        }
+        if (contentIds.size() != contents.size() || !new HashSet<>(contentIds).equals(byId.keySet())) {
+            throw new IllegalArgumentException("Order must contain every Content in this module exactly once");
+        }
+        if (contents.isEmpty()) {
+            return;
+        }
+        List<Content> ordered = contentIds.stream().map(byId::get).toList();
+
+        // Temporary positions are outside both the current positions and final 0..n-1.
+        // Flush each phase so swaps never violate the module/position unique constraint.
+        int temporaryPosition = contents.size();
+        for (Content content : ordered) {
+            while (occupiedPositions.contains(temporaryPosition)) {
+                temporaryPosition++;
+            }
+            content.changePosition(temporaryPosition++);
+        }
+        contentRepository.flush();
+        for (int position = 0; position < ordered.size(); position++) {
+            ordered.get(position).changePosition(position);
+        }
+        contentRepository.flush();
+    }
+
     // Find any Content subtype by ID.
     // Shared lookup method for other feature services.
     @Transactional(readOnly = true)
@@ -115,13 +186,35 @@ public class ContentService {
             ));
     }
 
+    // Acquire after the submission owner lock, and hold through submission commit.
+    // Refresh reads current rules even when preflight/OSIV already loaded this entity.
+    @Transactional(propagation = Propagation.MANDATORY)
+    public Content lockSubmissionContent(Long contentId) {
+        Content content = (Content) Hibernate.unproxy(requireContent(contentId));
+        entityManager.refresh(content, LockModeType.PESSIMISTIC_WRITE);
+        return content;
+    }
+
+    @Transactional
+    public StaticPage updateStaticPage(Long contentId, String title, String body) {
+        StaticPage page = findStaticPageById(contentId);
+        page.updateDetails(title, body);
+        return page;
+    }
+
+    @Transactional(readOnly = true)
+    public Long staticPageCourseId(Long contentId) {
+        return findStaticPageById(contentId).getModule().getCourse().getId();
+    }
+
+    // Internal lookup; HTTP access is checked by ContentController.
     // Find a Content item only if it is a StaticPage.
     @Transactional(readOnly = true)
     public StaticPage findStaticPageById(Long contentId) {
 
         Content content = requireContent(contentId);
 
-        if (!(content instanceof StaticPage page)) {
+        if (!(Hibernate.unproxy(content) instanceof StaticPage page)) {
             throw new NoSuchElementException(
                 "Static page not found: " + contentId
             );

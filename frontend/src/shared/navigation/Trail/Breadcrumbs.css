@@ -1,0 +1,39 @@
+.breadcrumbs {
+  margin-bottom: var(--space-5);
+  font-family: var(--font-ui);
+  font-size: var(--text-small);
+}
+
+.breadcrumbs ol {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.breadcrumbs li {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* Separator before every step but the first. */
+.breadcrumbs li + li::before {
+  content: '›';
+  /* Empty alt text: screen readers skip the separator. */
+  content: '›' / '';
+  padding-right: var(--space-2);
+}
+
+.breadcrumbs a {
+  color: var(--color-text);
+}
+
+.breadcrumbs [aria-current='page'] {
+  font-weight: var(--font-weight-bold);
+}

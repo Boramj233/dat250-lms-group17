@@ -1,13 +1,12 @@
 package no.hvl.dat250.lms.submission.domain;
 
-import java.time.Instant;
-
 import jakarta.persistence.*;
-
+import java.time.Instant;
 import no.hvl.dat250.lms.content.domain.Assignment;
 import no.hvl.dat250.lms.content.domain.CodingExercise;
 import no.hvl.dat250.lms.content.domain.Content;
 import no.hvl.dat250.lms.enrollment.domain.Enrollment;
+import no.hvl.dat250.lms.group.domain.Group;
 
 @Entity
 @Table(name = "submissions")
@@ -29,7 +28,7 @@ public class Submission {
     @Column(name = "submission_type", nullable = false)
     private SubmissionType type;
 
-    @Column(nullable = false, length = 10000)
+    @Column(length = 10000)
     private String payload;
 
     @Column(name = "submitted_at", nullable = false)
@@ -38,8 +37,30 @@ public class Submission {
     @Column(nullable = false)
     private boolean late;
 
-    // @Column
-    // private GroupId groupId;
+    @Embedded
+    private SubmissionFileMetadata file;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "group_id")
+    private Group group;
+
+    @ElementCollection
+    @CollectionTable(name = "submission_members", joinColumns = @JoinColumn(name = "submission_id"),
+        uniqueConstraints = @UniqueConstraint(columnNames = {"submission_id", "user_id"}))
+    private java.util.List<SubmissionMember> members = new java.util.ArrayList<>();
+
+    public Group getGroup() { return group; }
+    public java.util.List<SubmissionMember> getMembers() { return java.util.List.copyOf(members); }
+
+    public void assignGroup(Group group,
+                            java.util.List<SubmissionMember> snapshot) {
+        if (this.group != null || id != null || group == null || snapshot.isEmpty()
+            || snapshot.stream().noneMatch(m -> m.getUserId().equals(submittedBy.getUser().getUserId()))) {
+            throw new IllegalArgumentException("Valid group snapshot required before saving");
+        }
+        this.group = group;
+        this.members.addAll(snapshot);
+    }
 
     protected Submission() {
         // Required by JPA
@@ -50,6 +71,27 @@ public class Submission {
             Enrollment submittedBy,
             SubmissionType type,
             String payload,
+            Instant submittedAt,
+            boolean late) {
+
+        this(content, submittedBy, type, payload, null, submittedAt, late);
+    }
+
+    public static Submission file(
+            Assignment assignment,
+            Enrollment submittedBy,
+            SubmissionFileMetadata file,
+            Instant submittedAt,
+            boolean late) {
+        return new Submission(assignment, submittedBy, SubmissionType.FILE, null, file, submittedAt, late);
+    }
+
+    private Submission(
+            Content content,
+            Enrollment submittedBy,
+            SubmissionType type,
+            String payload,
+            SubmissionFileMetadata file,
             Instant submittedAt,
             boolean late) {
 
@@ -72,7 +114,11 @@ public class Submission {
             );
         }
 
-        if (payload == null || payload.isBlank()
+        if (type == SubmissionType.FILE) {
+            if (!(content instanceof Assignment) || file == null || payload != null) {
+                throw new IllegalArgumentException("FILE requires an Assignment and file metadata without a payload");
+            }
+        } else if (file != null || payload == null || payload.isBlank()
                 || payload.length() > 10000) {
             throw new IllegalArgumentException(
                 "Valid submission payload is required"
@@ -89,6 +135,7 @@ public class Submission {
         this.submittedBy = submittedBy;
         this.type = type;
         this.payload = payload;
+        this.file = file;
         this.submittedAt = submittedAt;
         this.late = late;
     }
@@ -111,6 +158,10 @@ public class Submission {
 
     public String getPayload() {
         return payload;
+    }
+
+    public SubmissionFileMetadata getFile() {
+        return file;
     }
 
     public Instant getSubmittedAt() {

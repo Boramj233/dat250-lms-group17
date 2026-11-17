@@ -5,7 +5,10 @@ import java.util.List;
 import java.util.NoSuchElementException;
 
 import no.hvl.dat250.lms.content.domain.Content;
-import no.hvl.dat250.lms.identity.CurrentUserService;
+import no.hvl.dat250.lms.security.AuthenticatedUser;
+import org.springframework.security.authentication.TestingAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.web.method.annotation.AuthenticationPrincipalArgumentResolver;
 import no.hvl.dat250.lms.submission.api.controllers.SubmissionController;
 import no.hvl.dat250.lms.submission.domain.Submission;
 import no.hvl.dat250.lms.submission.domain.SubmissionType;
@@ -19,7 +22,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
@@ -34,42 +36,31 @@ class SubmissionReadHttpTest {
     @Mock
     private SubmissionService submissionService;
 
-    @Mock
-    private CurrentUserService currentUserService;
-
-    @Mock
-    private ObjectProvider<CurrentUserService> currentUserProvider;
-
     private MockMvc mockMvc;
     private LocalValidatorFactoryBean validator;
 
     @BeforeEach
     void setUp() {
+        // Controller/DTO test only; real token validation is covered by SecurityIntegrationTest.
+        SecurityContextHolder.getContext().setAuthentication(
+            new TestingAuthenticationToken(new AuthenticatedUser(5L), null));
 
         validator = new LocalValidatorFactoryBean();
         validator.afterPropertiesSet();
 
         mockMvc = MockMvcBuilders
             .standaloneSetup(new SubmissionController(
-                submissionService,
-                currentUserProvider
+                submissionService
             ))
+            .setCustomArgumentResolvers(new AuthenticationPrincipalArgumentResolver())
             .setValidator(validator)
             .build();
     }
 
     @AfterEach
     void tearDown() {
+        SecurityContextHolder.clearContext();
         validator.destroy();
-    }
-
-    private void authenticatedStudent() {
-
-        when(currentUserProvider.getIfAvailable())
-            .thenReturn(currentUserService);
-
-        when(currentUserService.requireCurrentUserId())
-            .thenReturn(5L);
     }
 
     private Submission savedSubmission(
@@ -77,7 +68,7 @@ class SubmissionReadHttpTest {
             String payload) {
 
         Content content = mock(Content.class);
-        Submission submission = mock(Submission.class);
+        Submission submission = mock(Submission.class, RETURNS_DEEP_STUBS);
 
         when(content.getId()).thenReturn(30L);
         when(submission.getId()).thenReturn(submissionId);
@@ -95,8 +86,6 @@ class SubmissionReadHttpTest {
 
     @Test
     void ownSubmissionReturns200() throws Exception {
-
-        authenticatedStudent();
 
         Submission saved = savedSubmission(
             101L, "My solution"
@@ -116,8 +105,6 @@ class SubmissionReadHttpTest {
     @Test
     void otherUsersSubmissionReturns404() throws Exception {
 
-        authenticatedStudent();
-
         when(submissionService.findOwnSubmission(101L, 5L))
             .thenThrow(new NoSuchElementException(
                 "Submission not found"
@@ -129,8 +116,6 @@ class SubmissionReadHttpTest {
 
     @Test
     void ownSubmissionHistoryReturns200() throws Exception {
-
-        authenticatedStudent();
 
         Submission first = savedSubmission(
             101L, "First version"
@@ -154,8 +139,6 @@ class SubmissionReadHttpTest {
     @Test
     void emptyHistoryReturnsEmptyArray() throws Exception {
 
-        authenticatedStudent();
-
         when(submissionService.findMySubmissionHistory(30L, 5L))
             .thenReturn(List.of());
 
@@ -166,17 +149,4 @@ class SubmissionReadHttpTest {
         .andExpect(content().json("[]"));
     }
 
-    @Test
-    void missingIdentityProviderReturns503() throws Exception {
-
-        mockMvc.perform(get("/api/submissions/101"))
-            .andExpect(status().isServiceUnavailable());
-
-        mockMvc.perform(
-            get("/api/contents/30/submissions/me")
-        )
-        .andExpect(status().isServiceUnavailable());
-
-        verifyNoInteractions(submissionService);
-    }
 }

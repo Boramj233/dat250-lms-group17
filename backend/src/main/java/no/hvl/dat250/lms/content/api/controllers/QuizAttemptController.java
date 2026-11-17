@@ -2,20 +2,23 @@
 package no.hvl.dat250.lms.content.api.controllers;
 
 import java.util.List;
+import java.util.NoSuchElementException;
 
 import no.hvl.dat250.lms.content.api.dto.SubmitQuizRequest;
 import no.hvl.dat250.lms.content.api.dto.QuizAttemptResponse;
 
-import no.hvl.dat250.lms.content.domain.QuizAttempt;
+import no.hvl.dat250.lms.content.service.QuizAttemptService.AttemptResult;
 import no.hvl.dat250.lms.content.service.QuizAttemptService;
+import no.hvl.dat250.lms.content.service.QuizGrader.MatchIds;
 import no.hvl.dat250.lms.content.service.QuizSubmissionEvaluator.AnswerInput;
 
-import no.hvl.dat250.lms.identity.CurrentUserService;
+import no.hvl.dat250.lms.security.AuthenticatedUser;
+import no.hvl.dat250.lms.content.service.QuizAttemptLimitExceededException;
 
-import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.server.ResponseStatusException;
 
 import jakarta.validation.Valid;
 
@@ -25,53 +28,57 @@ public class QuizAttemptController {
 
     private final QuizAttemptService attemptService;
 
-    private final ObjectProvider<CurrentUserService>
-            currentUserProvider;
-
-    public QuizAttemptController(
-            QuizAttemptService attemptService,
-            ObjectProvider<CurrentUserService> currentUserProvider) {
-
+    public QuizAttemptController(QuizAttemptService attemptService) {
         this.attemptService = attemptService;
-        this.currentUserProvider = currentUserProvider;
     }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public QuizAttemptResponse submit(
             @PathVariable Long quizId,
-            @Valid @RequestBody SubmitQuizRequest request) {
+            @Valid @RequestBody SubmitQuizRequest request,
+            @AuthenticationPrincipal AuthenticatedUser currentUser) {
 
-        // Fail closed until Authentication is integrated.
-        CurrentUserService currentUser =
-                currentUserProvider.getIfAvailable();
-
-        if (currentUser == null) {
-            throw new ResponseStatusException(
-                HttpStatus.SERVICE_UNAVAILABLE,
-                "Authentication integration is not available"
-            );
-        }
-
-        // Obtain the authenticated LOCAL User ID.
-        Long userId = currentUser.requireCurrentUserId();
+        Long userId = currentUser.userId();
 
         // Convert HTTP DTOs into service-level inputs.
         List<AnswerInput> answers = request.answers()
             .stream()
             .map(answer -> new AnswerInput(
                 answer.questionId(),
-                answer.selectedOptionIds()
+                answer.selectedOptionIds(),
+                answer.textAnswer(),
+                answer.orderedItemIds(),
+                answer.matches() == null ? null : answer.matches().stream()
+                    .map(pair -> new MatchIds(pair.leftItemId(), pair.rightItemId())).toList()
             ))
             .toList();
 
         // Existing business logic handles validation and grading.
-        QuizAttempt attempt = attemptService.submitAttempt(
+        AttemptResult result = attemptService.submitAttemptWithFeedback(
             quizId,
             userId,
             answers
         );
 
-        return QuizAttemptResponse.from(attempt, quizId);
+        return QuizAttemptResponse.from(result, quizId);
     }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    @ResponseStatus(HttpStatus.FORBIDDEN)
+    public void handleAccessDenied() {
+        // Match the authorization exception before its enrollment lookup cause.
+    }
+
+    @ExceptionHandler(NoSuchElementException.class)
+    @ResponseStatus(HttpStatus.NOT_FOUND)
+    public void handleNotFound() {}
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public void handleInvalidArgument() {}
+
+    @ExceptionHandler(QuizAttemptLimitExceededException.class)
+    @ResponseStatus(HttpStatus.CONFLICT)
+    public void handleAttemptLimitExceeded() {}
 }

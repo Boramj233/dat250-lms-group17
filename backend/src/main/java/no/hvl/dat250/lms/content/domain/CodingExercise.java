@@ -23,6 +23,9 @@ public class CodingExercise extends Content {
     )
     private String starterRepositoryUrl;
 
+    @Column(name = "starter_code", length = 10000)
+    private String starterCode;
+
     @Column(name = "deadline")
     private Instant deadline;
 
@@ -42,8 +45,32 @@ public class CodingExercise extends Content {
             Instant deadline,
             boolean allowLateSubmission) {
 
+        this(module, title, position, instructions, starterRepositoryUrl, null,
+            deadline, allowLateSubmission);
+    }
+
+    public CodingExercise(
+            Module module,
+            String title,
+            int position,
+            String instructions,
+            String starterRepositoryUrl,
+            String starterCode,
+            Instant deadline,
+            boolean allowLateSubmission) {
+
         super(module, title, position);
 
+        validateDetails(instructions, starterRepositoryUrl, starterCode);
+
+        this.starterCode = starterCode;
+        this.instructions = instructions;
+        this.starterRepositoryUrl = starterRepositoryUrl;
+        this.deadline = deadline;
+        this.allowLateSubmission = allowLateSubmission;
+    }
+
+    private static void validateDetails(String instructions, String starterRepositoryUrl, String starterCode) {
         if (instructions == null || instructions.isBlank()
                 || instructions.length() > 10000) {
             throw new IllegalArgumentException(
@@ -59,10 +86,20 @@ public class CodingExercise extends Content {
             );
         }
 
+        if (starterCode != null && starterCode.length() > 10000) {
+            throw new IllegalArgumentException(
+                "Starter code must not exceed 10000 characters"
+            );
+        }
+
+    }
+
+    public void updateDetails(String title, String instructions, String starterRepositoryUrl, String starterCode) {
+        validateDetails(instructions, starterRepositoryUrl, starterCode);
+        changeTitle(title);
         this.instructions = instructions;
         this.starterRepositoryUrl = starterRepositoryUrl;
-        this.deadline = deadline;
-        this.allowLateSubmission = allowLateSubmission;
+        this.starterCode = starterCode;
     }
 
     public String getInstructions() {
@@ -71,6 +108,15 @@ public class CodingExercise extends Content {
 
     public String getStarterRepositoryUrl() {
         return starterRepositoryUrl;
+    }
+
+    public String getStarterCode() {
+        return starterCode;
+    }
+
+    public void updateSubmissionSettings(Instant deadline, boolean allowLateSubmission) {
+        this.deadline = deadline;
+        this.allowLateSubmission = allowLateSubmission;
     }
 
     public Instant getDeadline() {

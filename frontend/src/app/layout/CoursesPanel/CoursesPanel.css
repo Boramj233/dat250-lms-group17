@@ -1,0 +1,149 @@
+/* Opens to the right of the sidebar, on top of the page content. */
+.courses-panel {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 100%;
+  z-index: 10;
+  width: min(18rem, 70vw);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--spacing-content);
+  overflow-y: auto;
+  background: var(--color-background);
+  border-right: var(--border-width-sm) solid var(--color-border);
+  box-shadow: var(--space-2) 0 var(--space-5) rgb(0 0 0 / 0.12);
+}
+
+.courses-panel p {
+  margin: 0;
+  padding: 0 var(--space-5);
+}
+
+.courses-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.courses-panel-header h2 {
+  margin: 0;
+  font-size: var(--font-size-md);
+}
+
+.courses-panel-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--size-control-md);
+  min-height: var(--size-control-md);
+  border: none;
+  border-radius: var(--radius-control);
+  color: var(--color-text);
+  background: transparent;
+  cursor: pointer;
+}
+
+.courses-panel-close:hover {
+  background: var(--color-surface);
+}
+
+/* "All courses": a link to the page with every term. */
+.courses-panel-all {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  min-height: var(--size-control-md);
+  padding: var(--space-3) var(--space-5);
+  border: var(--border-width-sm) solid var(--color-border);
+  border-radius: var(--radius-control);
+  color: var(--color-text);
+  font-weight: var(--font-weight-bold);
+  text-decoration: none;
+}
+
+.courses-panel-all:hover {
+  background: var(--color-surface);
+}
+
+/* Term and role headings: small, uppercase labels above the lists. */
+.courses-panel-term,
+.courses-panel-group h4 {
+  margin: 0;
+  padding: 0 var(--space-5);
+  font-family: var(--font-ui);
+  font-size: var(--text-small);
+  font-weight: var(--font-weight-bold);
+  text-transform: uppercase;
+  letter-spacing: var(--letter-spacing-caps);
+}
+
+/* A light line separates the links above from the course list. */
+.courses-panel-term {
+  margin-top: var(--space-5);
+  margin-bottom: var(--space-5);
+  padding-top: var(--space-7);
+  border-top: var(--border-width-sm) solid var(--color-surface);
+}
+
+/* Below the course list, after a line like the one above it. */
+.courses-panel .courses-panel-note {
+  margin-top: var(--space-5);
+  padding-top: var(--space-7);
+  border-top: var(--border-width-sm) solid var(--color-surface);
+  font-family: var(--font-ui);
+  font-size: var(--text-small);
+}
+
+.courses-panel-note a {
+  color: var(--color-text);
+}
+
+.courses-panel-group h4 {
+  font-weight: normal;
+}
+
+.courses-panel-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.courses-panel-group + .courses-panel-group {
+  margin-top: var(--space-3);
+}
+
+/* Indented under "As teacher" / "As student" to show that they belong to it. */
+.courses-panel-group .courses-panel-list {
+  padding-left: var(--space-5);
+}
+
+.courses-panel-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.courses-panel-item {
+  display: block;
+  overflow-wrap: anywhere;
+  padding: var(--space-3) var(--space-5);
+  border-radius: var(--radius-control);
+  color: var(--color-text);
+  text-decoration: none;
+}
+
+.courses-panel-item:hover {
+  background: var(--color-surface);
+}
+
+.courses-panel-item.active {
+  color: var(--color-on-primary);
+  background: var(--color-primary);
+}

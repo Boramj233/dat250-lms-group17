@@ -1,0 +1,106 @@
+.manage-module-list {
+  display: flex;
+  flex-direction: column;
+  margin: 0 0 var(--space-7);
+  padding: 0;
+  list-style: none;
+  border: var(--border-width-sm) solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+/* One module: handle, rank, then the name taking the room, then the buttons. */
+.manage-module-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-start;
+  gap: var(--space-3) var(--space-5);
+  padding: var(--space-5);
+  border-bottom: var(--border-width-sm) solid var(--color-border);
+  background: var(--color-background);
+}
+
+.manage-module-row:last-child {
+  border-bottom: none;
+}
+
+.manage-module-name {
+  display: flex;
+  flex: 1 1 14rem;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.manage-module-number,
+.manage-module-count {
+  font-family: var(--font-ui);
+  font-size: var(--text-small);
+}
+
+.manage-module-number {
+  text-transform: uppercase;
+  letter-spacing: var(--letter-spacing-caps);
+}
+
+.manage-module-title {
+  font-weight: var(--font-weight-bold);
+  overflow-wrap: anywhere;
+}
+
+.manage-module-help {
+  margin: 0 0 var(--space-3);
+}
+
+.manage-module-handle {
+  display: inline-flex;
+  color: var(--color-border);
+  cursor: grab;
+}
+
+.manage-module-row:hover .manage-module-handle {
+  color: var(--color-text);
+}
+
+/* The rank: a round number badge. */
+.manage-module-rank {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  color: var(--color-on-primary);
+  background: var(--color-primary);
+  font-family: var(--font-ui);
+  font-weight: var(--font-weight-bold);
+}
+
+.manage-module-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.manage-module-move {
+  min-width: var(--size-control-md);
+  padding-inline: var(--space-3);
+}
+
+/* A module in a new, unsaved place: accent edge and "Was 3". */
+.manage-module-row.is-moved {
+  box-shadow: var(--edge-unsaved);
+}
+
+/* A .tag after "Module 2": where it was before it was moved. */
+.manage-module-moved {
+  margin-left: var(--space-3);
+}
+
+/* The row being dragged: lifted out of the list. */
+.manage-module-row.is-dragging {
+  opacity: 0.5;
+  outline: var(--border-width-sm) dashed var(--color-primary);
+  outline-offset: calc(-1 * var(--space-2));
+}

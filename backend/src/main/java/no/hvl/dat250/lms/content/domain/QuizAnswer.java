@@ -3,6 +3,8 @@ package no.hvl.dat250.lms.content.domain;
 
 import java.util.HashSet;
 import java.util.Set;
+import java.util.List;
+import java.util.ArrayList;
 
 import jakarta.persistence.*;
 
@@ -40,6 +42,85 @@ public class QuizAnswer {
 
     @Column(name = "is_correct", nullable = false)
     private boolean correct;
+
+    @Column(name = "text_answer", length = 255)
+    private String textAnswer;
+
+    public String getTextAnswer() { return textAnswer; }
+
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(name = "quiz_answer_ordered_items",
+        joinColumns = @JoinColumn(name = "answer_id"),
+        inverseJoinColumns = @JoinColumn(name = "item_id"),
+        uniqueConstraints = @UniqueConstraint(columnNames = {"answer_id", "item_id"}))
+    @OrderColumn(name = "order_position", nullable = false)
+    private List<QuizItem> orderedItems = new ArrayList<>();
+
+    @ElementCollection
+    @CollectionTable(name = "quiz_answer_matches", joinColumns = @JoinColumn(name = "answer_id"),
+        uniqueConstraints = {
+            @UniqueConstraint(columnNames = {"answer_id", "left_item_id"}),
+            @UniqueConstraint(columnNames = {"answer_id", "right_item_id"})
+        })
+    private List<QuizMatch> matches = new ArrayList<>();
+
+    public List<QuizMatch> getMatches() { return List.copyOf(matches); }
+
+    public List<QuizItem> getOrderedItems() {
+        return List.copyOf(orderedItems);
+    }
+
+    public QuizAnswer(QuizAttempt attempt, QuizQuestion question, Set<ChoiceOption> selectedOptions,
+                      boolean correct, String textAnswer) {
+        this(attempt, question, selectedOptions, correct, textAnswer, List.of());
+    }
+
+    public QuizAnswer(QuizAttempt attempt, QuizQuestion question, Set<ChoiceOption> selectedOptions,
+                      boolean correct, String textAnswer, List<QuizItem> orderedItems) {
+        this(attempt, question, selectedOptions, correct, textAnswer, orderedItems, List.of());
+    }
+
+    public QuizAnswer(QuizAttempt attempt, QuizQuestion question, Set<ChoiceOption> selectedOptions,
+                      boolean correct, String textAnswer, List<QuizItem> orderedItems, List<QuizMatch> matches) {
+        this(attempt, question, selectedOptions, correct);
+        if (textAnswer != null && textAnswer.length() > 255) {
+            throw new IllegalArgumentException("Text answer must not exceed 255 characters");
+        }
+        if (question.getType() == QuestionType.FILL_IN_BLANK) {
+            if (textAnswer == null || !selectedOptions.isEmpty()) {
+                throw new IllegalArgumentException("Fill-in answers require text and no selected options");
+            }
+        } else if (textAnswer != null) {
+            throw new IllegalArgumentException("Choice answers must not include text");
+        }
+        if (orderedItems == null) {
+            throw new IllegalArgumentException("Ordered items must not be null");
+        }
+        if (question.getType() == QuestionType.ORDERING) {
+            if (!selectedOptions.isEmpty() || textAnswer != null
+                    || orderedItems.size() != question.getItems().size()
+                    || orderedItems.size() < 2 || orderedItems.size() > 20
+                    || !new HashSet<>(orderedItems).equals(new HashSet<>(question.getItems()))) {
+                throw new IllegalArgumentException("Ordering answer must contain every question item exactly once");
+            }
+        } else if (!orderedItems.isEmpty()) {
+            throw new IllegalArgumentException("Only ordering answers may contain ordered items");
+        }
+        if (matches == null) {
+            throw new IllegalArgumentException("Matches must not be null");
+        }
+        if (question.getType() == QuestionType.MATCHING) {
+            if (!selectedOptions.isEmpty() || textAnswer != null) {
+                throw new IllegalArgumentException("Matching answers must not contain selected options or text");
+            }
+            QuizMatch.validateComplete(question.getItems(), matches);
+        } else if (!matches.isEmpty()) {
+            throw new IllegalArgumentException("Only matching answers may contain matches");
+        }
+        this.matches.addAll(matches);
+        this.orderedItems.addAll(orderedItems);
+        this.textAnswer = textAnswer;
+    }
 
     protected QuizAnswer() {}
 

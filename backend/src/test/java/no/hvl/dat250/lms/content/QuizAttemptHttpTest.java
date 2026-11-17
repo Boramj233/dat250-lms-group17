@@ -2,11 +2,16 @@
 package no.hvl.dat250.lms.content;
 
 import java.time.Instant;
+import java.util.List;
 
 import no.hvl.dat250.lms.content.api.controllers.QuizAttemptController;
 import no.hvl.dat250.lms.content.domain.QuizAttempt;
 import no.hvl.dat250.lms.content.service.QuizAttemptService;
-import no.hvl.dat250.lms.identity.CurrentUserService;
+import no.hvl.dat250.lms.content.service.QuizAttemptService.AttemptResult;
+import no.hvl.dat250.lms.security.AuthenticatedUser;
+import org.springframework.security.authentication.TestingAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.web.method.annotation.AuthenticationPrincipalArgumentResolver;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.AfterEach;
@@ -16,7 +21,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -33,18 +37,17 @@ class QuizAttemptHttpTest {
     @Mock
     private QuizAttemptService attemptService;
 
-    @Mock
-    private ObjectProvider<CurrentUserService> currentUserProvider;
-
     private MockMvc mockMvc;
     private LocalValidatorFactoryBean validator;
 
     @BeforeEach
     void setUp() {
+        // Controller/DTO test only; real token validation is covered by SecurityIntegrationTest.
+        SecurityContextHolder.getContext().setAuthentication(
+            new TestingAuthenticationToken(new AuthenticatedUser(5L), null));
         QuizAttemptController controller =
             new QuizAttemptController(
-                attemptService,
-                currentUserProvider
+                attemptService
             );
 
         validator = new LocalValidatorFactoryBean();
@@ -52,38 +55,15 @@ class QuizAttemptHttpTest {
 
         mockMvc = MockMvcBuilders
             .standaloneSetup(controller)
+            .setCustomArgumentResolvers(new AuthenticationPrincipalArgumentResolver())
             .setValidator(validator)
             .build();
     }
 
     @AfterEach
     void tearDown() {
+        SecurityContextHolder.clearContext();
         validator.close();
-    }
-
-    @Test
-    void returns503WhenAuthenticationIsUnavailable()
-            throws Exception {
-
-        String json = """
-            {
-              "answers": [
-                {
-                  "questionId": 11,
-                  "selectedOptionIds": [21]
-                }
-              ]
-            }
-            """;
-
-        mockMvc.perform(
-            post("/api/quizzes/7/attempts")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(json)
-        )
-        .andExpect(status().isServiceUnavailable());
-
-        verifyNoInteractions(attemptService);
     }
 
     @Test
@@ -131,15 +111,6 @@ class QuizAttemptHttpTest {
     void authenticatedSubmissionReturns201()
             throws Exception {
 
-        CurrentUserService currentUser =
-            mock(CurrentUserService.class);
-
-        when(currentUserProvider.getIfAvailable())
-            .thenReturn(currentUser);
-
-        when(currentUser.requireCurrentUserId())
-            .thenReturn(5L);
-
         QuizAttempt savedAttempt =
             mock(QuizAttempt.class);
 
@@ -152,11 +123,11 @@ class QuizAttemptHttpTest {
         when(savedAttempt.getCorrectCount()).thenReturn(1);
         when(savedAttempt.getTotalQuestions()).thenReturn(2);
 
-        when(attemptService.submitAttempt(
+        when(attemptService.submitAttemptWithFeedback(
             eq(7L),
             eq(5L),
             anyList()
-        )).thenReturn(savedAttempt);
+        )).thenReturn(new AttemptResult(savedAttempt, List.of()));
 
         mockMvc.perform(
             post("/api/quizzes/7/attempts")
@@ -178,9 +149,7 @@ class QuizAttemptHttpTest {
         .andExpect(jsonPath("$.correctCount").value(1))
         .andExpect(jsonPath("$.totalQuestions").value(2));
 
-        verify(currentUser).requireCurrentUserId();
-
-        verify(attemptService).submitAttempt(
+        verify(attemptService).submitAttemptWithFeedback(
             eq(7L),
             eq(5L),
             argThat(answers ->

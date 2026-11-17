@@ -40,6 +40,12 @@ class QuizServiceTest {
     @Mock
     private ModuleService moduleService;
 
+    @Mock
+    private QuizAttemptRepository attemptRepository;
+
+    @Mock
+    private QuizItemRepository itemRepository;
+
     @InjectMocks
     private QuizService quizService;
 

@@ -1,0 +1,10 @@
+/* "Published since …" / "Unpublished. Students see it from …" above the form. */
+.content-publish-status {
+  margin: 0 0 var(--space-7);
+  padding: var(--space-3) var(--space-5);
+  border-left: var(--space-2) solid var(--color-accent);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  font-family: var(--font-ui);
+  font-size: var(--text-small);
+}

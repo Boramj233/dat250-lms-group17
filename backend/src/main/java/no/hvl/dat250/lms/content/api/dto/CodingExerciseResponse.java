@@ -13,6 +13,7 @@ public record CodingExerciseResponse(
     int position,
     String instructions,
     String starterRepositoryUrl,
+    String starterCode,
     Instant deadline,
     boolean allowLateSubmission
 
@@ -28,6 +29,7 @@ public record CodingExerciseResponse(
             exercise.getPosition(),
             exercise.getInstructions(),
             exercise.getStarterRepositoryUrl(),
+            exercise.getStarterCode(),
             exercise.getDeadline(),
             exercise.isAllowLateSubmission()
         );

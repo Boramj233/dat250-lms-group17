@@ -2,9 +2,12 @@
 package no.hvl.dat250.lms.content;
 
 import java.util.List;
+import java.util.Set;
+import java.util.UUID;
 
 import no.hvl.dat250.lms.content.domain.ChoiceOption;
 import no.hvl.dat250.lms.content.service.QuizGrader;
+import no.hvl.dat250.lms.content.service.QuizGrader.MatchIds;
 
 import org.junit.jupiter.api.Test;
 
@@ -14,6 +17,71 @@ import static org.mockito.Mockito.*;
 class QuizGraderTest {
 
     private final QuizGrader grader = new QuizGrader();
+
+    @Test
+    void matchingIgnoresPairArrayOrderButRequiresCorrectAssociations() {
+        UUID leftA = UUID.randomUUID(), leftB = UUID.randomUUID();
+        UUID rightA = UUID.randomUUID(), rightB = UUID.randomUUID();
+        var key = List.of(new MatchIds(leftA, rightA), new MatchIds(leftB, rightB));
+        assertTrue(grader.isMatchingCorrect(key, List.of(key.get(1), key.get(0))));
+        assertFalse(grader.isMatchingCorrect(key, List.of(new MatchIds(leftA, rightB), new MatchIds(leftB, rightA))));
+    }
+
+    @Test
+    void matchingRejectsIncompleteDuplicateReversedAndForeignSides() {
+        UUID leftA = UUID.randomUUID(), leftB = UUID.randomUUID();
+        UUID rightA = UUID.randomUUID(), rightB = UUID.randomUUID();
+        var key = List.of(new MatchIds(leftA, rightA), new MatchIds(leftB, rightB));
+        assertThrows(IllegalArgumentException.class, () -> grader.isMatchingCorrect(key, null));
+        assertThrows(IllegalArgumentException.class, () -> grader.isMatchingCorrect(key, List.of(key.get(0))));
+        assertThrows(IllegalArgumentException.class, () -> grader.isMatchingCorrect(key, List.of(key.get(0), key.get(0))));
+        assertThrows(IllegalArgumentException.class, () -> grader.isMatchingCorrect(key,
+            List.of(key.get(0), new MatchIds(leftB, rightA))));
+        assertThrows(IllegalArgumentException.class, () -> grader.isMatchingCorrect(key,
+            List.of(key.get(0), new MatchIds(rightB, leftB))));
+        assertThrows(IllegalArgumentException.class, () -> grader.isMatchingCorrect(key,
+            List.of(key.get(0), new MatchIds(leftB, UUID.randomUUID()))));
+        assertThrows(IllegalStateException.class, () -> grader.isMatchingCorrect(List.of(key.get(0)), key));
+    }
+
+    @Test
+    void orderingRequiresExactSequenceRatherThanSetEquality() {
+        List<UUID> correct = List.of(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID());
+        assertTrue(grader.isOrderCorrect(correct, correct));
+        assertFalse(grader.isOrderCorrect(correct, List.of(correct.get(2), correct.get(1), correct.get(0))));
+    }
+
+    @Test
+    void orderingRejectsMissingDuplicateAndForeignItems() {
+        List<UUID> correct = List.of(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID());
+        assertThrows(IllegalArgumentException.class, () -> grader.isOrderCorrect(correct, null));
+        assertThrows(IllegalArgumentException.class, () -> grader.isOrderCorrect(correct, List.of()));
+        assertThrows(IllegalArgumentException.class, () -> grader.isOrderCorrect(correct, correct.subList(0, 2)));
+        assertThrows(IllegalArgumentException.class, () -> grader.isOrderCorrect(correct,
+            List.of(correct.get(0), correct.get(0), correct.get(2))));
+        assertThrows(IllegalArgumentException.class, () -> grader.isOrderCorrect(correct,
+            List.of(correct.get(0), correct.get(1), UUID.randomUUID())));
+        assertThrows(IllegalStateException.class, () -> grader.isOrderCorrect(List.of(correct.get(0), correct.get(0)), correct));
+    }
+
+    @Test
+    void textMatchingTrimsEdgesAndIgnoresCaseButPreservesInternalSpaces() {
+        Set<String> accepted = Set.of(" Java ", "Java language");
+        assertTrue(grader.isTextCorrect(accepted, "  JAVA  "));
+        assertTrue(grader.isTextCorrect(accepted, "java LANGUAGE"));
+        assertFalse(grader.isTextCorrect(accepted, "Java  language"));
+        assertFalse(grader.isTextCorrect(accepted, "J a v a"));
+        assertFalse(grader.isTextCorrect(accepted, ""));
+        assertFalse(grader.isTextCorrect(accepted, "   "));
+        assertFalse(grader.isTextCorrect(accepted, "Python"));
+    }
+
+    @Test
+    void textMatchingRejectsMissingOrOversizedInputAndMissingKey() {
+        assertThrows(IllegalArgumentException.class, () -> grader.isTextCorrect(Set.of("Java"), null));
+        assertThrows(IllegalArgumentException.class, () -> grader.isTextCorrect(Set.of("Java"), "a".repeat(256)));
+        assertThrows(IllegalStateException.class, () -> grader.isTextCorrect(Set.of(), "Java"));
+    }
 
     private ChoiceOption option(long id, boolean correct) {
         ChoiceOption option = mock(ChoiceOption.class);

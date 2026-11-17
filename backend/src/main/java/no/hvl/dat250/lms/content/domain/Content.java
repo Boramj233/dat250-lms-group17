@@ -6,7 +6,9 @@ import no.hvl.dat250.lms.module.domain.Module;
 
 
 @Entity
-@Table (name = "contents")
+@Table(name = "contents", uniqueConstraints = @UniqueConstraint(
+    name = "uq_content_module_position", columnNames = {"module_id", "content_position"}))
+@org.hibernate.annotations.Check(name = "ck_content_position_nonnegative", constraints = "content_position >= 0")
 @Inheritance(strategy = InheritanceType.JOINED)
 public abstract class Content {
 
@@ -25,8 +27,18 @@ public abstract class Content {
     private Module module;
 
     // by default no content is required to be completed in a module
+    // duplicate method of below, remove after updating
     @Column(name = "required_for_completion", nullable = false)
     private boolean requiredForCompletion = false;
+
+    @Column(name = "required_for_module_completion", nullable = false)
+    private boolean requiredForModuleCompletion;
+
+    public boolean isRequiredForModuleCompletion() { return requiredForModuleCompletion; }
+
+    public void setRequiredForModuleCompletion(boolean required) {
+        this.requiredForModuleCompletion = required;
+    }
 
     private Instant visibleFrom;
 
@@ -37,15 +49,29 @@ public abstract class Content {
     protected Content(Module module, String title, int position){
         this.module = module;
         this.title = title;
-        this.position = position;
+        changePosition(position);
     }
 
     public Long getId(){
         return id;
     }
 
+    public void changeTitle(String title) {
+        if (title == null || title.isBlank() || title.length() > 255) {
+            throw new IllegalArgumentException("Title must be nonblank and at most 255 characters");
+        }
+        this.title = title;
+    }
+
     public String getTitle() {
         return title;
+    }
+
+    public void changePosition(int position) {
+        if (position < 0) {
+            throw new IllegalArgumentException("Content position must be non-negative");
+        }
+        this.position = position;
     }
 
     public int getPosition() {

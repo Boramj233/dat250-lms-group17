@@ -6,9 +6,11 @@ import java.util.NoSuchElementException;
 import no.hvl.dat250.lms.content.domain.Assignment;
 import no.hvl.dat250.lms.content.domain.Content;
 import no.hvl.dat250.lms.content.repository.ContentRepository;
+import no.hvl.dat250.lms.enrollment.service.EnrollmentService;
 import no.hvl.dat250.lms.module.domain.Module;
 import no.hvl.dat250.lms.module.service.ModuleService;
 
+import org.hibernate.Hibernate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,13 +19,19 @@ public class AssignmentService {
 
     private final ContentRepository contentRepository;
     private final ModuleService moduleService;
+    private final EnrollmentService enrollmentService;
+    private final ContentService contentService;
 
     public AssignmentService(
             ContentRepository contentRepository,
-            ModuleService moduleService) {
+            ModuleService moduleService,
+            EnrollmentService enrollmentService,
+            ContentService contentService) {
 
         this.contentRepository = contentRepository;
         this.moduleService = moduleService;
+        this.enrollmentService = enrollmentService;
+        this.contentService = contentService;
     }
 
     @Transactional
@@ -34,7 +42,11 @@ public class AssignmentService {
             int position,
             String instructions,
             Instant deadline,
-            boolean allowLateSubmission) {
+            boolean allowLateSubmission,
+            boolean mandatoryForExam,
+            Long teacherUserId) {
+
+        enrollmentService.requireActiveTeacher(teacherUserId, courseId);
 
         if (title == null || title.isBlank()) {
             throw new IllegalArgumentException(
@@ -65,9 +77,56 @@ public class AssignmentService {
             allowLateSubmission
         );
 
+        assignment.setMandatoryForExam(mandatoryForExam);
+
+        if (contentRepository.existsByModule_IdAndPosition(moduleId, position)) {
+            throw new ContentPositionConflictException("Content position is already occupied in this module");
+        }
+
         return contentRepository.save(assignment);
     }
 
+    @Transactional
+    public void updateExamRequirement(
+            Long assignmentId,
+            Long teacherUserId,
+            boolean mandatoryForExam) {
+
+        Assignment assignment = findAssignment(assignmentId);
+        Long courseId = assignment.getModule().getCourse().getId();
+        enrollmentService.requireActiveTeacher(teacherUserId, courseId);
+        assignment.setMandatoryForExam(mandatoryForExam);
+    }
+
+    @Transactional
+    public Assignment updateDetails(Long assignmentId, String title, String instructions) {
+        Assignment assignment = findAssignment(assignmentId);
+        assignment.updateDetails(title, instructions);
+        return assignment;
+    }
+
+    @Transactional
+    public Assignment updateSubmissionSettings(
+            Long assignmentId,
+            Instant deadline,
+            boolean allowLateSubmission,
+            Long teacherUserId) {
+        // Share the submission content lock and refresh rules after any wait.
+        Content content = contentService.lockSubmissionContent(assignmentId);
+        if (!(content instanceof Assignment assignment)) {
+            throw new NoSuchElementException("Assignment not found");
+        }
+        enrollmentService.requireActiveTeacher(teacherUserId, content.getModule().getCourse().getId());
+        assignment.updateSubmissionSettings(deadline, allowLateSubmission);
+        return assignment;
+    }
+
+    @Transactional(readOnly = true)
+    public Long courseId(Long assignmentId) {
+        return findAssignment(assignmentId).getModule().getCourse().getId();
+    }
+
+    /** Internal lookup; HTTP access is checked by AssignmentController. */
     @Transactional(readOnly = true)
     public Assignment findAssignment(Long assignmentId) {
 
@@ -79,7 +138,7 @@ public class AssignmentService {
             )
         );
 
-        if (!(content instanceof Assignment assignment)) {
+        if (!(Hibernate.unproxy(content) instanceof Assignment assignment)) {
             throw new NoSuchElementException(
                 "Assignment not found: " + assignmentId
             );
