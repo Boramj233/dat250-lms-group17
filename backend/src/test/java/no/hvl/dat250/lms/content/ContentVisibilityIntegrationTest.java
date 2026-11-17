@@ -135,6 +135,18 @@ class ContentVisibilityIntegrationTest {
         configure(fixture, id, "{\"visibleFrom\":" + (from == null ? "null" : "\"" + from + "\"") + "}")
             .andExpect(status().isOk()).andExpect(jsonPath("$.contentId").value(id));
     }
+    private String windowBody(Instant from, Instant until) {
+        return "{\"visibleFrom\":" + (from == null ? "null" : "\"" + from + "\"")
+            + ",\"visibleUntil\":" + (until == null ? "null" : "\"" + until + "\"") + "}";
+    }
+    private void setWindow(Fixture fixture, Long id, Instant from, Instant until) throws Exception {
+        configure(fixture, id, windowBody(from, until)).andExpect(status().isOk())
+            .andExpect(jsonPath("$.contentId").value(id));
+    }
+    private void hide(Fixture fixture, Long id, boolean closeEnd) throws Exception {
+        if (closeEnd) setWindow(fixture, id, null, PAST);
+        else setFrom(fixture, id, FUTURE);
+    }
     private ResultActions submit(Fixture fixture, Long id, String type, boolean group) throws Exception {
         return mvc.perform(post("/api/contents/{id}/submissions", id)
             .header("Authorization", TestTokens.bearer(fixture.student())).contentType(MediaType.APPLICATION_JSON)
@@ -170,7 +182,7 @@ class ContentVisibilityIntegrationTest {
         assertFalse(page.isVisibleAt(NOW.minusNanos(1)));
         assertTrue(page.isVisibleAt(NOW));
         assertTrue(page.isVisibleAt(NOW.plusNanos(1)));
-        ReflectionTestUtils.setField(page, "visibleUntil", FUTURE);
+        page.changeVisibility(NOW, FUTURE);
         assertTrue(page.isVisibleAt(FUTURE.minusNanos(1)));
         assertFalse(page.isVisibleAt(FUTURE));
         assertFalse(page.isVisibleAt(FUTURE.plusNanos(1)));
@@ -214,6 +226,96 @@ class ContentVisibilityIntegrationTest {
     }
 
     @Test
+    void teacherCanScheduleCloseAndReopenAllFourTypesThroughTheSameEndpoint() throws Exception {
+        Fixture fixture = fixture();
+        for (Long id : fixture.contentIds()) {
+            setWindow(fixture, id, FUTURE, FUTURE.plusSeconds(3600));
+            getAs(detail(fixture, id), fixture.student()).andExpect(status().isForbidden());
+            getAs(detail(fixture, id), fixture.teacher()).andExpect(status().isOk())
+                .andExpect(jsonPath("$.visibleUntil").value(FUTURE.plusSeconds(3600).toString()));
+            // Both new bounds are validated together, without an intermediate invalid window.
+            setWindow(fixture, id, FUTURE.plusSeconds(7200), FUTURE.plusSeconds(10800));
+            setWindow(fixture, id, PAST, FUTURE);
+            getAs(detail(fixture, id), fixture.student()).andExpect(status().isOk())
+                .andExpect(jsonPath("$.visibleFrom").value(PAST.toString()))
+                .andExpect(jsonPath("$.visibleUntil").value(FUTURE.toString()));
+            setWindow(fixture, id, null, PAST);
+            getAs(detail(fixture, id), fixture.student()).andExpect(status().isForbidden());
+            assertTrue(tx(() -> contents.requireContent(id).isRequiredForModuleCompletion()));
+        }
+        getAs(list(fixture), fixture.student()).andExpect(status().isOk()).andExpect(content().json("[]"));
+        getAs(list(fixture), fixture.teacher()).andExpect(status().isOk()).andExpect(jsonPath("$.length()").value(4))
+            .andExpect(jsonPath("$[0].visibleUntil").value(PAST.toString()));
+        assertEquals(4, contents.findContentsByModule(fixture.courseId(), fixture.moduleId()).size());
+        for (Long id : fixture.contentIds()) {
+            setWindow(fixture, id, null, null);
+            getAs(detail(fixture, id), fixture.student()).andExpect(status().isOk())
+                .andExpect(jsonPath("$.visibleFrom").isEmpty()).andExpect(jsonPath("$.visibleUntil").isEmpty());
+        }
+        getAs(list(fixture), fixture.student()).andExpect(status().isOk()).andExpect(jsonPath("$.length()").value(4));
+    }
+
+    @Test
+    void omittedEndPreservesItWhileExplicitNullClearsItAndStartSemanticsStayCompatible() throws Exception {
+        Fixture fixture = fixture();
+        Long id = fixture.pageId();
+        setWindow(fixture, id, PAST, FUTURE);
+        setFrom(fixture, id, NOW);
+        assertEquals(FUTURE, tx(() -> contents.requireContent(id).getVisibleUntil()));
+        configure(fixture, id, "{}").andExpect(status().isOk());
+        assertNull(tx(() -> contents.requireContent(id).getVisibleFrom()));
+        assertEquals(FUTURE, tx(() -> contents.requireContent(id).getVisibleUntil()));
+        setWindow(fixture, id, PAST, FUTURE);
+        configure(fixture, id, "{\"visibleUntil\":null}").andExpect(status().isOk())
+            .andExpect(jsonPath("$.visibleFrom").isEmpty()).andExpect(jsonPath("$.visibleUntil").isEmpty());
+        assertNull(tx(() -> contents.requireContent(id).getVisibleUntil()));
+        // The DTO's presence flag is not a client-editable property.
+        setWindow(fixture, id, PAST, FUTURE);
+        configure(fixture, id, "{\"visibleUntilProvided\":true}").andExpect(status().isOk())
+            .andExpect(jsonPath("$.visibleUntil").value(FUTURE.toString()));
+    }
+
+    @Test
+    void invalidWindowsAndEndTimestampsLeaveBothStoredBoundsUnchanged() throws Exception {
+        Fixture fixture = fixture();
+        for (Long id : fixture.contentIds()) {
+            setWindow(fixture, id, PAST, FUTURE);
+            for (String invalid : List.of(windowBody(FUTURE, PAST), windowBody(NOW, NOW),
+                    "{\"visibleUntil\":\"not-a-date\"}", "{\"visibleUntil\":\"2026-12-01T10:00:00\"}")) {
+                configure(fixture, id, invalid).andExpect(status().isBadRequest());
+                assertEquals(PAST, tx(() -> contents.requireContent(id).getVisibleFrom()));
+                assertEquals(FUTURE, tx(() -> contents.requireContent(id).getVisibleUntil()));
+            }
+        }
+        configure(fixture, Long.MAX_VALUE, windowBody(null, PAST)).andExpect(status().isNotFound());
+        assertThrows(AccessDeniedException.class, () -> contents.updateVisibilityWindow(
+            fixture.pageId(), fixture.student().getUserId(), null, PAST));
+    }
+
+    @Test
+    void explicitEndCannotBypassCourseTeacherAuthorization() throws Exception {
+        Fixture fixture = fixture();
+        Fixture other = fixture();
+        String body = windowBody(null, PAST);
+        for (Long id : fixture.contentIds()) {
+            mvc.perform(put(settings(id)).contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isUnauthorized());
+            for (User denied : List.of(fixture.student(), fixture.member(), other.teacher(), other.student())) {
+                mvc.perform(put(settings(id)).header("Authorization", TestTokens.bearer(denied))
+                        .contentType(MediaType.APPLICATION_JSON).content(body)).andExpect(status().isForbidden());
+            }
+            assertNull(tx(() -> contents.requireContent(id).getVisibleUntil()));
+        }
+        tx(() -> {
+            entities.createQuery("select e from Enrollment e where e.user.userId=:user and e.course.id=:course", Enrollment.class)
+                .setParameter("user", fixture.teacher().getUserId()).setParameter("course", fixture.courseId())
+                .getSingleResult().deactivate();
+            return null;
+        });
+        configure(fixture, fixture.pageId(), body).andExpect(status().isForbidden());
+    }
+
+    @Test
     void configurationRequiresActualCourseTeacherAndRejectsInvalidDates() throws Exception {
         Fixture fixture = fixture();
         Fixture other = fixture();
@@ -243,7 +345,7 @@ class ContentVisibilityIntegrationTest {
     }
 
     @Test
-    void existingEndBoundaryIsEnforcedAndCannotBeEditedThroughThisApi() throws Exception {
+    void startOnlyUpdatesPreserveAndEnforceExistingEndBoundary() throws Exception {
         Fixture fixture = fixture();
         tx(() -> {
             for (Long id : fixture.contentIds()) ReflectionTestUtils.setField(entities.find(Content.class, id), "visibleUntil", PAST);
@@ -265,33 +367,35 @@ class ContentVisibilityIntegrationTest {
         }
     }
 
-    @Test
-    void pageCompletionIsRetainedButCannotBeChangedOrReadThroughHiddenPageEndpoint() throws Exception {
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void pageCompletionIsRetainedButCannotBeChangedOrReadThroughHiddenPageEndpoint(boolean closeEnd) throws Exception {
         Fixture fixture = fixture();
         mark(fixture, true).andExpect(status().isOk()).andExpect(jsonPath("$.completed").value(true));
-        setFrom(fixture, fixture.pageId(), FUTURE);
+        hide(fixture, fixture.pageId(), closeEnd);
         mark(fixture, true).andExpect(status().isForbidden());
         mark(fixture, false).andExpect(status().isForbidden());
         getAs("/api/contents/" + fixture.pageId() + "/completion", fixture.student()).andExpect(status().isForbidden());
         assertTrue(contents.isCompleted(fixture.pageId(), fixture.student().getUserId()));
         assertTrue(completion.status(fixture.pageId(), fixture.student().getUserId()).completed());
-        setFrom(fixture, fixture.pageId(), null);
+        setWindow(fixture, fixture.pageId(), null, null);
         getAs("/api/contents/" + fixture.pageId() + "/completion", fixture.student()).andExpect(status().isOk())
             .andExpect(jsonPath("$.completed").value(true));
     }
 
-    @Test
-    void hiddenQuizRejectsNewAttemptsButRetainsHistoryHintsAndCompletion() throws Exception {
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void hiddenQuizRejectsNewAttemptsButRetainsHistoryHintsAndCompletion(boolean closeEnd) throws Exception {
         Fixture fixture = fixture();
-        setFrom(fixture, fixture.quizId(), FUTURE);
+        hide(fixture, fixture.quizId(), closeEnd);
         quizSubmit(fixture).andExpect(status().isForbidden());
         assertFalse(attempts.existsByQuiz_Id(fixture.quizId()));
-        setFrom(fixture, fixture.quizId(), null);
+        setWindow(fixture, fixture.quizId(), null, null);
         quizSubmit(fixture, false).andExpect(status().isCreated()).andExpect(jsonPath("$.correctCount").value(0));
         Long attemptId = tx(() -> entities.createQuery("select a.id from QuizAttempt a where a.quiz.id=:quiz", Long.class)
             .setParameter("quiz", fixture.quizId()).getSingleResult());
         quizSubmit(fixture).andExpect(status().isCreated()).andExpect(jsonPath("$.correctCount").value(1));
-        setFrom(fixture, fixture.quizId(), FUTURE);
+        hide(fixture, fixture.quizId(), closeEnd);
         quizSubmit(fixture).andExpect(status().isForbidden());
         String path = "/api/quizzes/" + fixture.quizId() + "/attempts";
         getAs(path + "/me/count", fixture.student()).andExpect(status().isOk()).andExpect(jsonPath("$.usedAttempts").value(2));
@@ -322,8 +426,9 @@ class ContentVisibilityIntegrationTest {
     }
 
     @ParameterizedTest
-    @CsvSource({"false,false", "false,true", "true,false", "true,true"})
-    void visibilityChangesPreserveReleasedGradesAndHistoricalGroupOwnership(boolean coding, boolean group) throws Exception {
+    @CsvSource({"false,false,false", "false,true,false", "true,false,false", "true,true,false",
+        "false,false,true", "false,true,true", "true,false,true", "true,true,true"})
+    void visibilityChangesPreserveReleasedGradesAndHistoricalGroupOwnership(boolean coding, boolean group, boolean closeEnd) throws Exception {
         Fixture fixture = fixture();
         Long id = coding ? fixture.codingId() : fixture.assignmentId();
         var saved = submissions.submit(id, fixture.student().getUserId(), SubmissionType.TEXT, "Answer", group ? fixture.groupId() : null);
@@ -333,7 +438,7 @@ class ContentVisibilityIntegrationTest {
             entities.find(Group.class, fixture.groupId()).removeGroupMember(entities.find(User.class, fixture.member().getUserId()));
             return null;
         });
-        setFrom(fixture, id, FUTURE);
+        hide(fixture, id, closeEnd);
         for (User owner : group ? List.of(fixture.student(), fixture.member()) : List.of(fixture.student())) {
             assertTrue(contents.isCompleted(id, owner.getUserId()));
             getAs("/api/submissions/" + saved.getId(), owner).andExpect(status().isOk()).andExpect(jsonPath("$.late").value(false));
@@ -345,20 +450,21 @@ class ContentVisibilityIntegrationTest {
     }
 
     @ParameterizedTest
-    @ValueSource(booleans = {false, true})
-    void hiddenFileSubmissionIsRejectedBeforeStorage(boolean group) throws Exception {
+    @CsvSource({"false,false", "false,true", "true,false", "true,true"})
+    void hiddenFileSubmissionIsRejectedBeforeStorage(boolean group, boolean closeEnd) throws Exception {
         Fixture fixture = fixture();
-        setFrom(fixture, fixture.assignmentId(), FUTURE);
+        hide(fixture, fixture.assignmentId(), closeEnd);
         file(fixture, group).andExpect(status().isForbidden());
         verifyNoInteractions(storage);
     }
 
     @ParameterizedTest
-    @ValueSource(booleans = {false, true})
-    void fileFinalAcceptanceRechecksVisibilityChangedDuringUpload(boolean group) throws Exception {
+    @CsvSource({"false,false", "false,true", "true,false", "true,true"})
+    void fileFinalAcceptanceRechecksVisibilityChangedDuringUpload(boolean group, boolean closeEnd) throws Exception {
         Fixture fixture = fixture();
         doAnswer(call -> {
-            contents.updateVisibility(fixture.assignmentId(), fixture.teacher().getUserId(), FUTURE);
+            if (closeEnd) contents.updateVisibilityWindow(fixture.assignmentId(), fixture.teacher().getUserId(), null, PAST);
+            else contents.updateVisibility(fixture.assignmentId(), fixture.teacher().getUserId(), FUTURE);
             return new SubmissionObjectStorage.ObjectReference("test", call.getArgument(0));
         }).when(storage).put(any(), any(), anyLong(), any());
         file(fixture, group).andExpect(status().isForbidden());

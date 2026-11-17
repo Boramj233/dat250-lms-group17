@@ -86,10 +86,22 @@ public class ContentService {
 
     @Transactional
     public Content updateVisibility(Long contentId, Long teacherUserId, Instant visibleFrom) {
+        Content content = visibilityContentForTeacher(contentId, teacherUserId);
+        content.changeVisibleFrom(visibleFrom);
+        return content;
+    }
+
+    @Transactional
+    public Content updateVisibilityWindow(Long contentId, Long teacherUserId, Instant visibleFrom, Instant visibleUntil) {
+        Content content = visibilityContentForTeacher(contentId, teacherUserId);
+        content.changeVisibility(visibleFrom, visibleUntil);
+        return content;
+    }
+
+    private Content visibilityContentForTeacher(Long contentId, Long teacherUserId) {
         // Reuse the content row lock used by submission acceptance and settings editing.
         Content content = lockSubmissionContent(contentId);
         enrollmentService.requireActiveTeacher(teacherUserId, content.getModule().getCourse().getId());
-        content.changeVisibleFrom(visibleFrom);
         return content;
     }
 

@@ -727,24 +727,43 @@ framework, Quiz settings, visibility or frontend changes are included.
 
 ## Content Visibility
 
-An active teacher in the Content's actual course can replace its start restriction:
+An active teacher in the Content's actual course can configure its visibility window:
 
 ```http
 PUT /api/contents/{contentId}/visibility
 Content-Type: application/json
 
-{"visibleFrom":"2026-12-01T08:00:00Z"}
+{"visibleFrom":"2026-12-01T08:00:00Z","visibleUntil":"2026-12-08T08:00:00Z"}
 ```
 
 This endpoint supports StaticPage, Assignment, CodingExercise and Quiz. Success is
-200 with `{contentId, visibleFrom, visibleUntil}`. `visibleFrom: null` or an omitted
-field (`{}`) clears the start restriction. Use an ISO timestamp with a timezone;
+200 with `{contentId, visibleFrom, visibleUntil}`. Use an ISO timestamp with a timezone;
 times are stored as Instant. Invalid timestamps return 400, unauthenticated calls
 401, non-course/inactive teachers and students 403, and missing Content 404. The
-teacher's identity comes from the verified principal. Only visibleFrom is editable;
-an existing visibleUntil is preserved, and a nonnull start must be strictly before
-that end (otherwise 400). Content summaries and all four detail/creation response
-DTOs also include visibleFrom and visibleUntil.
+teacher's identity comes from the verified principal. When both bounds are nonnull,
+the start must be strictly before the end (otherwise 400); both new values are
+validated together before either is changed. Invalid updates leave the stored
+window unchanged. Content summaries and all four detail/creation response DTOs
+also include visibleFrom and visibleUntil.
+
+The original start-only request remains compatible. Start is always replaced,
+while end is replaced only when its property is present:
+
+| Request | Start | End |
+| --- | --- | --- |
+| `{"visibleFrom":"..."}` | Set start | Preserve existing end |
+| `{"visibleFrom":null}` or `{}` | Clear start | Preserve existing end |
+| `{"visibleUntil":"..."}` | Clear start (omitted) | Set end |
+| `{"visibleUntil":null}` | Clear start (omitted) | Clear end |
+| Both properties | Set/clear each as supplied | Set/clear each as supplied |
+
+To close access now, send `{"visibleFrom":null,"visibleUntil":"<now-or-past-UTC-instant>"}`.
+Clearing start also permits closing a previously scheduled future window without
+an invalid start/end pair. Keep the elapsed end to leave the Content unavailable
+indefinitely. To reopen without time restrictions, send
+`{"visibleFrom":null,"visibleUntil":null}`. Clearing start alone does not reopen
+Content whose preserved end has already elapsed. No archive/deleted flag is added;
+this closes current access, without deleting or concealing owned historical records.
 
 The window is `[visibleFrom, visibleUntil)`: the start is inclusive, the end is
 exclusive, and either null bound is unrestricted. Existing rows with both null
@@ -779,5 +798,5 @@ Internal ContentService.requireContent(), findContentsByModule() and isCompleted
 keep their existing contracts. HTTP browsing uses a separate filtered list method;
 a hidden required Content stays required and is not silently removed from Module
 completion evaluation. This feature does not implement Module access/dependency,
-Content Delete, visibleUntil editing or frontend changes. Existing mapped columns
+Content Delete or frontend changes. Existing mapped columns
 are reused, so no database migration is added or automatically executed.

@@ -16,6 +16,7 @@ import no.hvl.dat250.lms.content.api.dto.UpdateContentVisibilityRequest;
 import no.hvl.dat250.lms.security.AuthenticatedUser;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import no.hvl.dat250.lms.content.domain.StaticPage;
+import no.hvl.dat250.lms.content.domain.Content;
 import no.hvl.dat250.lms.content.service.ContentService;
 
 import no.hvl.dat250.lms.security.auth.annotations.IsTeacherInCourse;
@@ -43,8 +44,14 @@ public class ContentController {
             @PathVariable Long contentId,
             @Valid @RequestBody UpdateContentVisibilityRequest request,
             @AuthenticationPrincipal AuthenticatedUser user) {
-        return ResponseEntity.ok(ContentVisibilityResponse.from(
-            contentService.updateVisibility(contentId, user.userId(), request.visibleFrom())));
+        Content content;
+        if (request.hasVisibleUntil()) {
+            content = contentService.updateVisibilityWindow(contentId, user.userId(),
+                request.getVisibleFrom(), request.getVisibleUntil());
+        } else {
+            content = contentService.updateVisibility(contentId, user.userId(), request.getVisibleFrom());
+        }
+        return ResponseEntity.ok(ContentVisibilityResponse.from(content));
     }
 
     @IsTeacherInCourse
