@@ -121,7 +121,7 @@ public class ModuleController {
     }
 
     @IsCourseManager
-    @DeleteMapping("/api/courses/{courseId}/modules/{moduleId}")
+    @DeleteMapping("/{moduleId}")
     public ResponseEntity<Void> deleteModule(
             @PathVariable Long courseId,
             @PathVariable Long moduleId) {
