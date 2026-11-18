@@ -3,7 +3,6 @@ import type { ContentType } from '@domain/content/types'
 import { passRequirementText } from '@domain/quizzes/passRule'
 import { Field, type SetFormValue } from '@shared/ui/Form'
 import type { ContentFormValues } from './contentFormValues'
-import { combineExtensions, FILE_TYPE_PRESETS, formatExtensions } from './fileTypes'
 import QuizQuestionsEditor from './QuizQuestionsEditor'
 
 type FieldsProps = {
@@ -88,49 +87,10 @@ export function SubmissionFields({ type, values, set }: FieldsProps & { type: Co
             />
             Group assignment (one submission per group)
           </label>
-          <FileTypeFields values={values} set={set} />
+          <p className="form-hint">Students hand in a text or one PDF file (at most 10 MB).</p>
         </>
       )}
     </>
-  )
-}
-
-/** Which file types students may hand in: ticked presets plus typed extensions. */
-function FileTypeFields({ values, set }: FieldsProps) {
-  const { fileTypePresets, otherFileTypes } = values
-  return (
-    <fieldset className="form-field file-types">
-      <legend className="form-label">Accepted file types</legend>
-      <div className="form-row">
-        {FILE_TYPE_PRESETS.map(preset => (
-          <label key={preset.label} className="form-check" title={preset.extensions.join(', ')}>
-            <input
-              type="checkbox"
-              checked={fileTypePresets.includes(preset.label)}
-              onChange={event =>
-                set('fileTypePresets')(
-                  event.target.checked
-                    ? [...fileTypePresets, preset.label]
-                    : fileTypePresets.filter(label => label !== preset.label),
-                )
-              }
-            />
-            {preset.label}
-          </label>
-        ))}
-      </div>
-      <label htmlFor="file-types-other">Other extensions</label>
-      <input
-        id="file-types-other"
-        value={otherFileTypes}
-        placeholder="e.g. .py, .java"
-        onChange={event => set('otherFileTypes')(event.target.value)}
-      />
-      <p className="form-hint">
-        Accepted: {formatExtensions(combineExtensions(fileTypePresets, otherFileTypes))}. Tick nothing to accept any
-        file type.
-      </p>
-    </fieldset>
   )
 }
 

@@ -119,11 +119,6 @@ export interface AssignmentContent extends ContentDetailBase {
    * not in the backend yet; missing until it is.
    */
   groupAssignment?: boolean
-  /**
-   * File name extensions that may be handed in, lower case with a dot, e.g. [".pdf",
-   * ".zip"]; empty for any file type. Proposed field, not in the backend yet.
-   */
-  acceptedFileTypes?: string[]
 }
 
 // Matches CodingExerciseResponse (GET /api/coding-exercises/{id}) plus `type`.
@@ -168,8 +163,6 @@ export interface CreateAssignmentInput extends CreateContentBase {
   mandatoryForExam: boolean
   /** Proposed (see AssignmentContent.groupAssignment). */
   groupAssignment: boolean
-  /** Proposed (see AssignmentContent.acceptedFileTypes); empty for any file type. */
-  acceptedFileTypes: string[]
 }
 
 export interface CreateCodingExerciseInput extends CreateContentBase {

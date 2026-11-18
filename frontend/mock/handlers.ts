@@ -348,7 +348,6 @@ function detailResponse(content: Content & { courseId: number }, forTeacher = fa
         allowLateSubmission: content.allowLateSubmission,
         mandatoryForExam: content.mandatoryForExam,
         groupAssignment: content.groupAssignment ?? false,
-        acceptedFileTypes: content.acceptedFileTypes ?? [],
       }
     case 'CODING_EXERCISE':
       return {

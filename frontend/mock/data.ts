@@ -564,7 +564,6 @@ export const contents: (Content & { courseId: number })[] = [
     allowLateSubmission: false,
     mandatoryForExam: true,
     groupAssignment: true,
-    acceptedFileTypes: ['.pdf', '.zip'],
   },
   // DAT251
   {

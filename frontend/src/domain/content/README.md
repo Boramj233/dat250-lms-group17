@@ -88,7 +88,8 @@ are required except `starterCode` and `deadline`.
 A quiz's questions are replaced all at once, and only when they differ from the saved ones
 (`questionsChanged`), since the backend refuses (409) once a student has made an attempt;
 `maxAttempts` can always be changed. The assignment fields
-`groupAssignment` and `acceptedFileTypes` are not in the backend and are not sent.
+`groupAssignment` is not in the backend and is not sent. Students hand in a text or one
+PDF file (the backend accepts only PDF), so there is no choice of file types.
 
 An item is shown as **published** once its visible date has passed (its own
 `visibleFrom`, or its module's start date). The backend does not lock published content.
@@ -161,21 +162,18 @@ there is starter code. The backend should add `starterCode` to the entity,
 `starterRepositoryUrl`. Until then the field is missing and the UI shows only the
 repository.
 
-## Group assignments and accepted file types (proposed)
+## Group assignments (proposed)
 
-Two more fields on `AssignmentContent`, set when the assignment is created:
+One more field on `AssignmentContent`, set when the assignment is created:
 
 - `groupAssignment` (boolean): students hand in as a group, one submission per
   group (the submission's `groupId`, see `domain/assignments`). A member hands in
   with `groupId` in `POST /api/contents/{contentId}/submissions` (or `…/submissions/file`),
   and every member then sees it in `…/submissions/me` with `groupId` and the `members`
   at that time. The frontend shows the group's name from the course's groups.
-- `acceptedFileTypes` (string array): the file name extensions that may be handed
-  in, lower case with a dot, e.g. `[".pdf", ".zip"]`. Empty means any file type.
-  The backend must check uploaded files against it.
 
-The backend should add both to the `Assignment` entity, `CreateAssignmentRequest`
-and `AssignmentResponse`. Until then they are missing and the UI does not show them.
+The backend should add it to the `Assignment` entity, `CreateAssignmentRequest`
+and `AssignmentResponse`. Until then it is missing and the UI does not show it.
 
 ## Mandatory for the exam (backend)
 

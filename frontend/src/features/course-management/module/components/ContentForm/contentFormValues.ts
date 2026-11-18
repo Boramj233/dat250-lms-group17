@@ -4,7 +4,6 @@ import type { Content, ContentFields, ContentType, NewQuizQuestion } from '@doma
 import { checkContentVisibleFrom } from '@domain/content/visibility'
 import type { CourseModule } from '@domain/modules/types'
 import type { QuizAnswerKey } from '@domain/quizzes/types'
-import { combineExtensions, splitExtensions } from './fileTypes'
 import { emptyQuestion, firstInvalidQuestion, questionsFromContent } from './quizQuestions'
 
 /** Everything the form holds, as the fields show it (dates as datetime-local text). */
@@ -18,8 +17,6 @@ export type ContentFormValues = {
   allowLate: boolean
   mandatoryForExam: boolean
   groupAssignment: boolean
-  fileTypePresets: string[]
-  otherFileTypes: string
   starterUrl: string
   starterCode: string
   maxAttempts: number
@@ -36,7 +33,6 @@ export const DEFAULT_PASSING_PERCENTAGE = 60
  * quiz, `answerKey` fills in the correct answers of its questions.
  */
 export function initialValues(content: Content | undefined, answerKey?: QuizAnswerKey): ContentFormValues {
-  const files = content?.type === 'ASSIGNMENT' ? splitExtensions(content.acceptedFileTypes ?? []) : undefined
   const submittable = isSubmittable(content) ? content : undefined
   return {
     title: content?.title ?? '',
@@ -46,8 +42,6 @@ export function initialValues(content: Content | undefined, answerKey?: QuizAnsw
     allowLate: submittable?.allowLateSubmission ?? false,
     mandatoryForExam: content?.type === 'ASSIGNMENT' ? content.mandatoryForExam : false,
     groupAssignment: content?.type === 'ASSIGNMENT' ? (content.groupAssignment ?? false) : false,
-    fileTypePresets: files?.presetLabels ?? [],
-    otherFileTypes: files?.other ?? '',
     starterUrl: content?.type === 'CODING_EXERCISE' ? (content.starterRepositoryUrl ?? '') : '',
     starterCode: content?.type === 'CODING_EXERCISE' ? (content.starterCode ?? '') : '',
     maxAttempts: content?.type === 'QUIZ' ? content.maxAttempts : 1,
@@ -89,7 +83,6 @@ export function toFields(type: ContentType, values: ContentFormValues): ContentF
         allowLateSubmission: values.allowLate,
         mandatoryForExam: values.mandatoryForExam,
         groupAssignment: values.groupAssignment,
-        acceptedFileTypes: combineExtensions(values.fileTypePresets, values.otherFileTypes),
       }
     case 'CODING_EXERCISE':
       return {

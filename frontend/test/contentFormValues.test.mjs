@@ -22,7 +22,6 @@ test("a new form starts empty, with one empty question, one attempt and the back
   assert.equal(start.maxAttempts, 1)
   assert.equal(start.passingPercentage, 60)
   assert.equal(start.questions.length, 1)
-  assert.deepEqual(start.fileTypePresets, [])
 })
 
 test('editing starts from the saved item', () => {
@@ -34,14 +33,11 @@ test('editing starts from the saved item', () => {
     deadline: null,
     allowLateSubmission: true,
     mandatoryForExam: true,
-    acceptedFileTypes: ['.pdf', '.py'],
   })
   assert.equal(start.title, 'Essay')
   assert.equal(start.body, 'Write.')
   assert.equal(start.allowLate, true)
   assert.equal(start.mandatoryForExam, true)
-  assert.deepEqual(start.fileTypePresets, ['PDF'])
-  assert.equal(start.otherFileTypes, '.py')
 })
 
 test('formProblem: a coding exercise needs a starter repository or starter code', () => {
@@ -80,8 +76,8 @@ test('toFields sends only the fields of the type, trimmed', () => {
     starterRepositoryUrl: null,
     starterCode: 'x = 1',
   })
-  const assignment = toFields('ASSIGNMENT', values({ fileTypePresets: ['PDF'], otherFileTypes: 'py' }))
-  assert.deepEqual(assignment.acceptedFileTypes, ['.pdf', '.py'])
+  const assignment = toFields('ASSIGNMENT', values({}))
+  assert.equal('acceptedFileTypes' in assignment, false)
   assert.equal('starterCode' in assignment, false)
 })
 

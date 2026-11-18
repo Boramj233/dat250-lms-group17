@@ -67,13 +67,6 @@
   tab-size: 2;
 }
 
-/* Accepted file types: the preset checkboxes, then a field for other extensions. */
-.file-types {
-  margin: 0;
-  padding: 0;
-  border: none;
-}
-
 /* Starter repository and starter code: one required group (at least one of them). */
 .starter-fields {
   gap: var(--space-5);
