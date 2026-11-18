@@ -26,11 +26,6 @@ public abstract class Content {
     @JoinColumn(name = "module_id", nullable = false)
     private Module module;
 
-    // by default no content is required to be completed in a module
-    // duplicate method of below, remove after updating
-    @Column(name = "required_for_completion", nullable = false)
-    private boolean requiredForCompletion = false;
-
     @Column(name = "required_for_module_completion", nullable = false)
     private boolean requiredForModuleCompletion;
 
@@ -88,11 +83,5 @@ public abstract class Content {
 
     public Instant getVisibleUntil() {
         return visibleUntil;
-    }
-
-    public boolean getRequiredForCompletion() { return this.requiredForCompletion; }
-
-    public void setRequiredForCompletion(boolean requiredForCompletion) {
-        this.requiredForCompletion = requiredForCompletion;
     }
 }

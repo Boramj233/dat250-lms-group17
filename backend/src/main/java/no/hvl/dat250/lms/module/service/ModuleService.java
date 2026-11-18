@@ -3,6 +3,7 @@ package no.hvl.dat250.lms.module.service;
 import java.time.LocalDateTime;
 import java.util.*;
 
+import no.hvl.dat250.lms.content.domain.Content;
 import no.hvl.dat250.lms.course.domain.Course;
 import no.hvl.dat250.lms.course.service.CourseService;
 import no.hvl.dat250.lms.module.domain.Module;
