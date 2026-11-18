@@ -48,6 +48,13 @@ public class Grade {
     @Column(name = "released_at")
     private Instant releasedAt;
 
+    /**
+     * When the grade becomes visible to the student by itself (released by
+     * GradeReleaseScheduler); null when it waits for an explicit release.
+     */
+    @Column(name = "visible_from")
+    private Instant visibleFrom;
+
     @Version
     @Column(nullable = false)
     private Long version;
@@ -96,6 +103,24 @@ public class Grade {
         }
     }
 
+    /**
+     * Schedules the release, or clears it with null. A scheduled grade needs a Pass/Fail
+     * decision, since releasing requires one.
+     */
+    public void scheduleRelease(Instant visibleFrom) {
+        if (releasedAt != null) throw new IllegalStateException("Released grades cannot be edited");
+        if (visibleFrom != null && passed == null) {
+            throw new IllegalArgumentException("Choose Pass or Fail before scheduling the grade");
+        }
+        this.visibleFrom = visibleFrom;
+    }
+
+    /** Whether the scheduled release time has come (and it is not released yet). */
+    public boolean isReleaseDue(Instant now) {
+        return releasedAt == null && visibleFrom != null && !visibleFrom.isAfter(now);
+    }
+
+    public Instant getVisibleFrom() { return visibleFrom; }
     public Long getId() { return id; }
     public Submission getSubmission() { return submission; }
     public BigDecimal getScore() { return score; }

@@ -10,7 +10,10 @@ CREATE TABLE IF NOT EXISTS grades (
     graded_at TIMESTAMP(6) WITH TIME ZONE NOT NULL,
     released_by_id BIGINT REFERENCES enrollments(id),
     released_at TIMESTAMP(6) WITH TIME ZONE,
+    visible_from TIMESTAMP(6) WITH TIME ZONE, -- scheduled release; NULL: wait for an explicit release
     version BIGINT NOT NULL,
     CHECK ((released_at IS NULL AND released_by_id IS NULL)
         OR (released_at IS NOT NULL AND released_by_id IS NOT NULL))
 );
+-- Databases that already have the grades table: add the scheduled release time.
+ALTER TABLE grades ADD COLUMN IF NOT EXISTS visible_from TIMESTAMP(6) WITH TIME ZONE;
