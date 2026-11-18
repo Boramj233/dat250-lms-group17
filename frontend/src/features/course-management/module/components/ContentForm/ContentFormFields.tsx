@@ -50,7 +50,7 @@ export function StarterFields({ values, set }: FieldsProps) {
 
 /**
  * Assignments and coding exercises: deadline and late submissions; for assignments also
- * mandatory, group assignment and the accepted file types.
+ * whether it is mandatory for the exam.
  */
 export function SubmissionFields({ type, values, set }: FieldsProps & { type: ContentType }) {
   return (
@@ -78,14 +78,6 @@ export function SubmissionFields({ type, values, set }: FieldsProps & { type: Co
               onChange={event => set('mandatoryForExam')(event.target.checked)}
             />
             Mandatory for the exam
-          </label>
-          <label className="form-check">
-            <input
-              type="checkbox"
-              checked={values.groupAssignment}
-              onChange={event => set('groupAssignment')(event.target.checked)}
-            />
-            Group assignment (one submission per group)
           </label>
           <p className="form-hint">Students hand in a text or one PDF file (at most 10 MB).</p>
         </>

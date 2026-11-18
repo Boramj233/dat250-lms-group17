@@ -115,3 +115,31 @@
   margin: 0;
   font-style: italic;
 }
+
+/* A member with Remove beside them (teachers). */
+.course-group-member {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-3);
+}
+
+.course-group-remove {
+  min-height: auto;
+  padding: var(--space-2) var(--space-3);
+}
+
+/* Teachers: "Add a student to Group 7", a menu and Add. */
+.course-group-add {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+  font-family: var(--font-ui);
+  font-size: var(--text-small);
+}
+
+.course-group-add .form-row {
+  align-items: center;
+}

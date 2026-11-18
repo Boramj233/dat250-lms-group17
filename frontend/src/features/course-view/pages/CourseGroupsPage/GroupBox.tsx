@@ -1,3 +1,4 @@
+import { useId, useState } from 'react'
 import type { UserId } from '@shared/types'
 import { groupName } from '@domain/groups/hooks'
 import type { CourseGroup } from '@domain/groups/types'
@@ -16,12 +17,17 @@ type GroupBoxProps = {
   /** While another action runs. */
   busy: boolean
   memberName: (userId: UserId) => string
-  onJoin: () => void
-  onLeave: () => void
+  /** Teachers: students of the course who are in no group, to add to this one. */
+  addable: { userId: UserId; name: string }[]
+  onAdd: (userId: UserId) => void
+  onRemove: (userId: UserId) => void
   onDelete: () => void
 }
 
-/** One group: a header that unfolds its members, with Join, Leave or Delete next to it. */
+/**
+ * One group: a header that unfolds its members. Teachers also add students to it, remove
+ * members and delete it; students only see it.
+ */
 export default function GroupBox({
   group,
   userId,
@@ -31,8 +37,9 @@ export default function GroupBox({
   onToggle,
   busy,
   memberName,
-  onJoin,
-  onLeave,
+  addable,
+  onAdd,
+  onRemove,
   onDelete,
 }: GroupBoxProps) {
   const id = String(group.id)
@@ -55,15 +62,19 @@ export default function GroupBox({
             <span className="course-group-count">{formatCount(count, 'member')}</span>
           </button>
         </h2>
-        <GroupAction
-          isTeacher={isTeacher}
-          mine={mine}
-          label={label}
-          disabled={busy}
-          onJoin={onJoin}
-          onLeave={onLeave}
-          onDelete={onDelete}
-        />
+        {isTeacher && (
+          <div className="course-group-actions">
+            <button
+              type="button"
+              className="button-secondary"
+              disabled={busy}
+              aria-label={`Delete ${label}`}
+              onClick={onDelete}
+            >
+              Delete
+            </button>
+          </div>
+        )}
       </div>
       <div id={`course-group-${id}`} className="course-group-body" hidden={!expanded}>
         {count === 0 ? (
@@ -71,71 +82,73 @@ export default function GroupBox({
         ) : (
           <ul className="course-group-members">
             {group.memberIds.map(memberId => (
-              <li key={memberId}>
-                {memberName(memberId)}
-                {String(memberId) === String(userId) && <span className="course-group-you"> (you)</span>}
+              <li key={memberId} className="course-group-member">
+                <span>
+                  {memberName(memberId)}
+                  {String(memberId) === String(userId) && <span className="course-group-you"> (you)</span>}
+                </span>
+                {isTeacher && (
+                  <button
+                    type="button"
+                    className="button-secondary course-group-remove"
+                    disabled={busy}
+                    onClick={() => onRemove(memberId)}
+                  >
+                    Remove
+                    <span className="visually-hidden">
+                      {' '}
+                      {memberName(memberId)} from {label}
+                    </span>
+                  </button>
+                )}
               </li>
             ))}
           </ul>
         )}
+        {isTeacher && <AddMember label={label} addable={addable} busy={busy} onAdd={onAdd} />}
       </div>
     </li>
   )
 }
 
-type GroupActionProps = {
-  isTeacher: boolean
-  mine: boolean
+type AddMemberProps = {
   label: string
-  disabled: boolean
-  onJoin: () => void
-  onLeave: () => void
-  onDelete: () => void
+  addable: { userId: UserId; name: string }[]
+  busy: boolean
+  onAdd: (userId: UserId) => void
 }
 
-/** Teachers: Delete. Students: Leave on their own group, Join on the others. */
-function GroupAction({ isTeacher, mine, label, disabled, onJoin, onLeave, onDelete }: GroupActionProps) {
-  if (isTeacher) {
-    return (
-      <div className="course-group-actions">
-        <button
-          type="button"
-          className="button-secondary"
-          disabled={disabled}
-          aria-label={`Delete ${label}`}
-          onClick={onDelete}
-        >
-          Delete
-        </button>
-      </div>
-    )
-  }
-  if (mine) {
-    return (
-      <div className="course-group-actions">
-        <button
-          type="button"
-          className="button-secondary"
-          disabled={disabled}
-          aria-label={`Leave ${label}`}
-          onClick={onLeave}
-        >
-          Leave
-        </button>
-      </div>
-    )
+/** Teachers: a menu of the students without a group, and Add. */
+function AddMember({ label, addable, busy, onAdd }: AddMemberProps) {
+  const selectId = useId()
+  const [chosen, setChosen] = useState('')
+  if (addable.length === 0) {
+    return <p className="course-group-empty">Every student of the course is in a group.</p>
   }
   return (
-    <div className="course-group-actions">
-      <button
-        type="button"
-        className="button-primary"
-        disabled={disabled}
-        aria-label={`Join ${label}`}
-        onClick={onJoin}
-      >
-        Join
-      </button>
+    <div className="course-group-add">
+      <label htmlFor={selectId}>Add a student to {label}</label>
+      <div className="form-row">
+        <select id={selectId} value={chosen} onChange={event => setChosen(event.target.value)}>
+          <option value="">Choose a student…</option>
+          {addable.map(student => (
+            <option key={student.userId} value={String(student.userId)}>
+              {student.name}
+            </option>
+          ))}
+        </select>
+        <button
+          type="button"
+          className="button-primary"
+          disabled={busy || chosen === ''}
+          onClick={() => {
+            onAdd(chosen)
+            setChosen('')
+          }}
+        >
+          Add
+        </button>
+      </div>
     </div>
   )
 }

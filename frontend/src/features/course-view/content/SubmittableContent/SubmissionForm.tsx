@@ -11,8 +11,14 @@ const MAX_FILE_BYTES = 10 * 1024 * 1024
 
 type SubmissionFormProps = {
   content: AssignmentContent | CodingExerciseContent
-  /** Hand in for this group (a group assignment the user has a group for). */
-  groupId?: GroupId
+  /**
+   * The user's group in the course, if any. The backend lets a member hand in for their
+   * group on any assignment or coding exercise, so the form asks whether this answer is
+   * for the group or only for the user.
+   */
+  group?: { id: GroupId; label: string }
+  /** Whether "for the group" is chosen at first (e.g. the last answer was a group one). */
+  forGroupAtFirst?: boolean
   onDone: () => void
   onCancel: () => void
 }
@@ -21,13 +27,21 @@ type SubmissionFormProps = {
  * The answer in a format the backend accepts: for an assignment a text or a PDF file,
  * for a coding exercise a link to a Git repository.
  */
-export default function SubmissionForm({ content, groupId, onDone, onCancel }: SubmissionFormProps) {
+export default function SubmissionForm({
+  content,
+  group,
+  forGroupAtFirst = false,
+  onDone,
+  onCancel,
+}: SubmissionFormProps) {
   const submitText = useSubmitMySubmission()
   const submitPdf = useSubmitFile()
   const isCode = content.type === 'CODING_EXERCISE'
   const [kind, setKind] = useState<'TEXT' | 'FILE'>('TEXT')
   const [value, setValue] = useState('')
   const [file, setFile] = useState<File | null>(null)
+  const [forGroup, setForGroup] = useState(group !== undefined && forGroupAtFirst)
+  const groupId = group && forGroup ? group.id : undefined
   const pending = submitText.isPending || submitPdf.isPending
   const error = submitText.error ?? submitPdf.error
 
@@ -60,6 +74,19 @@ export default function SubmissionForm({ content, groupId, onDone, onCancel }: S
 
   return (
     <form className="form submittable-form" onSubmit={handleSubmit}>
+      {group && (
+        <fieldset className="submittable-kind">
+          <legend className="form-label">Hand in for</legend>
+          <label>
+            <input type="radio" name="submission-for" checked={!forGroup} onChange={() => setForGroup(false)} />
+            Only me
+          </label>
+          <label>
+            <input type="radio" name="submission-for" checked={forGroup} onChange={() => setForGroup(true)} />
+            {group.label} (it counts for everyone in the group)
+          </label>
+        </fieldset>
+      )}
       {!isCode && (
         <fieldset className="submittable-kind">
           <legend className="visually-hidden">How do you hand in?</legend>

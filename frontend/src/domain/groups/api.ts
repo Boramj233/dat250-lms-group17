@@ -18,8 +18,8 @@ export function deleteGroup(courseId: CourseId, groupId: GroupId): Promise<void>
 }
 
 /**
- * Adds a student to a group; a student joins by adding themselves. The body is the
- * bare user id. 409 when the student is already in a group in this course.
+ * Teachers: adds a student of the course to a group. The body is the bare user id. 409
+ * when the student is already in a group in this course.
  */
 export function addGroupMember(courseId: CourseId, groupId: GroupId, userId: UserId): Promise<CourseGroup> {
   return apiClient<CourseGroup>(
@@ -28,7 +28,7 @@ export function addGroupMember(courseId: CourseId, groupId: GroupId, userId: Use
   )
 }
 
-/** Removes a member from a group; a student leaves by removing themselves. */
+/** Teachers: removes a member from a group. */
 export function removeGroupMember(courseId: CourseId, groupId: GroupId, userId: UserId): Promise<void> {
   return apiClient<void>(apiPath`/api/courses/${courseId}/groups/${groupId}/members/${userId}`, { method: 'DELETE' })
 }

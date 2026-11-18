@@ -87,9 +87,8 @@ are required except `starterCode` and `deadline`.
 
 A quiz's questions are replaced all at once, and only when they differ from the saved ones
 (`questionsChanged`), since the backend refuses (409) once a student has made an attempt;
-`maxAttempts` can always be changed. The assignment fields
-`groupAssignment` is not in the backend and is not sent. Students hand in a text or one
-PDF file (the backend accepts only PDF), so there is no choice of file types.
+`maxAttempts` can always be changed. Students hand in a text or one PDF file (the
+backend accepts only PDF), so there is no choice of file types.
 
 An item is shown as **published** once its visible date has passed (its own
 `visibleFrom`, or its module's start date). The backend does not lock published content.
@@ -162,18 +161,16 @@ there is starter code. The backend should add `starterCode` to the entity,
 `starterRepositoryUrl`. Until then the field is missing and the UI shows only the
 repository.
 
-## Group assignments (proposed)
+## Handing in as a group (backend)
 
-One more field on `AssignmentContent`, set when the assignment is created:
-
-- `groupAssignment` (boolean): students hand in as a group, one submission per
-  group (the submission's `groupId`, see `domain/assignments`). A member hands in
-  with `groupId` in `POST /api/contents/{contentId}/submissions` (or `…/submissions/file`),
-  and every member then sees it in `…/submissions/me` with `groupId` and the `members`
-  at that time. The frontend shows the group's name from the course's groups.
-
-The backend should add it to the `Assignment` entity, `CreateAssignmentRequest`
-and `AssignmentResponse`. Until then it is missing and the UI does not show it.
+An assignment has no "group assignment" setting. On **every** assignment and coding
+exercise, a student who is in a group in the course may hand in for the group: the
+submission form asks "Only me" or "Group N". That sends `groupId` with
+`POST /api/contents/{contentId}/submissions` (or `…/submissions/file`); the backend
+checks that the student is a member (403 otherwise) and stores the members at that
+time. Every one of them then sees it in `…/submissions/me` (with `groupId` and
+`members`), and its released grade counts for each of them. Group answers and the
+student's own answers are separate sequences; teachers grade the latest of each.
 
 ## Mandatory for the exam (backend)
 

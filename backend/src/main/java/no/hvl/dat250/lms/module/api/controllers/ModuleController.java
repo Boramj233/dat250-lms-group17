@@ -7,6 +7,7 @@ import java.util.stream.Collectors;
 
 import jakarta.validation.Valid;
 
+import no.hvl.dat250.lms.module.api.dto.ReorderModulesRequest;
 import no.hvl.dat250.lms.module.api.dto.UpdateModuleAvailabilityRequest;
 import no.hvl.dat250.lms.module.api.dto.UpdateModuleRequest;
 import no.hvl.dat250.lms.module.domain.Module;
@@ -19,6 +20,7 @@ import no.hvl.dat250.lms.security.AuthenticatedUser;
 import no.hvl.dat250.lms.security.auth.access.CourseAccess;
 import no.hvl.dat250.lms.security.auth.annotations.IsCourseManager;
 import no.hvl.dat250.lms.security.auth.annotations.IsEnrolledInCourse;
+import no.hvl.dat250.lms.security.auth.annotations.IsTeacherInCourse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -120,6 +122,25 @@ public class ModuleController {
         );
     }
 
+    /**
+     * Sets the order of all the course's modules at once (teachers of the course). The body
+     * has every module of the course exactly once, first to last (400 otherwise). Answers
+     * the modules in their new order.
+     */
+    @IsTeacherInCourse
+    @PutMapping("/order")
+    public ResponseEntity<List<ModuleResponse>> reorderModules(
+            @PathVariable Long courseId,
+            @Valid @RequestBody ReorderModulesRequest request) {
+
+        List<ModuleResponse> modules = moduleService.reorderModules(courseId, request.moduleIds())
+                .stream()
+                .map(module -> ModuleResponse.from(module, courseId))
+                .toList();
+
+        return ResponseEntity.ok(modules);
+    }
+
     @IsCourseManager
     @DeleteMapping("/{moduleId}")
     public ResponseEntity<Void> deleteModule(
@@ -209,5 +230,13 @@ public class ModuleController {
             NoSuchElementException exception) {
 
         return ResponseEntity.notFound().build();
+    }
+
+    // E.g. an order that leaves out a module, or a dependency that would make a cycle.
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<Void> handleBadRequest(
+            IllegalArgumentException exception) {
+
+        return ResponseEntity.badRequest().build();
     }
 }

@@ -1,48 +1,29 @@
 import { errorMessage } from '@shared/api/errorMessage'
 import { groupName } from '@domain/groups/hooks'
-import { SwitchGroupError } from '@domain/groups/switchGroup'
 import type { CourseGroup } from '@domain/groups/types'
 
 // Messages for the group actions that failed, from the backend's status code.
 
-export function joinError(error: Error): string {
+export function addError(error: Error, name: string, group: CourseGroup): string {
   return errorMessage(
     error,
     {
-      409: 'You are already in a group in this course. Leave it before you join another.',
-      403: 'You are not allowed to join this group.',
-      404: 'The group no longer exists.',
+      409: `${name} is already in a group in this course. Remove them from it first.`,
+      403: `${name} could not be added: only active students of the course can be in a group.`,
+      404: `${groupName(group)} no longer exists.`,
     },
-    'You could not join the group. Try again.',
+    `${name} could not be added to ${groupName(group)}. Try again.`,
   )
 }
 
-export function switchError(error: Error, from: CourseGroup, to: CourseGroup): string {
-  if (error instanceof SwitchGroupError) {
-    const why = joinError(error.cause instanceof Error ? error.cause : error)
-    return error.backInOldGroup
-      ? `${why} You are still in ${groupName(from)}.`
-      : `${why} You are no longer in ${groupName(from)} and not in ${groupName(to)}; join a group again.`
-  }
-  // Leaving the old group failed: nothing changed.
+export function removeError(error: Error, name: string, group: CourseGroup): string {
   return errorMessage(
     error,
     {
-      409: `You were no longer in ${groupName(from)}, so nothing was changed. Try joining ${groupName(to)} again.`,
+      409: `${name} is no longer in ${groupName(group)}.`,
+      404: `${groupName(group)} no longer exists.`,
     },
-    `${leaveError(error)} You are still in ${groupName(from)}.`,
-  )
-}
-
-export function leaveError(error: Error): string {
-  return errorMessage(
-    error,
-    {
-      409: 'You are no longer in this group.',
-      403: 'You are not allowed to leave this group.',
-      404: 'The group no longer exists.',
-    },
-    'You could not leave the group. Try again.',
+    `${name} could not be removed from ${groupName(group)}. Try again.`,
   )
 }
 

@@ -16,7 +16,6 @@ export type ContentFormValues = {
   deadline: string
   allowLate: boolean
   mandatoryForExam: boolean
-  groupAssignment: boolean
   starterUrl: string
   starterCode: string
   maxAttempts: number
@@ -41,7 +40,6 @@ export function initialValues(content: Content | undefined, answerKey?: QuizAnsw
     deadline: toDateTimeLocal(submittable?.deadline),
     allowLate: submittable?.allowLateSubmission ?? false,
     mandatoryForExam: content?.type === 'ASSIGNMENT' ? content.mandatoryForExam : false,
-    groupAssignment: content?.type === 'ASSIGNMENT' ? (content.groupAssignment ?? false) : false,
     starterUrl: content?.type === 'CODING_EXERCISE' ? (content.starterRepositoryUrl ?? '') : '',
     starterCode: content?.type === 'CODING_EXERCISE' ? (content.starterCode ?? '') : '',
     maxAttempts: content?.type === 'QUIZ' ? content.maxAttempts : 1,
@@ -82,7 +80,6 @@ export function toFields(type: ContentType, values: ContentFormValues): ContentF
         deadline,
         allowLateSubmission: values.allowLate,
         mandatoryForExam: values.mandatoryForExam,
-        groupAssignment: values.groupAssignment,
       }
     case 'CODING_EXERCISE':
       return {

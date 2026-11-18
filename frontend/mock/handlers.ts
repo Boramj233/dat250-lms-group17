@@ -142,7 +142,7 @@ function enrollmentResponse(enrollment: (typeof enrollments)[number]) {
 const badRequest = (error: string): MockResult => ({ status: 400, body: { error } })
 const nextId = (items: { id: number | string }[]) => Math.max(0, ...items.map(item => Number(item.id))) + 1
 
-/** The submission is the user's own, or their group's (proposed group assignments). */
+/** The submission is the user's own, or their group's (they were a member when it was handed in). */
 function isOwnSubmission(user: MockUser, submission: (typeof submissions)[number]) {
   if (submission.userId === user.userId) return true
   const group = groups.find(g => g.id === submission.groupId)
@@ -150,13 +150,6 @@ function isOwnSubmission(user: MockUser, submission: (typeof submissions)[number
 }
 
 /** The members' names of a group (proposed in GroupDTO). */
-function groupMembers(group: (typeof groups)[number]) {
-  return group.memberIds.flatMap(userId => {
-    const member = users.find(u => u.userId === userId)
-    return member ? [{ userId, firstName: member.firstName, lastName: member.lastName }] : []
-  })
-}
-
 type MockSubmission = (typeof submissions)[number]
 
 /** The mock has no enrollment ids; use the position in the enrollments list. */
@@ -347,7 +340,6 @@ function detailResponse(content: Content & { courseId: number }, forTeacher = fa
         deadline: content.deadline,
         allowLateSubmission: content.allowLateSubmission,
         mandatoryForExam: content.mandatoryForExam,
-        groupAssignment: content.groupAssignment ?? false,
       }
     case 'CODING_EXERCISE':
       return {
@@ -971,7 +963,7 @@ const routes: MockHandler[] = [
     },
   },
   {
-    // GroupDTO[] (backend), with the proposed name and members.
+    // GroupDTO[] (backend): { id, groupNumber, memberIds }.
     method: 'GET',
     path: '/api/courses/:courseId/groups',
     handle: ({ user, params }) => {
@@ -979,13 +971,7 @@ const routes: MockHandler[] = [
       return ok(
         groups
           .filter(g => String(g.courseId) === params.courseId)
-          .map(group => ({
-            id: group.id,
-            groupNumber: group.groupNumber,
-            memberIds: group.memberIds,
-            name: group.name ?? null,
-            members: groupMembers(group),
-          })),
+          .map(group => ({ id: group.id, groupNumber: group.groupNumber, memberIds: group.memberIds })),
       )
     },
   },
@@ -1003,7 +989,7 @@ const routes: MockHandler[] = [
       }
       const group = { id: nextId(groups), courseId: Number(params.courseId), groupNumber, memberIds: [] as number[] }
       groups.push(group)
-      return created({ id: group.id, groupNumber, memberIds: [], name: null, members: [] })
+      return created({ id: group.id, groupNumber, memberIds: [] })
     },
   },
   {
@@ -1020,13 +1006,12 @@ const routes: MockHandler[] = [
     },
   },
   {
-    // Body: the bare user id → GroupDTO. Proposed: a student may add themselves (join);
-    // the backend lets only teachers do this today. Only active students; one group per course.
+    // Teachers (backend): the bare user id → GroupDTO. Only active students; one group per course.
     method: 'POST',
     path: '/api/courses/:courseId/groups/:groupId/members',
     handle: ({ user, params, body }) => {
       const userId = Number(body)
-      if (!isTeacher(user, params.courseId) && userId !== user.userId) return forbidden()
+      if (!isTeacher(user, params.courseId)) return forbidden()
       const group = groups.find(g => String(g.id) === params.groupId && String(g.courseId) === params.courseId)
       if (!group) return notFound()
       if (
@@ -1039,22 +1024,16 @@ const routes: MockHandler[] = [
         return conflict('User already belongs to another group in this course')
       }
       group.memberIds.push(userId)
-      return ok({
-        id: group.id,
-        groupNumber: group.groupNumber,
-        memberIds: group.memberIds,
-        name: group.name ?? null,
-        members: groupMembers(group),
-      })
+      return ok({ id: group.id, groupNumber: group.groupNumber, memberIds: group.memberIds })
     },
   },
   {
-    // Proposed: a student may remove themselves (leave); today only teachers may.
+    // Teachers (backend): removes a member.
     method: 'DELETE',
     path: '/api/courses/:courseId/groups/:groupId/members/:userId',
     handle: ({ user, params }) => {
       const userId = Number(params.userId)
-      if (!isTeacher(user, params.courseId) && userId !== user.userId) return forbidden()
+      if (!isTeacher(user, params.courseId)) return forbidden()
       const group = groups.find(g => String(g.id) === params.groupId && String(g.courseId) === params.courseId)
       if (!group) return notFound()
       if (!group.memberIds.includes(userId)) return conflict('User is not a member of this group')
@@ -1125,6 +1104,30 @@ const routes: MockHandler[] = [
       }
       modules.push(module)
       return created(moduleResponse(module))
+    },
+  },
+  {
+    // Backend (exists): ReorderModulesRequest { moduleIds } -> ModuleResponse[] in the new
+    // order. Every module of the course exactly once (400 otherwise); teachers of the course.
+    // Before '/modules/:moduleId', which would also match '/modules/order'.
+    method: 'PUT',
+    path: '/api/courses/:courseId/modules/order',
+    handle: ({ user, params, body }) => {
+      if (!isTeacher(user, params.courseId)) return forbidden()
+      const { moduleIds } = (body ?? {}) as { moduleIds?: (number | string)[] }
+      const inCourse = modules.filter(m => String(m.courseId) === params.courseId)
+      const ids = (moduleIds ?? []).map(String)
+      if (
+        !Array.isArray(moduleIds) ||
+        ids.length !== inCourse.length ||
+        new Set(ids).size !== ids.length ||
+        !inCourse.every(m => ids.includes(String(m.id)))
+      ) {
+        return badRequest('Order must contain every module of the course exactly once')
+      }
+      const ordered = ids.map(id => inCourse.find(m => String(m.id) === id)!)
+      ordered.forEach((module, position) => (module.position = position))
+      return ok(ordered.map(moduleResponse))
     },
   },
   {

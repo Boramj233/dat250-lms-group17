@@ -149,29 +149,15 @@ export function deleteModule({ courseId, moduleId }: DeleteModuleInput): Promise
 }
 
 /**
- * Saves the order (rank) of the course's modules. The backend has no endpoint for the
- * whole order, so every module whose position changes gets PUT /modules/{id} with its
- * title and new position (0, 1, 2, …). Answers with the modules in their new order.
+ * Saves the order (rank) of all the course's modules at once
+ * (PUT /api/courses/{courseId}/modules/order, one transaction). `moduleIds` has every
+ * module of the course exactly once, first to last (400 otherwise); their positions
+ * become 0, 1, 2, …. Answers with the modules in their new order.
  */
 export async function reorderModules({ courseId, moduleIds }: ReorderModulesInput): Promise<CourseModule[]> {
-  const modules = await getCourseModules(courseId)
-  const byId = new Map(modules.map(m => [String(m.id), m]))
-  const result: CourseModule[] = []
-  for (const [position, id] of moduleIds.entries()) {
-    const module = byId.get(String(id))
-    if (!module) throw new Error(`Module ${id} is not in the course`)
-    if (module.position === position) {
-      result.push(module)
-      continue
-    }
-    result.push(
-      toCourseModule(
-        await apiClient<ModuleResponse>(
-          apiPath`/api/courses/${courseId}/modules/${id}`,
-          jsonBody('PUT', { title: module.title, position }),
-        ),
-      ),
-    )
-  }
-  return result
+  const modules = await apiClient<ModuleResponse[]>(
+    apiPath`/api/courses/${courseId}/modules/order`,
+    jsonBody('PUT', { moduleIds }),
+  )
+  return modules.map(toCourseModule)
 }

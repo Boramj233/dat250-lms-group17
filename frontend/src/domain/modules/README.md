@@ -4,17 +4,18 @@ Modules organize content within a course. Content API functions and hooks belong
 `../content`, including module content lists. Shared identifiers are defined in
 `../shared/types.ts`. All endpoints below exist in the backend (`ModuleController`).
 
-| Method | Endpoint                                                               | Request body                            | Response                  |
-| ------ | ---------------------------------------------------------------------- | --------------------------------------- | ------------------------- |
-| GET    | `/api/courses/{courseId}/modules`                                      | —                                       | `ModuleResponse[]`        |
-| GET    | `/api/courses/{courseId}/modules/{moduleId}`                           | —                                       | `ModuleResponse`          |
-| POST   | `/api/courses/{courseId}/modules`                                      | `{ title, position }`                   | `ModuleResponse` (201)    |
-| PUT    | `/api/courses/{courseId}/modules/{moduleId}`                           | `{ title, position }` (both required)   | `ModuleResponse`          |
-| PUT    | `/api/courses/{courseId}/modules/{moduleId}/availability`              | `{ availableFrom, availableToAllFrom }` | `ModuleResponse`          |
-| DELETE | `/api/courses/{courseId}/modules/{moduleId}`                           | —                                       | 204                       |
-| GET    | `/api/courses/{courseId}/modules/{moduleId}/dependencies`              | —                                       | the required modules' ids |
-| POST   | `/api/courses/{courseId}/modules/{moduleId}/dependencies/{requiredId}` | —                                       | `ModuleResponse`          |
-| DELETE | `/api/courses/{courseId}/modules/{moduleId}/dependencies/{requiredId}` | —                                       | 204                       |
+| Method | Endpoint                                                               | Request body                            | Response                            |
+| ------ | ---------------------------------------------------------------------- | --------------------------------------- | ----------------------------------- |
+| GET    | `/api/courses/{courseId}/modules`                                      | —                                       | `ModuleResponse[]`                  |
+| GET    | `/api/courses/{courseId}/modules/{moduleId}`                           | —                                       | `ModuleResponse`                    |
+| POST   | `/api/courses/{courseId}/modules`                                      | `{ title, position }`                   | `ModuleResponse` (201)              |
+| PUT    | `/api/courses/{courseId}/modules/order`                                | `{ moduleIds }` (every module once)     | `ModuleResponse[]` in the new order |
+| PUT    | `/api/courses/{courseId}/modules/{moduleId}`                           | `{ title, position }` (both required)   | `ModuleResponse`                    |
+| PUT    | `/api/courses/{courseId}/modules/{moduleId}/availability`              | `{ availableFrom, availableToAllFrom }` | `ModuleResponse`                    |
+| DELETE | `/api/courses/{courseId}/modules/{moduleId}`                           | —                                       | 204                                 |
+| GET    | `/api/courses/{courseId}/modules/{moduleId}/dependencies`              | —                                       | the required modules' ids           |
+| POST   | `/api/courses/{courseId}/modules/{moduleId}/dependencies/{requiredId}` | —                                       | `ModuleResponse`                    |
+| DELETE | `/api/courses/{courseId}/modules/{moduleId}/dependencies/{requiredId}` | —                                       | 204                                 |
 
 `ModuleResponse` is `{ id, courseId, title, position, dependencyIds, availableFrom,
 availableToAllFrom }`. `api.ts` maps it to `CourseModule`: `dependencyIds` →
@@ -30,8 +31,8 @@ The frontend functions combine these endpoints:
   `title`/`position` (the missing one is kept), PUT `/availability` for the dates (both are
   set; a missing one is kept), and POST/DELETE `/dependencies/{id}` for the difference in
   `prerequisiteModuleIds`.
-- `reorderModules({ courseId, moduleIds })`: the backend has no endpoint for the whole
-  order, so every module whose position changes gets a PUT with its new position.
+- `reorderModules({ courseId, moduleIds })`: PUT `/modules/order` with every module of the
+  course once, first to last; one transaction, so the order is never half saved.
 - `deleteModule`: DELETE. The backend removes other modules' dependencies on it, but
   does not delete its content yet (TODO in `ModuleService.deleteModule`), so the manage
   page only offers it for an empty module.

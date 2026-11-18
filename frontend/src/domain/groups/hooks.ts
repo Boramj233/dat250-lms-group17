@@ -3,7 +3,6 @@ import type { CourseId, GroupId, UserId } from '@shared/types'
 import { addGroupMember, createGroup, deleteGroup, getCourseGroups, removeGroupMember } from './api'
 import { groupKeys } from './queryKeys'
 import type { CourseGroup } from './types'
-import { switchGroup } from './switchGroup'
 
 // Fetches and caches a course's groups, sorted by group number.
 export function useCourseGroups(courseId: CourseId) {
@@ -14,9 +13,9 @@ export function useCourseGroups(courseId: CourseId) {
   })
 }
 
-/** "Rabbit Runners", or "Group 7" while the group has no name. */
+/** "Group 7". */
 export function groupName(group: CourseGroup): string {
-  return group.name || `Group ${group.groupNumber}`
+  return `Group ${group.groupNumber}`
 }
 
 /** The group the user is in; a student is in at most one group per course. */
@@ -51,32 +50,15 @@ export function useDeleteGroup(courseId: CourseId) {
   return useGroupMutation(courseId, (groupId: GroupId) => deleteGroup(courseId, groupId))
 }
 
-/** Students: join a group (as themselves). */
-export function useJoinGroup(courseId: CourseId) {
+/** Teachers: puts a student of the course in the group (409 when already in a group). */
+export function useAddGroupMember(courseId: CourseId) {
   return useGroupMutation(courseId, ({ groupId, userId }: { groupId: GroupId; userId: UserId }) =>
     addGroupMember(courseId, groupId, userId),
   )
 }
 
-/**
- * Students: move from one group to another (one group at a time); see switchGroup for what
- * happens when a step fails (it throws SwitchGroupError when joining failed).
- */
-export function useSwitchGroup(courseId: CourseId) {
-  return useGroupMutation(
-    courseId,
-    ({ fromGroupId, toGroupId, userId }: { fromGroupId: GroupId; toGroupId: GroupId; userId: UserId }) =>
-      switchGroup({
-        from: fromGroupId,
-        to: toGroupId,
-        leave: groupId => removeGroupMember(courseId, groupId, userId),
-        join: groupId => addGroupMember(courseId, groupId, userId),
-      }),
-  )
-}
-
-/** Students: leave a group (as themselves). */
-export function useLeaveGroup(courseId: CourseId) {
+/** Teachers: takes a member out of the group. */
+export function useRemoveGroupMember(courseId: CourseId) {
   return useGroupMutation(courseId, ({ groupId, userId }: { groupId: GroupId; userId: UserId }) =>
     removeGroupMember(courseId, groupId, userId),
   )

@@ -114,11 +114,6 @@ export interface AssignmentContent extends ContentDetailBase {
    * PATCH /api/assignments/{id}/exam-requirement.
    */
   mandatoryForExam: boolean
-  /**
-   * Whether students hand in as a group (one submission per group). Proposed field,
-   * not in the backend yet; missing until it is.
-   */
-  groupAssignment?: boolean
 }
 
 // Matches CodingExerciseResponse (GET /api/coding-exercises/{id}) plus `type`.
@@ -161,8 +156,6 @@ export interface CreateAssignmentInput extends CreateContentBase {
   allowLateSubmission: boolean
   /** CreateAssignmentRequest.mandatoryForExam. */
   mandatoryForExam: boolean
-  /** Proposed (see AssignmentContent.groupAssignment). */
-  groupAssignment: boolean
 }
 
 export interface CreateCodingExerciseInput extends CreateContentBase {
