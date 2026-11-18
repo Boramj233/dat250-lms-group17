@@ -1,3 +1,4 @@
+import type { QuizContentQuestion } from '@domain/content/types'
 import type { ContentId } from '@shared/types'
 
 // A quiz is a content item. Attempt IDs are local to this domain.
@@ -47,12 +48,41 @@ export interface SubmitQuizAnswersInput {
 }
 
 /**
- * Proposed: one of the user's attempts with the answers (GET
- * /api/quizzes/{quizId}/attempts/{attemptId}). The backend already stores them
- * (QuizAnswer); it has no endpoint to read them yet.
+ * Matches the backend's QuizAttemptDetailResponse: one attempt with the answers. The
+ * student's own: GET /api/quizzes/{quizId}/attempts/{attemptId}; any student's, for
+ * teachers of the course: GET …/attempts/{attemptId}/review. Never the answer key.
  */
 export interface QuizAttemptDetail extends QuizAttemptScore {
   answers: QuizAttemptAnswer[]
+}
+
+// Matches the backend's QuizAttemptCountResponse: GET /api/quizzes/{quizId}/attempts/me/count.
+export interface QuizAttemptCount {
+  usedAttempts: number
+}
+
+/**
+ * Matches the backend's QuizAnswerKeyResponse (teachers of the course only):
+ * GET /api/quizzes/{quizId}/answer-key. One entry per question, in order.
+ */
+export interface QuizAnswerKey {
+  quizId: QuizId
+  questions: QuizQuestionKey[]
+}
+
+// QuizAnswerKeyResponse.QuestionKeyResponse. Which fields are filled depends on the type.
+export interface QuizQuestionKey {
+  /** The question as students see it (QuizDetailResponse.QuestionResponse). */
+  question: QuizContentQuestion
+  hint: string | null
+  /** MULTIPLE_CHOICE, TRUE_FALSE. */
+  correctOptionIds: (string | number)[]
+  /** FILL_IN_BLANK: every answer that counts as correct (compared without case). */
+  acceptedAnswers: string[]
+  /** ORDERING: the item ids in the correct order. */
+  correctOrder: string[]
+  /** MATCHING: the correct pairs. */
+  correctMatches: { leftItemId: string; rightItemId: string }[]
 }
 
 /**

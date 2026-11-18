@@ -1,7 +1,8 @@
 # Content API contract
 
-The read endpoints below exist in the backend, and the types in `types.ts` match its
-DTOs. The write and completion endpoints further down are still frontend proposals.
+The read, write, visibility, completion and delete endpoints below exist in the
+backend, and the types in `types.ts` match its DTOs. Sections marked "proposed" are
+still frontend proposals.
 
 The content types are `STATIC_PAGE`, `QUIZ`, `ASSIGNMENT` and `CODING_EXERCISE`.
 The backend's content list sends `"Assignment"` for assignments; `getModuleContent`
@@ -53,60 +54,56 @@ as completed when the user has completed all its required items. How a module wi
 no required items is treated is up to the backend; the mock then requires all its
 assignments, coding exercises and quizzes, as before.
 
-## Visible from (proposed)
+## Visible from / until (backend)
 
-Every content item can get a date students see it from, so a module's content does not
-all appear at once; it is also how a teacher prepares content before it is shown (there
-is no separate "active" flag). The `Content` entity already has `visibleFrom`; the API
-does not use it yet.
+Every content item has `visibleFrom` and `visibleUntil` (ISO instants or null) in
+`ContentSummaryResponse` and the detail responses. Students only get the item between
+the two (not in the module's list, 403/404 on its page); teachers of the course always do.
 
-- `visibleFrom` (ISO instant or null) on every create request (pages, assignments,
-  coding exercises, quizzes), on `PATCH /api/contents/{id}`, and on
-  `ContentSummaryResponse` and the detail responses.
-- Null: the item **inherits its module's start date** (`availableFrom`), or is visible
-  at once if the module has none.
-- It **cannot be before the module's start date**: 400. Likewise a module's
-  `availableFrom` cannot be moved after the visible date of content in it: 400.
-- Before that date students do not get the item (not in the module's list, 404 on its
-  page, not among upcoming deadlines); teachers of the course do, and see when it opens.
+- `PUT /api/contents/{contentId}/visibility` with `{ visibleFrom, visibleUntil? }` →
+  `{ contentId, visibleFrom, visibleUntil }` (teachers). Leaving `visibleUntil` out keeps
+  the saved one; null removes it. Frontend: `updateVisibility`, `useUpdateVisibility`.
+- The create requests have no `visibleFrom`, so `createContent` sets it with this
+  endpoint right after creating the item, and `editContent` sends it last.
+- Null `visibleFrom` means visible at once; the module's own `availableFrom` still keeps
+  students out until the module opens, so in practice it **inherits the module's start
+  date**. The frontend does not allow a date before the module's start date
+  (`visibility.ts`: `effectiveVisibleFrom`, `checkContentVisibleFrom`,
+  `checkModuleStartAgainstContent`); the backend does not check this.
 
-The rules are in `visibility.ts` (`effectiveVisibleFrom`, `checkContentVisibleFrom`,
-`checkModuleStartAgainstContent`); the mock backend uses the same functions.
+## Editing (backend)
 
-## Editing until published (proposed)
+Each type has its own update endpoints; `editContent` calls the ones for the item's type:
 
-An item is **published** once its visible date has passed (its own `visibleFrom`, or its
-module's start date); that alone decides it, and the module's table shows it as
-Published / Unpublished. A teacher can change **everything** about an item until then:
+| Type            | Endpoints                                                                                                                                                                      |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Page            | `PUT /api/contents/{id}` `{ title, body }`                                                                                                                                     |
+| Assignment      | `PATCH /api/assignments/{id}/exam-requirement`, `PUT /api/assignments/{id}` `{ title, instructions }`, `PUT …/submission-settings` `{ deadline, allowLateSubmission }`         |
+| Coding exercise | `PUT /api/coding-exercises/{id}` `{ title, instructions, starterRepositoryUrl, starterCode }`, `PUT …/submission-settings`                                                     |
+| Quiz            | `PUT /api/quizzes/{id}` `{ title, maxAttempts }`, `PUT /api/quizzes/{id}/questions` `{ questions }` (only when changed), passing percentage with `PATCH …/completion-settings` |
 
-- `PATCH /api/contents/{contentId}` takes any of the fields the item was created with:
-  `title`, `visibleFrom`, and per type `body` (pages); `instructions`, `deadline`,
-  `allowLateSubmission`, `groupAssignment`, `acceptedFileTypes` (assignments; not
-  `mandatoryForExam`, see "Mandatory for the exam"); `instructions`, `deadline`, `allowLateSubmission`,
-  `starterRepositoryUrl`, `starterCode` (coding exercises); `maxAttempts`,
-  `passingPercentage` (quizzes).
-- `PUT /api/quizzes/{quizId}/questions` replaces all of a quiz's questions.
-- Once published, both answer **409**. Only `position` can still be changed with PATCH
-  (and the completion settings, which have their own endpoint).
-- `POST /api/quizzes/{quizId}/questions` stays open, since a new quiz's questions are
-  added right after it is created.
+and then `PUT /api/contents/{id}/visibility` for every type. All fields of these requests
+are required except `starterCode` and `deadline`.
 
-The frontend uses the same form for creating and editing (`course-management/module/ContentForm`).
-It does **not** check whether an item may be changed: it always shows the form and shows
-the backend's 409 if it refuses. The rule above is the backend's to decide (the mock
-backend follows it).
+A quiz's questions are replaced all at once, and only when they differ from the saved ones
+(`questionsChanged`), since the backend refuses (409) once a student has made an attempt;
+`maxAttempts` can always be changed. The assignment fields
+`groupAssignment` and `acceptedFileTypes` are not in the backend and are not sent.
 
-## Quiz questions and correct answers (proposed)
+An item is shown as **published** once its visible date has passed (its own
+`visibleFrom`, or its module's start date). The backend does not lock published content.
+
+## Quiz answer key (teachers)
 
 `GET /api/quizzes/{quizId}` (`QuizDetailResponse`) returns the questions and their
-options, but not which options are correct or the hints, so students cannot see
-them. Teachers need both to check a quiz they made. Proposed: when the user is a
-teacher of the course, the backend adds `hint` to each question and `correct` to each
-option (`QuizContentQuestion`, `QuizContentOption` in `types.ts`); for everyone else
-the response stays as it is. Until then the manage pages show the questions and
-options, and say that the correct answers are not available.
+options, items and sides, but never the correct answers or hints. Teachers of the
+course get them from `GET /api/quizzes/{quizId}/answer-key` (`QuizAnswerKeyResponse`,
+`QuizAnswerKey` in `../quizzes/types.ts`): per question the question itself, `hint`,
+`correctOptionIds`, `acceptedAnswers`, `correctOrder` and `correctMatches`. The quiz page
+shows it to teachers with "Show answer key" (`useQuizAnswerKey`), and the edit form on
+the manage pages fills it into the questions (`questionsFromContent(questions, answerKey)`).
 
-## Taking a quiz (partly proposed)
+## Taking a quiz
 
 The backend grades a quiz in one request: `POST /api/quizzes/{quizId}/attempts` with
 `{ answers: [{ questionId, selectedOptionIds, textAnswer, orderedItemIds, matches }] }`
@@ -116,34 +113,32 @@ used `maxAttempts`.
 
 Each question has a `type` (backend `QuestionType`; default `MULTIPLE_CHOICE`):
 
-| Type              | Shown with                | Answered with                                 | In the UI        |
-| ----------------- | ------------------------- | --------------------------------------------- | ---------------- |
-| `MULTIPLE_CHOICE` | `options`                 | `selectedOptionIds`: exactly the correct ones | yes (checkboxes) |
-| `TRUE_FALSE`      | two `options`             | `selectedOptionIds`                           | yes              |
-| `FILL_IN_BLANK`   | —                         | `textAnswer` (compared without case)          | not yet          |
-| `ORDERING`        | `items` (UUIDs)           | `orderedItemIds`: every item once             | not yet          |
-| `MATCHING`        | `leftItems`, `rightItems` | `matches: [{ leftItemId, rightItemId }]`, all | not yet          |
+| Type              | Shown with                | Answered with                                 |
+| ----------------- | ------------------------- | --------------------------------------------- |
+| `MULTIPLE_CHOICE` | `options`                 | `selectedOptionIds`: exactly the correct ones |
+| `TRUE_FALSE`      | two `options`             | `selectedOptionIds`                           |
+| `FILL_IN_BLANK`   | —                         | `textAnswer` (compared without case)          |
+| `ORDERING`        | `items` (UUIDs)           | `orderedItemIds`: every item once             |
+| `MATCHING`        | `leftItems`, `rightItems` | `matches: [{ leftItemId, rightItemId }]`, all |
 
 The backend answers **400** for the whole attempt when a fill-in, ordering or matching
-answer is missing, so the quiz form does not let a student submit a quiz with those
-types until it can answer them. Proposed, for the quiz page:
+answer is missing. Still proposed on `QuizDetailResponse`: `description` (text shown
+before the quiz is started) and `deadline` (ISO 8601 instant or null).
 
-- `GET /api/quizzes/{quizId}/attempts/me`: the user's earlier attempts
-  (`QuizAttemptResponse[]`), for "attempts used" and the best score.
-- On `QuizDetailResponse`: `description` (text shown before the quiz is started) and
-  `deadline` (ISO 8601 instant or null; no attempts after it).
+### Attempts (`QuizAttemptController`, `../quizzes/api.ts`)
 
-### Looking at an earlier attempt (proposed)
+| Endpoint                                                | Who                | Response                                  |
+| ------------------------------------------------------- | ------------------ | ----------------------------------------- |
+| `GET /api/quizzes/{quizId}/attempts/me`                 | the student        | `QuizAttemptResponse[]` (best score)      |
+| `GET /api/quizzes/{quizId}/attempts/me/count`           | the student        | `{ usedAttempts }` ("attempts used")      |
+| `GET /api/quizzes/{quizId}/attempts/{attemptId}`        | the student        | `QuizAttemptDetailResponse`, own only     |
+| `GET /api/quizzes/{quizId}/attempts/students/{userId}`  | teachers of course | one student's `QuizAttemptResponse[]`     |
+| `GET /api/quizzes/{quizId}/attempts/{attemptId}/review` | teachers of course | any student's `QuizAttemptDetailResponse` |
 
-Students can see how they answered each earlier attempt, with every question marked
-correct or wrong. The backend already stores this per question (`QuizAnswer`:
-selected options and `correct`); it only needs an endpoint to read it:
-
-- `GET /api/quizzes/{quizId}/attempts/{attemptId}` → `QuizAttemptResponse` plus
-  `answers: [{ questionId, selectedOptionIds, correct }]`. Only the user's own attempt;
-  404 for anyone else's.
-- It does not include which options are correct, so the review does not give the
-  answers away while the student has attempts left.
+`QuizAttemptDetailResponse` is the attempt with `answers: [{ questionId, question,
+selectedOptionIds, textAnswer, orderedItemIds, matches, correct }]`. It never includes
+the answer key, so a student's review does not give the answers away. Teachers pick a
+student under "Student attempts" on the quiz page.
 
 ### Passing percentage (backend)
 
@@ -192,19 +187,23 @@ also after the assignment is published.
 
 The frontend uses that endpoint (`updateExamRequirement`, `useUpdateExamRequirement`).
 When the edit form saves an assignment, `editContent` sends `mandatoryForExam` there
-first and the other fields with `PATCH /api/contents/{id}`, so a change to the exam
-requirement is kept even if the item is published and the PATCH answers 409.
+first, so a change to the exam requirement is kept even if a later request fails.
 
-## Other endpoints
+## Deleting and ordering (backend)
 
-Proposed (not in the backend yet):
+| Method | Endpoint                                                    | Request body     | Response                                   |
+| ------ | ----------------------------------------------------------- | ---------------- | ------------------------------------------ |
+| DELETE | `/api/contents/{contentId}`                                 | —                | 204; **409** when students have work on it |
+| PUT    | `/api/courses/{courseId}/modules/{moduleId}/contents/order` | `{ contentIds }` | 204; every item of the module once         |
 
-| Method | Endpoint                          | Request body                                                          | Response         |
-| ------ | --------------------------------- | --------------------------------------------------------------------- | ---------------- |
-| PATCH  | `/api/contents/{contentId}`       | Any of the item's fields (see "Editing until published")              | `Content`        |
-| PUT    | `/api/quizzes/{quizId}/questions` | `CreateQuizQuestionRequest[]`: all of an unpublished quiz's questions | the questions    |
-| DELETE | `/api/contents/{contentId}`       | —                                                                     | `204 No Content` |
-| PATCH  | `/api/contents/{contentId}/move`  | `{ moduleId, position }`                                              | `Content`        |
+Content with learning records (submissions, quiz attempts, a page marked as done) is
+never deleted: the module page then tells the teacher to hide it with "Visible from"
+instead. Frontend: `deleteContent` / `useDeleteContent`, `reorderContent` /
+`useReorderContent`.
+
+Still proposed (not in the backend): `PATCH /api/contents/{contentId}/move`
+(`{ moduleId, position }`), used by "Move to" on the module page; it fails until the
+backend has it.
 
 Content is created with the backend's endpoint for its type
 (`POST /api/courses/{courseId}/modules/{moduleId}/contents/{pages|assignments|coding-exercises|quizzes}`)
@@ -221,13 +220,19 @@ const items = useModuleContent(courseId, moduleId)
 const content = useContent(summary.type, contentId)
 const all = useCourseContent(courseId, moduleIds) // several modules at once
 const createContent = useCreateContent()
-const updateContent = useUpdateContent()
-const moveContent = useMoveContent()
+const updateVisibility = useUpdateVisibility()
 const deleteContent = useDeleteContent()
 
-createContent.mutate({ moduleId, type: 'STATIC_PAGE', title: 'Welcome', position: 0, body: 'Hello' })
-updateContent.mutate({ contentId, moduleId, changes: { body: 'Updated text' } })
-moveContent.mutate({ contentId, sourceModuleId: moduleId, targetModuleId, position: 0 })
+createContent.mutate({
+  courseId,
+  moduleId,
+  type: 'STATIC_PAGE',
+  title: 'Welcome',
+  position: 0,
+  body: 'Hello',
+  visibleFrom: null,
+})
+updateVisibility.mutate({ contentId, moduleId, visibleFrom: '2026-12-01T08:00:00.000Z' })
 deleteContent.mutate({ contentId, moduleId })
 ```
 

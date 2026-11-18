@@ -99,8 +99,9 @@ export function releaseGrade({ submissionId, version }: ReleaseGradeInput): Prom
 }
 
 /**
- * Proposed: makes every saved, unpublished grade in the assignment's submissions visible
- * now; each grade's visible date becomes this time.
+ * Makes every saved, unpublished grade of the latest submissions visible now
+ * (POST /api/contents/{contentId}/grades/release). Grades without a passed / not passed
+ * decision are left and counted as `undecided`.
  */
 export function releaseAllGrades(contentId: ContentId): Promise<ReleaseAllGradesResult> {
   return apiClient<ReleaseAllGradesResult>(apiPath`/api/contents/${contentId}/grades/release`, { method: 'POST' })

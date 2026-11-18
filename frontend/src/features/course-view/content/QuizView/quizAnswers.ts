@@ -1,5 +1,5 @@
 import type { QuizContentQuestion } from '@domain/content/types'
-import type { QuizAnswerInput, QuizAttemptAnswer } from '@domain/quizzes/types'
+import type { QuizAnswerInput, QuizAttemptAnswer, QuizQuestionKey } from '@domain/quizzes/types'
 import { typeOf } from './questionType'
 
 /**
@@ -106,6 +106,20 @@ export function toAnswerInput(question: QuizContentQuestion, answer: AnswerDraft
         questionId,
         matches: Object.entries(answer.matches).map(([leftItemId, rightItemId]) => ({ leftItemId, rightItemId })),
       }
+  }
+}
+
+/**
+ * The answer key of a question as an answer, to show the correct one read-only. A
+ * fill-in question shows every accepted answer, separated by " / ".
+ */
+export function fromAnswerKey(question: QuizContentQuestion, key: QuizQuestionKey | undefined): AnswerDraft {
+  if (!key) return { ...emptyAnswer(question), order: [] }
+  return {
+    optionIds: key.correctOptionIds.map(String),
+    text: key.acceptedAnswers.join(' / '),
+    order: key.correctOrder,
+    matches: Object.fromEntries(key.correctMatches.map(match => [match.leftItemId, match.rightItemId])),
   }
 }
 

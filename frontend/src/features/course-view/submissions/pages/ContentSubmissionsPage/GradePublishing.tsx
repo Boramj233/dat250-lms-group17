@@ -25,7 +25,7 @@ export default function GradePublishing({ contentId, unpublished }: GradePublish
     const confirmed = await confirm({
       title: `Publish ${formatCount(unpublished, 'grade')}?`,
       message:
-        'The students see their score and feedback right away, also for grades with a later visible date. A published grade cannot be changed.',
+        'The students see their score and feedback right away, also for grades with a later visible date. Grades without a passed / not passed decision are not published. A published grade cannot be changed.',
       confirmLabel: 'Publish all',
     })
     if (!confirmed) return
@@ -33,7 +33,10 @@ export default function GradePublishing({ contentId, unpublished }: GradePublish
     releaseAll.mutate(undefined, {
       onSuccess: result =>
         setPublished(
-          `${result.released} ${result.released === 1 ? 'grade is' : 'grades are'} now visible to the students.`,
+          `${result.released} ${result.released === 1 ? 'grade is' : 'grades are'} now visible to the students.` +
+            (result.undecided > 0
+              ? ` ${formatCount(result.undecided, 'grade')} without a passed / not passed decision ${result.undecided === 1 ? 'was' : 'were'} not published.`
+              : ''),
         ),
     })
   }

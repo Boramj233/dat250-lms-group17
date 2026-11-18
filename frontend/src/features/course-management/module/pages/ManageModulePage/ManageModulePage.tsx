@@ -1,16 +1,24 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router'
+import { ApiError } from '@shared/api/apiClient'
 import { fromDateTimeLocal } from '@shared/lib/dateFormat'
+import { moveItem } from '@shared/lib/moveItem'
 import { paths } from '@shared/paths'
 import type { ContentId, ModuleId } from '@shared/types'
-import { useCourseContent, useDeleteContent, useMoveContent, useUpdateCompletionSettings } from '@domain/content/hooks'
+import {
+  useCourseContent,
+  useDeleteContent,
+  useMoveContent,
+  useReorderContent,
+  useUpdateCompletionSettings,
+} from '@domain/content/hooks'
 import type { ContentSummary } from '@domain/content/types'
 import type { ActionMenuItem } from '@shared/ui/ActionMenu'
 import { useConfirm } from '@shared/ui/ConfirmDialog'
 import PageHeader from '@shared/ui/PageHeader'
 import SaveBar from '@shared/ui/SaveBar'
 import { checkModuleStartAgainstContent } from '@domain/content/visibility'
-import { useUpdateModule } from '@domain/modules/hooks'
+import { useDeleteModule, useUpdateModule } from '@domain/modules/hooks'
 import { checkAvailabilityDates } from '@domain/modules/prerequisites'
 import { useManageCourse } from '../../../manageCourseContext'
 import { useManageModule } from '../../manageModuleContext'
@@ -32,8 +40,8 @@ import './ManageModulePage.css'
 /**
  * One module: a button per content type to create new content, and a table of the
  * module's content (visible from, published or unpublished by that date, required for
- * module completion, and a "⋯" menu to edit, move or delete it), and below it when
- * students can open the module. Every change on the page is collected and marked first;
+ * module completion, ↑ / ↓ for its place in the module, and a "⋯" menu to edit, move or
+ * delete it), and below it when students can open the module. Every change on the page is collected and marked first;
  * one Save changes applies them all (deleting asks once more), Cancel throws them away.
  */
 export default function ManageModulePage() {
@@ -44,6 +52,8 @@ export default function ManageModulePage() {
   const deleteContent = useDeleteContent()
   const updateCompletionSettings = useUpdateCompletionSettings()
   const updateModule = useUpdateModule()
+  const reorderContent = useReorderContent()
+  const deleteModule = useDeleteModule()
   // Content counts of all modules, so moved content goes to the end of its new module.
   const allContent = useCourseContent(
     course.id,
@@ -58,8 +68,18 @@ export default function ManageModulePage() {
   // The availability fields; they start from the module, which is new after a save.
   const savedDates = savedAvailability(module)
   const [availability, setAvailability] = useState<AvailabilityDraft>(savedDates)
+  // A new order of the content (ids as strings) that is not saved yet; null: the saved order.
+  const [order, setOrder] = useState<string[] | null>(null)
 
-  const changes = contentChanges(draft) + availabilityChanges(availability, savedDates)
+  const savedIds = content.map(item => String(item.id))
+  // The unsaved order, without items that are gone and with new ones at the end.
+  const shownIds = order
+    ? [...order.filter(id => savedIds.includes(id)), ...savedIds.filter(id => !order.includes(id))]
+    : savedIds
+  const shown = shownIds.map(id => content.find(item => String(item.id) === id)!)
+  const orderChanges = order ? shownIds.filter((id, index) => savedIds[index] !== id).length : 0
+
+  const changes = contentChanges(draft) + availabilityChanges(availability, savedDates) + orderChanges
   const moduleLabel = (id: ModuleId) => {
     const index = modules.findIndex(m => String(m.id) === String(id))
     return index >= 0 ? `Module ${index + 1}: ${modules[index].title}` : 'another module'
@@ -81,6 +101,18 @@ export default function ManageModulePage() {
   function cancel() {
     change(() => EMPTY_DRAFT)
     setAvailability(savedDates)
+    setOrder(null)
+  }
+
+  /** ↑ / ↓: moves the item one place in the module (saved with the other changes). */
+  function moveRow(item: ContentSummary, by: -1 | 1) {
+    const from = shownIds.indexOf(String(item.id))
+    const to = from + by
+    if (from < 0 || to < 0 || to >= shownIds.length) return
+    const next = moveItem(shownIds, from, to)
+    setOrder(next.join() === savedIds.join() ? null : next)
+    setSaved(null)
+    setError(null)
   }
 
   /** Removes one applied change from the draft, so a failed save can be tried again. */
@@ -133,6 +165,11 @@ export default function ManageModulePage() {
       if (availabilityChanged) {
         await updateModule.mutateAsync({ courseId: course.id, moduleId: module.id, changes: moduleChanges })
       }
+      // The order first, while every item is still in the module (the backend needs each once).
+      if (orderChanges > 0) {
+        await reorderContent.mutateAsync({ courseId: course.id, moduleId: module.id, contentIds: shownIds })
+        setOrder(null)
+      }
       for (const [id, required] of Object.entries(draft.required)) {
         if (draft.deletes.includes(id)) {
           done('required', id)
@@ -163,9 +200,24 @@ export default function ManageModulePage() {
         added.set(String(target), already + 1)
         done('moves', id)
       }
+      // Content students have worked on (submissions, attempts, pages marked as done) is
+      // never deleted: the backend answers 409 for it.
+      const kept: string[] = []
       for (const id of draft.deletes) {
-        await deleteContent.mutateAsync({ contentId: id, moduleId: module.id })
+        try {
+          await deleteContent.mutateAsync({ contentId: id, moduleId: module.id })
+        } catch (deleteError) {
+          if (!(deleteError instanceof ApiError && deleteError.status === 409)) throw deleteError
+          kept.push(content.find(item => String(item.id) === id)?.title ?? 'An item')
+        }
         done('deletes', id)
+      }
+      if (kept.length > 0) {
+        setError(
+          `${kept.map(title => `“${title}”`).join(', ')} could not be deleted, since students have already ` +
+            'worked on it. Hide it with “Visible from” instead.',
+        )
+        return
       }
       setSaved('All changes are saved.')
     } catch {
@@ -173,6 +225,27 @@ export default function ManageModulePage() {
     } finally {
       setSaving(false)
     }
+  }
+
+  /**
+   * Deletes the whole module (DELETE /modules/{id}). Only an empty module: the backend
+   * does not delete a module's content yet, and content students have worked on is kept.
+   */
+  async function removeModule() {
+    const confirmed = await confirm({
+      title: `Delete "${module.title}"?`,
+      message: (
+        <p>The module is removed from the course, and other modules no longer require it. This cannot be undone.</p>
+      ),
+      confirmLabel: 'Delete module',
+      danger: true,
+    })
+    if (!confirmed) return
+    setError(null)
+    deleteModule.mutate(
+      { courseId: course.id, moduleId: module.id },
+      { onSuccess: () => navigate(paths.manageCourse(course.id)) },
+    )
   }
 
   function actionsFor(item: ContentSummary): ActionMenuItem[] {
@@ -238,7 +311,9 @@ export default function ManageModulePage() {
           <ModuleContentTable
             courseId={course.id}
             module={module}
-            content={content}
+            content={shown}
+            savedIndexOf={item => savedIds.indexOf(String(item.id))}
+            onMove={moveRow}
             draft={draft}
             now={now}
             saving={saving}
@@ -257,6 +332,27 @@ export default function ManageModulePage() {
         disabled={saving}
         onChange={changeAvailability}
       />
+
+      <section aria-labelledby="delete-module-title">
+        <h2 id="delete-module-title" className="section-title">
+          Delete module
+        </h2>
+        {content.length > 0 ? (
+          <p className="form-hint">Only an empty module can be deleted. Delete or move its content first.</p>
+        ) : (
+          <>
+            {deleteModule.error && <p role="alert">Could not delete the module. Try again.</p>}
+            <button
+              type="button"
+              className="button-danger"
+              disabled={saving || deleteModule.isPending}
+              onClick={() => void removeModule()}
+            >
+              {deleteModule.isPending ? 'Deleting…' : 'Delete module'}
+            </button>
+          </>
+        )}
+      </section>
 
       {/* One bar for every change on the page. */}
       <SaveBar

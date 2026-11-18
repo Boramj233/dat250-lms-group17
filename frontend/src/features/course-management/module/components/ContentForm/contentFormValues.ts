@@ -3,6 +3,7 @@ import { isSubmittable } from '@domain/content/contentTypes'
 import type { Content, ContentFields, ContentType, NewQuizQuestion } from '@domain/content/types'
 import { checkContentVisibleFrom } from '@domain/content/visibility'
 import type { CourseModule } from '@domain/modules/types'
+import type { QuizAnswerKey } from '@domain/quizzes/types'
 import { combineExtensions, splitExtensions } from './fileTypes'
 import { emptyQuestion, firstInvalidQuestion, questionsFromContent } from './quizQuestions'
 
@@ -30,8 +31,11 @@ export type ContentFormValues = {
 /** The backend's default (Quiz.passingPercentage). */
 export const DEFAULT_PASSING_PERCENTAGE = 60
 
-/** The form's starting values: empty for a new item, otherwise the saved item's. */
-export function initialValues(content: Content | undefined): ContentFormValues {
+/**
+ * The form's starting values: empty for a new item, otherwise the saved item's. For a
+ * quiz, `answerKey` fills in the correct answers of its questions.
+ */
+export function initialValues(content: Content | undefined, answerKey?: QuizAnswerKey): ContentFormValues {
   const files = content?.type === 'ASSIGNMENT' ? splitExtensions(content.acceptedFileTypes ?? []) : undefined
   const submittable = isSubmittable(content) ? content : undefined
   return {
@@ -50,7 +54,7 @@ export function initialValues(content: Content | undefined): ContentFormValues {
     passingPercentage: content?.type === 'QUIZ' ? content.passingPercentage : DEFAULT_PASSING_PERCENTAGE,
     questions:
       content?.type === 'QUIZ' && content.questions?.length
-        ? questionsFromContent(content.questions)
+        ? questionsFromContent(content.questions, answerKey)
         : [emptyQuestion()],
   }
 }

@@ -12,7 +12,12 @@ import { itemDraft, type ContentDraft } from './contentDraft'
 type ModuleContentTableProps = {
   courseId: CourseId
   module: CourseModule
+  /** In the shown order, which may not be saved yet. */
   content: ContentSummary[]
+  /** The item's place in the saved order, from 0, for "Was 3". */
+  savedIndexOf: (item: ContentSummary) => number
+  /** ↑ / ↓. */
+  onMove: (item: ContentSummary, by: -1 | 1) => void
   draft: ContentDraft
   /** For "Published" / "Unpublished". */
   now: number
@@ -26,16 +31,18 @@ type ModuleContentTableProps = {
 }
 
 /**
- * The module's content: title, type, visible from, published or not, required for module
- * completion and a "⋯" menu. Unsaved changes are marked on their rows.
+ * The module's content: its place (with ↑ / ↓), title, type, visible from, published or
+ * not, required for module completion and a "⋯" menu. Unsaved changes are marked on their rows.
  */
 export default function ModuleContentTable(props: ModuleContentTableProps) {
   const { courseId, module, content, draft, now, saving, moduleLabel, onRequiredChange, actionsFor } = props
+  const { savedIndexOf, onMove } = props
   return (
     <div className="manage-content-table-wrap">
       <table className="manage-content-table">
         <thead>
           <tr>
+            <th scope="col">Order</th>
             <th scope="col">Title</th>
             <th scope="col">Type</th>
             <th scope="col">Visible from</th>
@@ -49,20 +56,46 @@ export default function ModuleContentTable(props: ModuleContentTableProps) {
           </tr>
         </thead>
         <tbody>
-          {content.map(item => {
+          {content.map((item, index) => {
             const { deleted, movedTo, requiredChanged, required } = itemDraft(draft, item)
+            const savedIndex = savedIndexOf(item)
+            const reordered = savedIndex !== index
             const rowClass = deleted
               ? 'is-deleted'
-              : movedTo !== undefined || requiredChanged
+              : movedTo !== undefined || requiredChanged || reordered
                 ? 'is-changed'
                 : undefined
             return (
               <tr key={item.id} className={rowClass || undefined}>
+                <td className="manage-content-order">
+                  <span className="manage-content-rank">{index + 1}</span>
+                  <button
+                    type="button"
+                    className="button-secondary manage-content-move"
+                    disabled={index === 0 || saving}
+                    onClick={() => onMove(item, -1)}
+                    aria-label={`Move ${item.title} up`}
+                    title="Move up"
+                  >
+                    ↑
+                  </button>
+                  <button
+                    type="button"
+                    className="button-secondary manage-content-move"
+                    disabled={index === content.length - 1 || saving}
+                    onClick={() => onMove(item, 1)}
+                    aria-label={`Move ${item.title} down`}
+                    title="Move down"
+                  >
+                    ↓
+                  </button>
+                </td>
                 <th scope="row">
                   <Link className="manage-content-title" to={paths.manageContent(courseId, module.id, item.id)}>
                     {item.title}
                   </Link>
                   {deleted && <span className="tag tag-strong tag-danger manage-change">Will be deleted</span>}
+                  {reordered && <span className="tag tag-strong manage-change">Was {savedIndex + 1}</span>}
                   {!deleted && movedTo !== undefined && (
                     <span className="tag tag-strong manage-change">Moves to {moduleLabel(movedTo)}</span>
                   )}

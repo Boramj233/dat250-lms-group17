@@ -1,4 +1,5 @@
 import type { NewQuizQuestion, QuizContentQuestion, QuizQuestionType } from '@domain/content/types'
+import type { QuizAnswerKey } from '@domain/quizzes/types'
 
 /** The backend's limits (CreateQuizQuestionRequest). */
 const MAX_ITEMS = 20
@@ -115,38 +116,57 @@ export function firstInvalidQuestion(questions: NewQuizQuestion[]): string | und
 }
 
 /**
- * A saved quiz's questions as editable ones, in order. The backend does not send the
- * answer key: `correct` and `hint` only to teachers (proposed), and never the accepted
- * answers, the correct order or the correct pairs. So fill-in answers and the right side
- * of matching pairs start empty, and ordering items come in the order they were sent.
+ * A saved quiz's questions as editable ones, in order, with the correct answers from the
+ * answer key (GET /api/quizzes/{id}/answer-key) when it is given. The quiz itself
+ * (GET /api/quizzes/{id}) has no answer key, so without it fill-in answers and the right
+ * side of matching pairs start empty, no option is marked correct, and ordering items
+ * come in the order they were sent.
  */
-export function questionsFromContent(questions: QuizContentQuestion[]): NewQuizQuestion[] {
+export function questionsFromContent(questions: QuizContentQuestion[], answerKey?: QuizAnswerKey): NewQuizQuestion[] {
   return [...questions]
     .sort((a, b) => a.position - b.position)
     .map(question => {
-      const base = { questionText: question.questionText, hint: question.hint ?? '' }
+      const key = answerKey?.questions.find(entry => String(entry.question?.id) === String(question.id))
+      const base = { questionText: question.questionText, hint: key?.hint ?? question.hint ?? '' }
       const type = question.type ?? 'MULTIPLE_CHOICE'
       switch (type) {
         case 'MULTIPLE_CHOICE':
-        case 'TRUE_FALSE':
+        case 'TRUE_FALSE': {
+          const correctIds = key?.correctOptionIds.map(String)
           return {
             ...base,
             type,
             options: [...question.options]
               .sort((a, b) => a.position - b.position)
-              .map(option => ({ optionText: option.optionText, correct: option.correct ?? false })),
+              .map(option => ({
+                optionText: option.optionText,
+                correct: correctIds ? correctIds.includes(String(option.id)) : (option.correct ?? false),
+              })),
           }
+        }
         case 'FILL_IN_BLANK':
-          return { ...base, ...typeFields(type) }
-        case 'ORDERING':
-          return { ...base, type, options: [], orderingItems: (question.items ?? []).map(item => item.text) }
-        case 'MATCHING':
+          return key?.acceptedAnswers.length
+            ? { ...base, type, options: [], acceptedAnswers: [...key.acceptedAnswers] }
+            : { ...base, ...typeFields(type) }
+        case 'ORDERING': {
+          const items = question.items ?? []
+          const inOrder = key?.correctOrder.length
+            ? key.correctOrder.flatMap(id => items.filter(item => item.id === id))
+            : items
+          return { ...base, type, options: [], orderingItems: inOrder.map(item => item.text) }
+        }
+        case 'MATCHING': {
+          const rightText = (leftId: string) => {
+            const rightId = key?.correctMatches.find(match => match.leftItemId === leftId)?.rightItemId
+            return question.rightItems?.find(item => item.id === rightId)?.text ?? ''
+          }
           return {
             ...base,
             type,
             options: [],
-            matchingPairs: (question.leftItems ?? []).map(item => ({ left: item.text, right: '' })),
+            matchingPairs: (question.leftItems ?? []).map(item => ({ left: item.text, right: rightText(item.id) })),
           }
+        }
       }
     })
 }

@@ -90,10 +90,10 @@ export interface GradeReview {
   /** The teacher's passed / not passed verdict; null when not decided. */
   passed: boolean | null
   /**
-   * Proposed: when the grade becomes visible to the student by itself; null when it
-   * waits to be published. Each grade has its own. Missing until the backend sends it.
+   * When the grade becomes visible to the student by itself (the backend releases it
+   * then); null when it waits to be published. Each grade has its own.
    */
-  visibleFrom?: string | null
+  visibleFrom: string | null
   gradedByEnrollmentId: number
   gradedAt: string
   releasedByEnrollmentId: number | null
@@ -124,7 +124,10 @@ export interface SaveGradeInput {
   feedback: string
   /** Passed / not passed; null when not decided. */
   passed: boolean | null
-  /** Proposed: ISO instant (in the future) the grade becomes visible; null to wait for Publish. */
+  /**
+   * ISO instant the grade becomes visible; null to wait for Publish. Needs `passed`; a
+   * time that has passed publishes it at once.
+   */
   visibleFrom: string | null
   version: number | null
 }
@@ -137,7 +140,11 @@ export interface ReleaseGradeInput {
   version: number
 }
 
-/** Proposed: the answer to "publish all": how many grades became visible. */
+/**
+ * The backend's ReleaseAllGradesResponse: how many grades became visible, and how many
+ * saved grades were left because they have no passed / not passed decision.
+ */
 export interface ReleaseAllGradesResult {
   released: number
+  undecided: number
 }

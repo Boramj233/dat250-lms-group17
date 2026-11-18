@@ -143,6 +143,69 @@ test('saved questions become editable ones; unknown answer keys start empty', ()
   assert.deepEqual(matching.matchingPairs, [{ left: 'Left', right: '' }])
 })
 
+test('the answer key fills in the correct answers of every question type', () => {
+  const questions = [
+    {
+      id: 1,
+      questionText: 'Choice',
+      position: 0,
+      type: 'MULTIPLE_CHOICE',
+      options: [
+        { id: 10, optionText: 'A', position: 0 },
+        { id: 11, optionText: 'B', position: 1 },
+      ],
+    },
+    { id: 2, questionText: 'Fill', position: 1, type: 'FILL_IN_BLANK', options: [] },
+    {
+      id: 3,
+      questionText: 'Order',
+      position: 2,
+      type: 'ORDERING',
+      options: [],
+      items: [
+        { id: 'x', text: 'Second' },
+        { id: 'y', text: 'First' },
+      ],
+    },
+    {
+      id: 4,
+      questionText: 'Match',
+      position: 3,
+      type: 'MATCHING',
+      options: [],
+      leftItems: [{ id: 'l', text: 'Left' }],
+      rightItems: [{ id: 'r', text: 'Right' }],
+    },
+  ]
+  const key = (question, fields) => ({
+    question,
+    hint: null,
+    correctOptionIds: [],
+    acceptedAnswers: [],
+    correctOrder: [],
+    correctMatches: [],
+    ...fields,
+  })
+  const answerKey = {
+    quizId: 1,
+    questions: [
+      key(questions[0], { correctOptionIds: [11], hint: 'Think again.' }),
+      key(questions[1], { acceptedAnswers: ['cat', 'kitten'] }),
+      key(questions[2], { correctOrder: ['y', 'x'] }),
+      key(questions[3], { correctMatches: [{ leftItemId: 'l', rightItemId: 'r' }] }),
+    ],
+  }
+  const [choice, fill, order, matching] = questionsFromContent(questions, answerKey)
+  assert.deepEqual(
+    choice.options.map(o => o.correct),
+    [false, true],
+  )
+  assert.equal(choice.hint, 'Think again.')
+  assert.deepEqual(fill.acceptedAnswers, ['cat', 'kitten'])
+  assert.deepEqual(order.orderingItems, ['First', 'Second'])
+  assert.deepEqual(matching.matchingPairs, [{ left: 'Left', right: 'Right' }])
+})
+
 // --- Students: answering -----------------------------------------------------------------
 
 const items = [

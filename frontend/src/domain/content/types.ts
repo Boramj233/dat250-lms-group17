@@ -18,10 +18,12 @@ export interface ContentSummary {
    */
   requiredForModuleCompletion?: boolean
   /**
-   * Proposed (see README): ISO 8601 instant students can see the item from. Null or
-   * missing: it inherits its module's start date (availableFrom). Never before it.
+   * ISO 8601 instant students can see the item from. Null or missing: as soon as its
+   * module is open (availableFrom). Changed with PUT /api/contents/{id}/visibility.
    */
   visibleFrom?: string | null
+  /** ISO 8601 instant students no longer see the item from; null or missing for never. */
+  visibleUntil?: string | null
 }
 
 interface ContentDetailBase extends ContentSummary {
@@ -129,10 +131,7 @@ export interface CodingExerciseContent extends ContentDetailBase {
   type: 'CODING_EXERCISE'
   instructions: string
   starterRepositoryUrl: string | null
-  /**
-   * Code the students start from, shown on the exercise. Proposed field, not in the
-   * backend's CodingExerciseResponse yet; missing or null when there is none.
-   */
+  /** Code the students start from, shown on the exercise; null when there is none. */
   starterCode?: string | null
   deadline: string | null
   allowLateSubmission: boolean
@@ -147,7 +146,10 @@ interface CreateContentBase {
   moduleId: ModuleId
   title: string
   position: number
-  /** Proposed: visible to students from; null inherits the module's start date. */
+  /**
+   * Visible to students from; null when the module opens. Not in the create requests:
+   * set right after creating with PUT /api/contents/{id}/visibility.
+   */
   visibleFrom: string | null
 }
 
@@ -175,7 +177,6 @@ export interface CreateCodingExerciseInput extends CreateContentBase {
   instructions: string
   /** A repository and/or code to start from; at least one of them. */
   starterRepositoryUrl: string | null
-  /** Proposed field (see CodingExerciseContent.starterCode). */
   starterCode: string | null
   deadline: string | null
   allowLateSubmission: boolean
@@ -223,19 +224,48 @@ export type ContentFields = CreateContentInput extends infer Input
   : never
 
 /**
- * Proposed: changes all of an unpublished item's fields (see README). A quiz's questions
- * are replaced as a whole.
+ * Saves the edit form's fields with the endpoints for the item's type (see `editContent`).
  */
 export interface EditContentInput {
   moduleId: ModuleId
   contentId: ContentId
+  /**
+   * The item's current setting (from the module's content list). Needed for a quiz,
+   * since its passing percentage is saved with the completion settings, which need both.
+   */
+  requiredForModuleCompletion: boolean
+  /**
+   * A quiz: the questions differ from the saved ones, so all of them are replaced
+   * (PUT /api/quizzes/{id}/questions, 409 once a student has made an attempt).
+   */
+  questionsChanged?: boolean
   fields: ContentFields
 }
 
-export interface UpdateContentInput {
+// The backend's UpdateContentVisibilityRequest: PUT /api/contents/{contentId}/visibility
+// (teachers of the course).
+export interface VisibilityInput {
   moduleId: ModuleId
   contentId: ContentId
-  changes: Partial<Pick<StaticPageContent, 'title' | 'position' | 'body' | 'visibleFrom'>>
+  /** Null: visible as soon as the module is open. */
+  visibleFrom: string | null
+  /** Leave out to keep the saved one; null removes it. */
+  visibleUntil?: string | null
+}
+
+// The backend's ContentVisibilityResponse.
+export interface ContentVisibility {
+  contentId: ContentId
+  visibleFrom: string | null
+  visibleUntil: string | null
+}
+
+// The backend's ReorderContentRequest: PUT …/modules/{moduleId}/contents/order (204).
+export interface ReorderContentInput {
+  courseId: CourseId
+  moduleId: ModuleId
+  /** Every item of the module, each once, first to last. */
+  contentIds: ContentId[]
 }
 
 // The backend's ContentCompletionController.Settings:
@@ -279,6 +309,7 @@ export interface DeleteContentInput {
   contentId: ContentId
 }
 
+/** Proposed: the backend has no endpoint to move content to another module yet. */
 export interface MoveContentInput {
   contentId: ContentId
   sourceModuleId: ModuleId

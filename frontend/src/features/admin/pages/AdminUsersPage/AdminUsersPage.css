@@ -1,0 +1,21 @@
+.admin-users {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.admin-users-search {
+  max-width: 28rem;
+}
+
+.admin-users-email {
+  overflow-wrap: anywhere;
+}
+
+/* Previous, "Page 1 of 3", Next. */
+.admin-users-pages {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
