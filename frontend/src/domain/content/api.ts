@@ -9,15 +9,16 @@ import type {
   ContentCompletion,
   ContentSummary,
   ContentType,
+  ContentVisibility,
   CreateContentInput,
   DeleteContentInput,
   EditContentInput,
   ExamRequirementInput,
-  MoveContentInput,
   PageCompletionInput,
   QuizContent,
+  ReorderContentInput,
   StaticPageContent,
-  UpdateContentInput,
+  VisibilityInput,
 } from './types'
 
 // The backend sends "Assignment" for assignments in content lists, unlike the other
@@ -26,7 +27,7 @@ function normalizeType(type: string): ContentType {
   return type === 'Assignment' ? 'ASSIGNMENT' : (type as ContentType)
 }
 
-/** A module's content, sorted by position. */
+/** A module's content, sorted by position. Students only get the items visible now. */
 export async function getModuleContent(courseId: CourseId, moduleId: ModuleId): Promise<ContentSummary[]> {
   const items = await apiClient<(Omit<ContentSummary, 'type'> & { type: string })[]>(
     apiPath`/api/courses/${courseId}/modules/${moduleId}/contents`,
@@ -59,6 +60,40 @@ function post<T>(url: string, body: unknown): Promise<T> {
   return apiClient<T>(url, jsonBody('POST', body))
 }
 
+function put<T>(url: string, body: unknown): Promise<T> {
+  return apiClient<T>(url, jsonBody('PUT', body))
+}
+
+/** The request body of the backend's create endpoint for each type (only its fields). */
+function createRequest(input: CreateContentInput): object {
+  const { title, position } = input
+  switch (input.type) {
+    case 'STATIC_PAGE':
+      return { title, position, body: input.body }
+    case 'ASSIGNMENT':
+      return {
+        title,
+        position,
+        instructions: input.instructions,
+        deadline: input.deadline,
+        allowLateSubmission: input.allowLateSubmission,
+        mandatoryForExam: input.mandatoryForExam,
+      }
+    case 'CODING_EXERCISE':
+      return {
+        title,
+        position,
+        instructions: input.instructions,
+        starterRepositoryUrl: input.starterRepositoryUrl,
+        starterCode: input.starterCode,
+        deadline: input.deadline,
+        allowLateSubmission: input.allowLateSubmission,
+      }
+    case 'QUIZ':
+      return { title, position, maxAttempts: input.maxAttempts }
+  }
+}
+
 const CREATE_PATH: Record<CreateContentInput['type'], string> = {
   STATIC_PAGE: 'pages',
   ASSIGNMENT: 'assignments',
@@ -67,62 +102,117 @@ const CREATE_PATH: Record<CreateContentInput['type'], string> = {
 }
 
 /**
- * Creates content with the backend endpoint for its type. A quiz is created first, then
- * its passing percentage is set (CreateQuizRequest has no field for it) and its
+ * Creates content with the backend endpoint for its type. The create requests have no
+ * `visibleFrom`, so a date is then set with PUT /api/contents/{id}/visibility. A quiz's
+ * passing percentage is then set (CreateQuizRequest has no field for it) and its
  * questions are added one by one. Resolves to the new content's id.
  */
 export async function createContent(input: CreateContentInput): Promise<{ id: ContentId }> {
-  const { courseId, moduleId, type, ...fields } = input
+  const { courseId, moduleId, type } = input
   const url = apiPath`/api/courses/${courseId}/modules/${moduleId}/contents/${CREATE_PATH[type]}`
-  if (input.type !== 'QUIZ') {
-    return post<{ id: ContentId }>(url, fields)
+  const created = await post<{ id: ContentId }>(url, createRequest(input))
+  if (input.visibleFrom) {
+    await updateVisibility({ moduleId, contentId: created.id, visibleFrom: input.visibleFrom })
   }
-  const { questions, passingPercentage, ...quizFields } = fields as Omit<typeof input, 'courseId' | 'moduleId' | 'type'>
-  const quiz = await post<{ id: ContentId }>(url, quizFields)
-  // New content is never required for module completion, so `false` changes nothing.
-  await updateCompletionSettings({
-    moduleId,
-    contentId: quiz.id,
-    requiredForModuleCompletion: false,
-    passingPercentage,
-  })
-  for (const [position, question] of questions.entries()) {
-    await post(apiPath`/api/quizzes/${quiz.id}/questions`, questionRequest(question, position))
+  if (input.type === 'QUIZ') {
+    // New content is never required for module completion, so `false` changes nothing.
+    await updateCompletionSettings({
+      moduleId,
+      contentId: created.id,
+      requiredForModuleCompletion: false,
+      passingPercentage: input.passingPercentage,
+    })
+    for (const [position, question] of input.questions.entries()) {
+      await post(apiPath`/api/quizzes/${created.id}/questions`, questionRequest(question, position))
+    }
   }
-  return quiz
+  return created
 }
 
 /**
- * Proposed: saves all fields of an unpublished item (PATCH /api/contents/{id}); a quiz's
- * questions are then replaced as a whole (PUT /api/quizzes/{id}/questions). 409 once
- * the item is published.
- *
- * An assignment's `mandatoryForExam` has its own endpoint, which also works after the
- * assignment is published; it is saved first, so it is kept even if the rest is refused.
+ * Saves the fields the edit form changes, with the backend's endpoints for the item's
+ * type:
+ * - a page: PUT /api/contents/{id} (title, body);
+ * - an assignment: PATCH /api/assignments/{id}/exam-requirement first (so it is kept even
+ *   if the rest is refused), then PUT /api/assignments/{id} (title, instructions) and
+ *   PUT /api/assignments/{id}/submission-settings (deadline, allowLateSubmission);
+ * - a coding exercise: PUT /api/coding-exercises/{id} (title, instructions, starter
+ *   repository and code) and PUT …/submission-settings;
+ * - a quiz: PUT /api/quizzes/{id} (title, maxAttempts), its passing percentage with
+ *   PATCH /api/contents/{id}/completion-settings and, only when `questionsChanged`, all
+ *   its questions with PUT /api/quizzes/{id}/questions (409 once a student has made an
+ *   attempt, so it is not sent when the questions are the same).
+ * Last, for every type, `visibleFrom` with PUT /api/contents/{id}/visibility (its
+ * `visibleUntil` is kept).
  */
-export async function editContent({ contentId, fields }: EditContentInput): Promise<void> {
-  if (fields.type === 'ASSIGNMENT') {
-    const { type: _type, mandatoryForExam, ...changes } = fields
-    await updateExamRequirement({ contentId, mandatoryForExam })
-    await apiClient<Content>(apiPath`/api/contents/${contentId}`, jsonBody('PATCH', changes))
-    return
+export async function editContent({
+  moduleId,
+  contentId,
+  requiredForModuleCompletion,
+  questionsChanged = false,
+  fields,
+}: EditContentInput): Promise<void> {
+  switch (fields.type) {
+    case 'STATIC_PAGE':
+      await put(apiPath`/api/contents/${contentId}`, { title: fields.title, body: fields.body })
+      break
+    case 'ASSIGNMENT':
+      await updateExamRequirement({ contentId, mandatoryForExam: fields.mandatoryForExam })
+      await put(apiPath`/api/assignments/${contentId}`, { title: fields.title, instructions: fields.instructions })
+      await put(apiPath`/api/assignments/${contentId}/submission-settings`, {
+        deadline: fields.deadline,
+        allowLateSubmission: fields.allowLateSubmission,
+      })
+      break
+    case 'CODING_EXERCISE':
+      await put(apiPath`/api/coding-exercises/${contentId}`, {
+        title: fields.title,
+        instructions: fields.instructions,
+        starterRepositoryUrl: fields.starterRepositoryUrl,
+        starterCode: fields.starterCode,
+      })
+      await put(apiPath`/api/coding-exercises/${contentId}/submission-settings`, {
+        deadline: fields.deadline,
+        allowLateSubmission: fields.allowLateSubmission,
+      })
+      break
+    case 'QUIZ':
+      await put(apiPath`/api/quizzes/${contentId}`, { title: fields.title, maxAttempts: fields.maxAttempts })
+      await updateCompletionSettings({
+        moduleId,
+        contentId,
+        requiredForModuleCompletion,
+        passingPercentage: fields.passingPercentage,
+      })
+      if (questionsChanged) {
+        await put(apiPath`/api/quizzes/${contentId}/questions`, {
+          questions: fields.questions.map((question, position) => questionRequest(question, position)),
+        })
+      }
+      break
   }
-  const { type, ...changes } = fields
-  if (type !== 'QUIZ') {
-    await apiClient<Content>(apiPath`/api/contents/${contentId}`, jsonBody('PATCH', changes))
-    return
-  }
-  const { questions, ...quizChanges } = changes as Omit<typeof fields & { type: 'QUIZ' }, 'type'>
-  await apiClient<Content>(apiPath`/api/contents/${contentId}`, jsonBody('PATCH', quizChanges))
-  await apiClient<unknown>(
-    apiPath`/api/quizzes/${contentId}/questions`,
-    jsonBody('PUT', questions.map(questionRequest)),
-  )
+  await updateVisibility({ moduleId, contentId, visibleFrom: fields.visibleFrom })
 }
 
-/** Proposed: changes some fields (PATCH /api/contents/{id}). */
-export function updateContent({ contentId, changes }: UpdateContentInput): Promise<Content> {
-  return apiClient<Content>(apiPath`/api/contents/${contentId}`, jsonBody('PATCH', changes))
+/**
+ * Teachers: when students see the item (PUT /api/contents/{id}/visibility). Null
+ * `visibleFrom` means from now on (or when the module opens). `visibleUntil` is only sent
+ * when it is given, so leaving it out keeps the saved one; null removes it.
+ */
+export function updateVisibility({
+  contentId,
+  visibleFrom,
+  visibleUntil,
+}: VisibilityInput): Promise<ContentVisibility> {
+  return put<ContentVisibility>(apiPath`/api/contents/${contentId}/visibility`, {
+    visibleFrom,
+    ...(visibleUntil !== undefined ? { visibleUntil } : {}),
+  })
+}
+
+/** Teachers: the module's content in a new order; every item once (204). */
+export function reorderContent({ courseId, moduleId, contentIds }: ReorderContentInput): Promise<void> {
+  return put<void>(apiPath`/api/courses/${courseId}/modules/${moduleId}/contents/order`, { contentIds })
 }
 
 /**
@@ -158,15 +248,10 @@ export function setPageCompletion({ contentId, completed }: PageCompletionInput)
   return apiClient<ContentCompletion>(apiPath`/api/contents/${contentId}/completion`, jsonBody('PUT', { completed }))
 }
 
-/** Proposed: DELETE /api/contents/{id}. */
+/**
+ * Teachers: DELETE /api/contents/{id} (204). 409 when students have work on it
+ * (submissions, quiz attempts or a page marked as done); such content is never deleted.
+ */
 export function deleteContent({ contentId }: DeleteContentInput): Promise<void> {
   return apiClient<void>(apiPath`/api/contents/${contentId}`, { method: 'DELETE' })
-}
-
-/** Proposed: PATCH /api/contents/{id}/move. */
-export function moveContent({ contentId, targetModuleId, position }: MoveContentInput): Promise<Content> {
-  return apiClient<Content>(
-    apiPath`/api/contents/${contentId}/move`,
-    jsonBody('PATCH', { moduleId: targetModuleId, position }),
-  )
 }

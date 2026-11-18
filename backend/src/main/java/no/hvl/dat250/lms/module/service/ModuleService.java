@@ -87,6 +87,40 @@ public class ModuleService {
         return module;
     }
 
+    /**
+     * Sets the order of all the course's modules in one transaction: {@code moduleIds} has
+     * every module of the course exactly once, first to last, and their positions become
+     * 0, 1, 2, …. Answers the modules in their new order.
+     *
+     * @throws IllegalArgumentException when a module is missing, repeated or from another course
+     * @throws NoSuchElementException when the course does not exist
+     */
+    @Transactional
+    public List<Module> reorderModules(Long courseId, List<Long> moduleIds) {
+        if (courseId == null) {
+            throw new IllegalArgumentException("Course ID must not be null");
+        }
+        if (moduleIds == null || moduleIds.stream().anyMatch(id -> id == null || id <= 0)) {
+            throw new IllegalArgumentException("Module IDs must be a non-null list of positive IDs");
+        }
+        courseService.findCourseById(courseId)
+                .orElseThrow(() -> new NoSuchElementException("Course not found: " + courseId));
+        List<Module> modules = moduleRepository.findByCourse_IdOrderByPositionAsc(courseId);
+        Map<Long, Module> byId = new HashMap<>();
+        for (Module module : modules) {
+            byId.put(module.getId(), module);
+        }
+        if (moduleIds.size() != modules.size() || !new HashSet<>(moduleIds).equals(byId.keySet())) {
+            throw new IllegalArgumentException("Order must contain every module of the course exactly once");
+        }
+        List<Module> ordered = moduleIds.stream().map(byId::get).toList();
+        for (int position = 0; position < ordered.size(); position++) {
+            ordered.get(position).setPosition(position);
+        }
+        moduleRepository.flush();
+        return ordered;
+    }
+
     public Optional<Module> findModuleById(Long id) {
 
         if (id == null) {

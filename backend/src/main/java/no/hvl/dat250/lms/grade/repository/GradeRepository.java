@@ -14,4 +14,12 @@ public interface GradeRepository extends JpaRepository<Grade, Long> {
     long countReleasedPassed(Long contentId, Long userId);
 
     Optional<Grade> findBySubmission_Id(Long submissionId);
+
+    /** Unreleased grades whose scheduled release time has come (with a Pass/Fail decision). */
+    @org.springframework.data.jpa.repository.Query("""
+        select g from Grade g
+        where g.releasedAt is null and g.visibleFrom is not null and g.visibleFrom <= :now
+          and g.passed is not null
+        """)
+    java.util.List<Grade> findDueReleases(java.time.Instant now);
 }

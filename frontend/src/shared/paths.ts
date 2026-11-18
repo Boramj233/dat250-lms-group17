@@ -39,6 +39,8 @@ export const paths = {
   courseContent: (courseId: CourseId, moduleId: ModuleId, section: ContentSection, contentId: ContentId) =>
     `/courses/${id(courseId)}/modules/${id(moduleId)}/${section}/${id(contentId)}`,
   profile: '/profile',
+  /** Administrators: every user and their access. */
+  adminUsers: '/admin/users',
 
   // Course managers: create courses and manage the courses they teach.
   manageCourses: '/manage-courses',

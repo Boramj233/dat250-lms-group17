@@ -1,7 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useInvalidatingMutation } from '@shared/api/useInvalidatingMutation'
 import type { CourseId } from '@shared/types'
-import { createModule, getCourseModules, reorderModules, updateModule } from './api'
+import { contentKeys } from '@domain/content/queryKeys'
+import { createModule, deleteModule, getCourseModules, reorderModules, updateModule } from './api'
 import { moduleKeys } from './queryKeys'
 
 // Fetches and caches the modules belonging to a specific course, sorted by position.
@@ -23,6 +24,20 @@ export function useCreateModule() {
 //for teachers, not for students
 export function useUpdateModule() {
   return useInvalidatingMutation(updateModule, (_module, { courseId }) => [moduleKeys.courseModules(courseId)])
+}
+
+// Deletes a module, forgets its cached content list and refreshes the module list.
+//for teachers, not for students
+export function useDeleteModule() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: deleteModule,
+    onSuccess: async (_data, { courseId, moduleId }) => {
+      queryClient.removeQueries({ queryKey: contentKeys.moduleContent(moduleId) })
+      await queryClient.invalidateQueries({ queryKey: moduleKeys.courseModules(courseId) })
+    },
+  })
 }
 
 // Saves a new order (rank) of the course's modules; students see it at once.

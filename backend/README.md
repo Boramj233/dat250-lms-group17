@@ -465,6 +465,17 @@ APIs; there is no separate CodingGrade or new grading endpoint:
 - `GET /api/submissions/{submissionId}/grade/review`: teacher Grade view.
 - `POST /api/submissions/{submissionId}/grade/release`: release using the current version.
 - `GET /api/submissions/{submissionId}/grade`: the owner's released Grade.
+- `POST /api/contents/{contentId}/grades/release`: release every saved grade of the
+  latest submissions at once; answers `{released, undecided}`.
+
+`SaveGradeRequest.visibleFrom` (ISO instant or null) schedules the release: the grade
+stays hidden until then and `GradeReleaseScheduler` releases it (as the teacher who saved
+it) on its next run, every minute by default (`lms.grades.release-check-ms`; disable with
+`lms.grades.release-scheduler.enabled=false`). A time that has already passed releases it
+at once. A scheduled grade needs a Pass/Fail decision (400 otherwise). `GradeReviewResponse`
+includes `visibleFrom`. Releasing all skips grades without a Pass/Fail decision and counts
+them as `undecided`. Existing H2 databases need the `visible_from` column from
+`db/manual/h2-grades.sql`.
 
 Teacher operations require an active TEACHER enrollment in the Content's course.
 Scores remain 0–100 with at most two decimal places; feedback is limited to 10,000
@@ -651,7 +662,7 @@ Active course teachers can replace the basic editable fields of an existing Cont
 | `/api/contents/{contentId}` (StaticPage only) | title, body |
 | `/api/assignments/{assignmentId}` | title, instructions |
 | `/api/coding-exercises/{exerciseId}` | title, instructions, starterRepositoryUrl, optional starterCode |
-| `/api/quizzes/{quizId}` | title |
+| `/api/quizzes/{quizId}` | title, optional maxAttempts (null or omitted keeps it) |
 
 Success returns 200 with the existing type-specific response DTO (QuizResponse for
 quiz updates). Each PUT supplies the complete editable field set, not a partial patch.
@@ -680,12 +691,19 @@ Submission payloads, Grade feedback/Pass/Fail/release, attempts, answer keys and
 are preserved. Quiz title editing does not allow question changes after an attempt.
 
 These requests do not edit position, Module, Required, mandatoryForExam, passingPercentage,
-maxAttempts, deadlines, late-submission rules or visibility. Existing ordering and settings
+deadlines, late-submission rules or visibility. A quiz's maxAttempts (at least 1) may be
+lowered after attempts; attempts already made are kept. Existing ordering and settings
 endpoints retain their separate paths. No schema migration, new locks or versions are added.
 
-Frontend integration: current proposed `PATCH /api/contents/{id}` and
-`PUT /api/quizzes/{id}/questions` are not implemented by this phase. Use the type-specific
-PUT endpoints above for basic editing; no frontend code is changed here.
+### Replacing a quiz's questions
+
+`PUT /api/quizzes/{quizId}/questions` with `{"questions": [CreateQuizQuestionRequest, ...]}`
+(at most 100) replaces every question of the quiz in one transaction: the old questions,
+options, items and answer keys are deleted and the new ones are checked and stored exactly
+like `POST /api/quizzes/{quizId}/questions`. It answers 200 with the `QuizDetailResponse`.
+Teachers of the course only (403 otherwise). Once any student has made an attempt it
+answers **409** and changes nothing, since attempts are graded against the questions they
+answered. An invalid question answers 400 and leaves the old questions in place.
 
 ## Assignment / CodingExercise Submission Settings
 

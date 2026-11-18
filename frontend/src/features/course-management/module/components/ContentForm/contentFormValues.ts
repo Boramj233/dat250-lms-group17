@@ -3,7 +3,7 @@ import { isSubmittable } from '@domain/content/contentTypes'
 import type { Content, ContentFields, ContentType, NewQuizQuestion } from '@domain/content/types'
 import { checkContentVisibleFrom } from '@domain/content/visibility'
 import type { CourseModule } from '@domain/modules/types'
-import { combineExtensions, splitExtensions } from './fileTypes'
+import type { QuizAnswerKey } from '@domain/quizzes/types'
 import { emptyQuestion, firstInvalidQuestion, questionsFromContent } from './quizQuestions'
 
 /** Everything the form holds, as the fields show it (dates as datetime-local text). */
@@ -16,9 +16,6 @@ export type ContentFormValues = {
   deadline: string
   allowLate: boolean
   mandatoryForExam: boolean
-  groupAssignment: boolean
-  fileTypePresets: string[]
-  otherFileTypes: string
   starterUrl: string
   starterCode: string
   maxAttempts: number
@@ -30,9 +27,11 @@ export type ContentFormValues = {
 /** The backend's default (Quiz.passingPercentage). */
 export const DEFAULT_PASSING_PERCENTAGE = 60
 
-/** The form's starting values: empty for a new item, otherwise the saved item's. */
-export function initialValues(content: Content | undefined): ContentFormValues {
-  const files = content?.type === 'ASSIGNMENT' ? splitExtensions(content.acceptedFileTypes ?? []) : undefined
+/**
+ * The form's starting values: empty for a new item, otherwise the saved item's. For a
+ * quiz, `answerKey` fills in the correct answers of its questions.
+ */
+export function initialValues(content: Content | undefined, answerKey?: QuizAnswerKey): ContentFormValues {
   const submittable = isSubmittable(content) ? content : undefined
   return {
     title: content?.title ?? '',
@@ -41,16 +40,13 @@ export function initialValues(content: Content | undefined): ContentFormValues {
     deadline: toDateTimeLocal(submittable?.deadline),
     allowLate: submittable?.allowLateSubmission ?? false,
     mandatoryForExam: content?.type === 'ASSIGNMENT' ? content.mandatoryForExam : false,
-    groupAssignment: content?.type === 'ASSIGNMENT' ? (content.groupAssignment ?? false) : false,
-    fileTypePresets: files?.presetLabels ?? [],
-    otherFileTypes: files?.other ?? '',
     starterUrl: content?.type === 'CODING_EXERCISE' ? (content.starterRepositoryUrl ?? '') : '',
     starterCode: content?.type === 'CODING_EXERCISE' ? (content.starterCode ?? '') : '',
     maxAttempts: content?.type === 'QUIZ' ? content.maxAttempts : 1,
     passingPercentage: content?.type === 'QUIZ' ? content.passingPercentage : DEFAULT_PASSING_PERCENTAGE,
     questions:
       content?.type === 'QUIZ' && content.questions?.length
-        ? questionsFromContent(content.questions)
+        ? questionsFromContent(content.questions, answerKey)
         : [emptyQuestion()],
   }
 }
@@ -84,8 +80,6 @@ export function toFields(type: ContentType, values: ContentFormValues): ContentF
         deadline,
         allowLateSubmission: values.allowLate,
         mandatoryForExam: values.mandatoryForExam,
-        groupAssignment: values.groupAssignment,
-        acceptedFileTypes: combineExtensions(values.fileTypePresets, values.otherFileTypes),
       }
     case 'CODING_EXERCISE':
       return {

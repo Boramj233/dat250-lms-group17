@@ -10,11 +10,11 @@ import {
   getCompletion,
   getContent,
   getModuleContent,
-  moveContent,
+  reorderContent,
   setPageCompletion,
   updateCompletionSettings,
-  updateContent,
   updateExamRequirement,
+  updateVisibility,
 } from './api'
 import { contentKeys } from './queryKeys'
 import type { Content, ContentCompletion, ContentSummary, ContentType } from './types'
@@ -86,16 +86,6 @@ export function useDeleteContent() {
   })
 }
 
-// Moves or reorders content and refreshes its details and module lists.
-//only for teachers, not for students
-export function useMoveContent() {
-  return useInvalidatingMutation(moveContent, (_content, { contentId, sourceModuleId, targetModuleId }) => [
-    contentKeys.content(contentId),
-    contentKeys.moduleContent(sourceModuleId),
-    ...(String(sourceModuleId) !== String(targetModuleId) ? [contentKeys.moduleContent(targetModuleId)] : []),
-  ])
-}
-
 // One item changed: its details and its module's content list.
 const itemKeys = (_result: unknown, { contentId, moduleId }: { contentId: ContentId; moduleId: ModuleId }) => [
   contentKeys.content(contentId),
@@ -104,13 +94,19 @@ const itemKeys = (_result: unknown, { contentId, moduleId }: { contentId: Conten
 
 // Updates content and refreshes its details and module content list.
 //only for teachers, not for students
-/** Teachers: saves all fields of an unpublished item (proposed), then reloads it and its module. */
+/** Teachers: saves the edit form's fields, then reloads the item and its module. */
 export function useEditContent() {
   return useInvalidatingMutation(editContent, itemKeys)
 }
 
-export function useUpdateContent() {
-  return useInvalidatingMutation(updateContent, itemKeys)
+/** Teachers: when students see the item (visible from / until). */
+export function useUpdateVisibility() {
+  return useInvalidatingMutation(updateVisibility, itemKeys)
+}
+
+/** Teachers: saves a new order of a module's content and reloads the module's list. */
+export function useReorderContent() {
+  return useInvalidatingMutation(reorderContent, (_result, { moduleId }) => [contentKeys.moduleContent(moduleId)])
 }
 
 /** Teachers: "required for module completion" (and a quiz's passing percentage). */

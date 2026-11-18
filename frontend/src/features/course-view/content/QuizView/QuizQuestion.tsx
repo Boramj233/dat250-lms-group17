@@ -34,6 +34,11 @@ type QuizQuestionProps = {
    * for the question (e.g. it was added later). The answer cannot be changed.
    */
   result?: boolean | null
+  /**
+   * Teachers: `answer` is the answer key. Shown read-only, marked "Correct answer", with
+   * the question's hint (shown to students who answer it wrong) below.
+   */
+  answerKey?: { hint: string | null }
 }
 
 /**
@@ -42,10 +47,18 @@ type QuizQuestionProps = {
  * false), a text field (fill in the blank), a list with Up/Down buttons (ordering) or a
  * menu per item (matching).
  */
-export default function QuizQuestion({ question, number, total, answer, onChange, result }: QuizQuestionProps) {
+export default function QuizQuestion({
+  question,
+  number,
+  total,
+  answer,
+  onChange,
+  result,
+  answerKey,
+}: QuizQuestionProps) {
   const type = typeOf(question)
-  const reviewing = result !== undefined
-  const resultClass = result === true ? ' is-correct' : result === false ? ' is-wrong' : ''
+  const reviewing = result !== undefined || answerKey !== undefined
+  const resultClass = result === true || answerKey ? ' is-correct' : result === false ? ' is-wrong' : ''
   const answered = isAnswered(question, answer)
   const props = { question, answer, onChange: onChange ?? (() => {}) }
   return (
@@ -58,7 +71,12 @@ export default function QuizQuestion({ question, number, total, answer, onChange
           <span className="quiz-question-number">
             Question {number} of {total}
           </span>
-          {reviewing ? (
+          {answerKey ? (
+            <span className="quiz-question-result is-correct">
+              <CheckIcon size={14} strokeWidth={3} />
+              Correct answer · {TYPE_LABEL[type]}
+            </span>
+          ) : reviewing ? (
             <QuestionResult result={result} answered={answered} />
           ) : (
             <span className="quiz-question-type">{TYPE_LABEL[type]}</span>
@@ -67,7 +85,7 @@ export default function QuizQuestion({ question, number, total, answer, onChange
         <span className="quiz-question-text">{question.questionText}</span>
       </legend>
       {!reviewing && <p className="quiz-question-hint">{TYPE_HINT[type]}</p>}
-      {reviewing && result !== null && !answered && (
+      {!answerKey && reviewing && result !== null && !answered && (
         <p className="quiz-question-hint">You did not answer this question.</p>
       )}
       {type === 'FILL_IN_BLANK' ? (
@@ -78,6 +96,11 @@ export default function QuizQuestion({ question, number, total, answer, onChange
         <MatchingAnswer {...props} />
       ) : (
         <ChoiceAnswer {...props} />
+      )}
+      {answerKey && (
+        <p className="quiz-question-hint">
+          {answerKey.hint ? <>Hint for a wrong answer: {answerKey.hint}</> : 'No hint for a wrong answer.'}
+        </p>
       )}
     </fieldset>
   )

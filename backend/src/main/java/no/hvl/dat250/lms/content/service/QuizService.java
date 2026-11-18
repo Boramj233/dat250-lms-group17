@@ -80,6 +80,12 @@ public class QuizService {
     public record OrderingDraft(List<ItemDraft> items, List<String> correctOrder) {
     }
 
+    /** One whole question, as CreateQuizQuestionRequest describes it. */
+    public record QuestionDraft(
+            String questionText, int position, String hint, List<OptionDraft> options,
+            QuestionType type, List<String> acceptedAnswers, OrderingDraft ordering, MatchingDraft matching) {
+    }
+
     public record QuestionWithOptions(
         QuizQuestion question,
         List<ChoiceOption> options
@@ -96,7 +102,11 @@ public class QuizService {
         if (attemptRepository.existsByQuiz_Id(quizId)) {
             throw new ContentDeletionConflictException("Quiz with attempts cannot be deleted");
         }
-        List<QuizQuestion> questions = questionRepository.findByQuiz_IdOrderByPositionAsc(quizId);
+        deleteQuestions(questionRepository.findByQuiz_IdOrderByPositionAsc(quizId));
+    }
+
+    /** Deletes questions with their options, items and answer keys (never attempts). */
+    private void deleteQuestions(List<QuizQuestion> questions) {
         for (QuizQuestion question : questions) {
             question.clearItemAnswerKeysForDeletion();
         }
@@ -381,6 +391,52 @@ public class QuizService {
             throw new IllegalArgumentException(
                 "At least one option must be correct");
         }
+    }
+
+    /**
+     * Replaces every question of the quiz with {@code questions}, in one transaction. Refused
+     * with QuizQuestionConflictException (409) once a student has made an attempt, since
+     * attempts are graded against the questions they answered.
+     */
+    @Transactional
+    public List<QuizQuestion> replaceQuestions(Long quizId, List<QuestionDraft> questions) {
+        if (questions == null || questions.size() > 100) {
+            throw new IllegalArgumentException("A quiz has at most 100 questions");
+        }
+        requireQuiz(quizId);
+        if (attemptRepository.existsByQuiz_Id(quizId)) {
+            throw new QuizQuestionConflictException();
+        }
+        deleteQuestions(questionRepository.findByQuiz_IdOrderByPositionAsc(quizId));
+        List<QuizQuestion> saved = new ArrayList<>();
+        for (QuestionDraft draft : questions) {
+            if (draft == null) throw new IllegalArgumentException("Question must not be null");
+            List<String> answers = draft.acceptedAnswers() == null ? List.of() : draft.acceptedAnswers();
+            saved.add(addQuestion(quizId, draft.questionText(), draft.position(), draft.hint(),
+                draft.options() == null ? List.of() : draft.options(), draft.type(), answers,
+                draft.ordering(), draft.matching()));
+        }
+        return saved;
+    }
+
+    /** Changes the title and, when given, the number of attempts allowed. */
+    @Transactional
+    public Quiz updateQuiz(Long quizId, String title, Integer maxAttempts) {
+        Quiz quiz = requireQuiz(quizId);
+        quiz.changeTitle(title);
+        if (maxAttempts != null) {
+            quiz.changeMaxAttempts(maxAttempts);
+        }
+        return quiz;
+    }
+
+    private Quiz requireQuiz(Long quizId) {
+        Content content = contentRepository.findById(quizId)
+            .orElseThrow(() -> new NoSuchElementException("Quiz not found"));
+        if (!(Hibernate.unproxy(content) instanceof Quiz quiz)) {
+            throw new NoSuchElementException("Quiz not found");
+        }
+        return quiz;
     }
 
     @Transactional

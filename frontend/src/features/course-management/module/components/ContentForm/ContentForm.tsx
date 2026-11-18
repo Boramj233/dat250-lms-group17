@@ -7,6 +7,7 @@ import { isSubmittableType } from '@domain/content/contentTypes'
 import type { Content, ContentFields, ContentType } from '@domain/content/types'
 import { checkContentVisibleFrom } from '@domain/content/visibility'
 import type { CourseModule } from '@domain/modules/types'
+import type { QuizAnswerKey } from '@domain/quizzes/types'
 import VisibleFromField from '../VisibleFromField'
 import { QuizFields, StarterFields, SubmissionFields } from './ContentFormFields'
 import { formProblem, initialValues, toFields } from './contentFormValues'
@@ -17,6 +18,8 @@ type ContentFormProps = {
   module: CourseModule
   /** The saved item when editing; leave out to create a new one. */
   initial?: Content
+  /** Editing a quiz: its correct answers, shown in the questions. */
+  answerKey?: QuizAnswerKey
   /** The submit button's text, e.g. "Create assignment" or "Save changes". */
   submitLabel: string
   pending: boolean
@@ -40,6 +43,7 @@ export default function ContentForm({
   type,
   module,
   initial,
+  answerKey,
   submitLabel,
   pending,
   error,
@@ -50,7 +54,7 @@ export default function ContentForm({
 }: ContentFormProps) {
   // `dirty`: changed since the form opened or was last sent; leaving (also Cancel) asks first.
   const { values, set, dirty, setDirty } = useFormValues(
-    () => initialValues(initial),
+    () => initialValues(initial, answerKey),
     () => onChange?.(),
   )
   const [problem, setProblem] = useState<string | null>(null)

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { NavLink, useLocation } from 'react-router'
+import { useHasAccess } from '@shared/auth/useAuth'
 import { paths } from '@shared/paths'
 import CoursesPanel, { COURSES_PANEL_ID } from '../CoursesPanel'
 import './Sidebar.css'
@@ -11,6 +12,7 @@ type SidebarProps = {
 
 export default function Sidebar({ isOpen }: SidebarProps) {
   const [coursesOpen, setCoursesOpen] = useState(false)
+  const isAdmin = useHasAccess('ADMIN')
   const sidebarRef = useRef<HTMLElement>(null)
   const coursesButtonRef = useRef<HTMLButtonElement>(null)
   // All courses, the course pages and Manage courses (with every page under it) are
@@ -70,6 +72,11 @@ export default function Sidebar({ isOpen }: SidebarProps) {
       <NavLink to={paths.profile} className={linkClass} onClick={closeCourses}>
         Profile
       </NavLink>
+      {isAdmin && (
+        <NavLink to={paths.adminUsers} className={linkClass} onClick={closeCourses}>
+          Users
+        </NavLink>
+      )}
 
       {coursesOpen && (
         <CoursesPanel

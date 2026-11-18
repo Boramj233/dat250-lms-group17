@@ -2,6 +2,9 @@ package no.hvl.dat250.lms.grade.service;
 
 import java.math.BigDecimal;
 import java.time.Clock;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Objects;
 import no.hvl.dat250.lms.enrollment.domain.Enrollment;
@@ -39,6 +42,16 @@ public class GradingService {
     @Transactional
     public GradeReviewResponse save(Long submissionId, Long teacherUserId,
                                     BigDecimal score, String feedback, Long version, Boolean passed) {
+        return save(submissionId, teacherUserId, score, feedback, version, passed, null);
+    }
+
+    /**
+     * Creates or revises the grade. {@code visibleFrom} schedules its release (null: wait for
+     * an explicit release); a time that has passed releases it at once.
+     */
+    @Transactional
+    public GradeReviewResponse save(Long submissionId, Long teacherUserId, BigDecimal score, String feedback,
+                                    Long version, Boolean passed, Instant visibleFrom) {
         Submission submission = submissions.lockTeacherSubmission(submissionId, teacherUserId);
         requireLatest(submission);
         Enrollment teacher = teacher(submission, teacherUserId);
@@ -56,7 +69,57 @@ public class GradingService {
             grade.revise(score, feedback, teacher, clock.instant().truncatedTo(java.time.temporal.ChronoUnit.MICROS));
         }
         grade.decidePassed(passed);
+        grade.scheduleRelease(visibleFrom);
+        Instant now = clock.instant().truncatedTo(ChronoUnit.MICROS);
+        if (grade.isReleaseDue(now)) {
+            grade.release(teacher, now);
+        }
         return GradeReviewResponse.from(grades.saveAndFlush(grade));
+    }
+
+    /**
+     * Releases every saved, unreleased grade of the latest submissions for the content (an
+     * active teacher of its course only). Grades without a Pass/Fail decision are left as
+     * they are and counted as undecided.
+     */
+    @Transactional
+    public ReleaseAllGradesResponse releaseAll(Long contentId, Long teacherUserId) {
+        List<Submission> latest = submissions.latestForTeacher(contentId, teacherUserId);
+        Instant now = clock.instant().truncatedTo(ChronoUnit.MICROS);
+        int released = 0;
+        int undecided = 0;
+        Enrollment teacher = null;
+        for (Submission listed : latest) {
+            Grade grade = grades.findBySubmission_Id(listed.getId()).orElse(null);
+            if (grade == null || grade.getReleasedAt() != null) continue;
+            if (grade.getPassed() == null) {
+                undecided++;
+                continue;
+            }
+            // Locked like a single release, so a concurrent resubmission is not missed.
+            Submission submission = submissions.lockTeacherSubmission(listed.getId(), teacherUserId);
+            if (!submissions.isLatestSubmission(submission)) continue;
+            if (teacher == null) teacher = teacher(submission, teacherUserId);
+            grade.release(teacher, now);
+            released++;
+        }
+        grades.flush();
+        return new ReleaseAllGradesResponse(released, undecided);
+    }
+
+    /**
+     * Releases the grades whose scheduled time has come, as the teacher who saved them.
+     * Run by GradeReleaseScheduler; returns how many were released.
+     */
+    @Transactional
+    public int releaseDue() {
+        Instant now = clock.instant().truncatedTo(ChronoUnit.MICROS);
+        List<Grade> due = grades.findDueReleases(now);
+        for (Grade grade : due) {
+            grade.release(grade.getGradedBy(), now);
+        }
+        grades.flush();
+        return due.size();
     }
 
     @Transactional

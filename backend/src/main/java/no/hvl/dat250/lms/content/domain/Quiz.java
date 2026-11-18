@@ -47,5 +47,13 @@ public class Quiz extends Content {
         return maxAttempts;
     }
 
+    /** Attempts made before stay; lowering it only stops new attempts beyond the limit. */
+    public void changeMaxAttempts(int maxAttempts) {
+        if (maxAttempts < 1) {
+            throw new IllegalArgumentException("Max attempts must be at least 1");
+        }
+        this.maxAttempts = maxAttempts;
+    }
+
 
 }

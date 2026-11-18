@@ -95,11 +95,9 @@ function StudentSubmission({ content, deadline, now }: StudentSubmissionProps) {
   const grade = useMyReleasedGrade(latest?.id)
   const [writing, setWriting] = useState(false)
   const closed = deadline !== null && deadline < now && !content.allowLateSubmission
-  const isGroupAssignment = content.type === 'ASSIGNMENT' && content.groupAssignment === true
-  // A group assignment is handed in for the user's group in the course, if they have one.
-  const myGroup = isGroupAssignment
-    ? people.groups?.find(group => group.memberIds.some(id => String(id) === String(user.userId)))
-    : undefined
+  // A member of a group in the course may hand in for the group (the backend allows it on
+  // every assignment and coding exercise) or only for themselves.
+  const myGroup = people.groups?.find(group => group.memberIds.some(id => String(id) === String(user.userId)))
 
   return (
     <DetailLayout
@@ -157,16 +155,10 @@ function StudentSubmission({ content, deadline, now }: StudentSubmissionProps) {
     >
       <Task content={content} />
       <Card id="submission-title" title="Your submission">
-        {isGroupAssignment && (
+        {myGroup && (
           <p className="text-meta submittable-note">
-            {myGroup ? (
-              <>
-                Group assignment: you hand in for <strong>{people.groupLabel(myGroup.id)}</strong>, and it counts for
-                everyone in it.
-              </>
-            ) : (
-              'Group assignment: you are not in a group in this course, so you hand in for yourself.'
-            )}
+            You are in <strong>{people.groupLabel(myGroup.id)}</strong>. When you hand in, you choose whether it is for
+            the group (everyone in it sees it and gets the grade) or only for you.
           </p>
         )}
         {history.isPending && <p role="status">Loading your submissions…</p>}
@@ -175,7 +167,8 @@ function StudentSubmission({ content, deadline, now }: StudentSubmissionProps) {
         {writing ? (
           <SubmissionForm
             content={content}
-            groupId={myGroup?.id}
+            group={myGroup && { id: myGroup.id, label: people.groupLabel(myGroup.id) }}
+            forGroupAtFirst={latest !== undefined && latest.groupId !== null}
             onDone={() => setWriting(false)}
             onCancel={() => setWriting(false)}
           />

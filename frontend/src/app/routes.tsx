@@ -35,6 +35,7 @@ import CourseModulesPage from '@features/course-view/pages/CourseModulesPage'
 import CoursePeoplePage from '@features/course-view/pages/CoursePeoplePage'
 import CourseFilesPage from '@features/course-view/pages/CourseFilesPage'
 import ProfilePage from '@features/profile/pages/ProfilePage'
+import AdminUsersPage from '@features/admin/pages/AdminUsersPage'
 import { paths } from '@shared/paths'
 
 export default function AppRoutes() {
@@ -96,6 +97,11 @@ export default function AppRoutes() {
           </Route>
         </Route>
         <Route path={paths.profile} element={<ProfilePage />} />
+
+        {/* Only administrators; others get the not-found page. */}
+        <Route element={<RequireAccess level="ADMIN" fallback={<NotFoundPage />} />}>
+          <Route path={paths.adminUsers} element={<AdminUsersPage />} />
+        </Route>
 
         {/* Only course managers (and admins); others get the not-found page. */}
         <Route element={<RequireAccess level="COURSE_MANAGER" fallback={<NotFoundPage />} />}>

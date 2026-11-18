@@ -15,22 +15,22 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/submissions/{submissionId}/grade")
+@RequestMapping("/api")
 public class GradeController {
     private final GradingService gradingService;
 
     public GradeController(GradingService gradingService) { this.gradingService = gradingService; }
 
-    @PutMapping
+    @PutMapping("/submissions/{submissionId}/grade")
     public ResponseEntity<GradeReviewResponse> save(
             @PathVariable Long submissionId,
             @Valid @RequestBody SaveGradeRequest request,
             @AuthenticationPrincipal AuthenticatedUser currentUser) {
         return response(gradingService.save(submissionId, currentUser.userId(),
-            request.score(), request.feedback(), request.version(), request.passed()));
+            request.score(), request.feedback(), request.version(), request.passed(), request.visibleFrom()));
     }
 
-    @PostMapping("/release")
+    @PostMapping("/submissions/{submissionId}/grade/release")
     public ResponseEntity<GradeReviewResponse> release(
             @PathVariable Long submissionId,
             @Valid @RequestBody ReleaseGradeRequest request,
@@ -38,18 +38,29 @@ public class GradeController {
         return response(gradingService.release(submissionId, currentUser.userId(), request.version()));
     }
 
-    @GetMapping("/review")
+    @GetMapping("/submissions/{submissionId}/grade/review")
     public ResponseEntity<GradeReviewResponse> review(
             @PathVariable Long submissionId,
             @AuthenticationPrincipal AuthenticatedUser currentUser) {
         return response(gradingService.review(submissionId, currentUser.userId()));
     }
 
-    @GetMapping
+    @GetMapping("/submissions/{submissionId}/grade")
     public ResponseEntity<ReleasedGradeResponse> ownReleased(
             @PathVariable Long submissionId,
             @AuthenticationPrincipal AuthenticatedUser currentUser) {
         return response(gradingService.ownReleased(submissionId, currentUser.userId()));
+    }
+
+    /**
+     * Releases every saved grade of the content's latest submissions that has a Pass/Fail
+     * decision; the others are counted as undecided. Active teachers of the course only.
+     */
+    @PostMapping("/contents/{contentId}/grades/release")
+    public ResponseEntity<ReleaseAllGradesResponse> releaseAll(
+            @PathVariable Long contentId,
+            @AuthenticationPrincipal AuthenticatedUser currentUser) {
+        return response(gradingService.releaseAll(contentId, currentUser.userId()));
     }
 
     private <T> ResponseEntity<T> response(T body) {

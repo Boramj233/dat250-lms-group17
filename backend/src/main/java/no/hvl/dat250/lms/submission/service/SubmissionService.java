@@ -26,6 +26,7 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -382,6 +383,17 @@ public class SubmissionService {
         return submissionRepository.findLatestForReview(
             contentId, PageRequest.of(page, size))
             .map(SubmissionReviewResponse::from);
+    }
+
+    /**
+     * The latest submission per student or group for gradable content, for an active
+     * teacher of its course (403 otherwise). Used to publish all grades at once.
+     */
+    @Transactional(readOnly = true)
+    public List<Submission> latestForTeacher(Long contentId, Long teacherUserId) {
+        Content content = contentService.requireContent(contentId);
+        requireTeacherGradableContent(content, teacherUserId);
+        return submissionRepository.findLatestForReview(contentId, Pageable.unpaged()).getContent();
     }
 
     @Transactional(readOnly = true)

@@ -12,12 +12,7 @@ import type { CreateQuizQuestionRequest } from '../src/domain/content/questionRe
 import type { Content, ContentType } from '../src/domain/content/types'
 import type { EnrolledCourse } from '../src/domain/courses/types'
 import type { UpcomingDeadline } from '../src/domain/deadlines/types'
-import {
-  checkContentVisibleFrom,
-  checkModuleStartAgainstContent,
-  isNotYetVisible,
-  isPublished,
-} from '../src/domain/content/visibility'
+import { checkContentVisibleFrom, isNotYetVisible } from '../src/domain/content/visibility'
 import { canRequire, checkAvailabilityDates, isAccessible } from '../src/domain/modules/prerequisites'
 import {
   completions,
@@ -72,6 +67,43 @@ function isTeacher(user: MockUser, courseId: string | number) {
   )
 }
 
+/** An ISO instant as the backend's LocalDateTime (local time, no offset), or null. */
+function localDateTime(iso: string | null | undefined): string | null {
+  if (!iso) return null
+  const date = new Date(iso)
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return (
+    `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}` +
+    `T${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`
+  )
+}
+
+/** A LocalDateTime from a request as an ISO instant, or null. */
+function fromLocalDateTime(value: string | null | undefined): string | null {
+  return value ? new Date(value).toISOString() : null
+}
+
+/** The backend's ModuleResponse. */
+function moduleResponse(module: (typeof modules)[number]) {
+  return {
+    id: module.id,
+    courseId: module.courseId,
+    title: module.title,
+    position: module.position,
+    dependencyIds: module.prerequisiteModuleIds ?? [],
+    availableFrom: localDateTime(module.availableFrom),
+    availableToAllFrom: localDateTime(module.openToAllFrom),
+  }
+}
+
+/** The module in the course for a teacher of it, or the answer to send instead. */
+function teacherModule(user: MockUser, params: Record<string, string>) {
+  const module = modules.find(m => String(m.id) === params.moduleId && String(m.courseId) === params.courseId)
+  if (!module) return notFound()
+  if (!isTeacher(user, params.courseId)) return forbidden()
+  return module
+}
+
 /** An active student of the course (the backend's requireActiveStudent). */
 function isStudent(user: MockUser, courseId: string | number) {
   return enrollments.some(
@@ -110,7 +142,7 @@ function enrollmentResponse(enrollment: (typeof enrollments)[number]) {
 const badRequest = (error: string): MockResult => ({ status: 400, body: { error } })
 const nextId = (items: { id: number | string }[]) => Math.max(0, ...items.map(item => Number(item.id))) + 1
 
-/** The submission is the user's own, or their group's (proposed group assignments). */
+/** The submission is the user's own, or their group's (they were a member when it was handed in). */
 function isOwnSubmission(user: MockUser, submission: (typeof submissions)[number]) {
   if (submission.userId === user.userId) return true
   const group = groups.find(g => g.id === submission.groupId)
@@ -118,13 +150,6 @@ function isOwnSubmission(user: MockUser, submission: (typeof submissions)[number
 }
 
 /** The members' names of a group (proposed in GroupDTO). */
-function groupMembers(group: (typeof groups)[number]) {
-  return group.memberIds.flatMap(userId => {
-    const member = users.find(u => u.userId === userId)
-    return member ? [{ userId, firstName: member.firstName, lastName: member.lastName }] : []
-  })
-}
-
 type MockSubmission = (typeof submissions)[number]
 
 /** The mock has no enrollment ids; use the position in the enrollments list. */
@@ -207,7 +232,7 @@ function teacherSubmission(user: MockUser, submissionId: string): MockSubmission
   if (!isTeacher(user, content.courseId)) return forbidden()
   return submission
 }
-const isResult = (value: MockSubmission | MockResult): value is MockResult => 'status' in value
+const isResult = <T extends object>(value: T | MockResult): value is MockResult => 'status' in value
 
 /**
  * Like SubmissionService: an assignment or coding exercise the user may hand in to,
@@ -238,7 +263,7 @@ function publishGrade(s: MockSubmission, at: string) {
 }
 
 /**
- * Proposed visible dates: a saved grade whose own visibleFrom has passed is published
+ * Visible dates, like the backend's GradeReleaseScheduler: a saved grade whose own visibleFrom has passed is published
  * (at that time). Run before every request, like a scheduled job.
  */
 function applyVisibleDates(now = Date.now()) {
@@ -293,6 +318,7 @@ function detailResponse(content: Content & { courseId: number }, forTeacher = fa
     title: content.title,
     position: content.position,
     visibleFrom: content.visibleFrom ?? null,
+    visibleUntil: content.visibleUntil ?? null,
   }
   switch (content.type) {
     case 'STATIC_PAGE':
@@ -303,8 +329,6 @@ function detailResponse(content: Content & { courseId: number }, forTeacher = fa
         courseId: content.courseId,
         maxAttempts: content.maxAttempts,
         passingPercentage: content.passingPercentage,
-        description: content.description ?? null,
-        deadline: content.deadline ?? null,
         questions: quizQuestionsResponse(content.id, forTeacher),
       }
     case 'ASSIGNMENT':
@@ -314,8 +338,6 @@ function detailResponse(content: Content & { courseId: number }, forTeacher = fa
         deadline: content.deadline,
         allowLateSubmission: content.allowLateSubmission,
         mandatoryForExam: content.mandatoryForExam,
-        groupAssignment: content.groupAssignment ?? false,
-        acceptedFileTypes: content.acceptedFileTypes ?? [],
       }
     case 'CODING_EXERCISE':
       return {
@@ -330,33 +352,17 @@ function detailResponse(content: Content & { courseId: number }, forTeacher = fa
 }
 
 /**
- * Students see content whose visible date (its own, or its module's
- * start date) has passed. Proposed, like the backend should.
+ * Students see content whose visible date (its own, or its module's start date) has
+ * passed, and whose `visibleUntil` (if any) has not.
  */
-function visibleToStudents(content: { visibleFrom?: string | null; moduleId: number | string }) {
+function visibleToStudents(content: {
+  visibleFrom?: string | null
+  visibleUntil?: string | null
+  moduleId: number | string
+}) {
+  if (content.visibleUntil && Date.parse(content.visibleUntil) <= Date.now()) return false
   const module = modules.find(m => String(m.id) === String(content.moduleId))
   return !(module && isNotYetVisible(content, module, Date.now()))
-}
-
-/** Published: students can see it. After that only position and required may change. */
-function publishedContent(content: { visibleFrom?: string | null; moduleId: number | string }) {
-  const module = modules.find(m => String(m.id) === String(content.moduleId))
-  return module ? isPublished(content, module, Date.now()) : true
-}
-
-/** The fields each type may change with PATCH (proposed), besides title and visibleFrom. */
-const EDITABLE_FIELDS: Record<ContentType, string[]> = {
-  STATIC_PAGE: ['body'],
-  ASSIGNMENT: [
-    'instructions',
-    'deadline',
-    'allowLateSubmission',
-    // mandatoryForExam has its own endpoint: PATCH /api/assignments/{id}/exam-requirement.
-    'groupAssignment',
-    'acceptedFileTypes',
-  ],
-  CODING_EXERCISE: ['instructions', 'deadline', 'allowLateSubmission', 'starterRepositoryUrl', 'starterCode'],
-  QUIZ: ['maxAttempts', 'passingPercentage', 'description', 'deadline'],
 }
 
 /** Stores a valid CreateQuizQuestionRequest for a quiz, with new ids for it, its options and items. */
@@ -383,11 +389,230 @@ function contentDetail(type: ContentType): MockHandler['handle'] {
   }
 }
 
+/** The quiz with this id, or the answer to send instead. */
+function quizFor(params: Record<string, string>) {
+  const quiz = contents.find(c => String(c.id) === params.quizId && c.type === 'QUIZ')
+  return quiz && quiz.type === 'QUIZ' ? quiz : notFound()
+}
+
+/** The attempt without the stored user id (QuizAttemptResponse, plus answers when kept). */
+function attemptResponse(attempt: (typeof quizAttempts)[number], withAnswers: boolean) {
+  const { userId: _userId, answers, ...response } = attempt
+  return withAnswers ? { ...response, answers } : response
+}
+
+/** QuizAnswerKeyResponse.QuestionKeyResponse for one stored question. */
+function questionKey(question: (typeof quizQuestions)[number]) {
+  return {
+    question: questionResponse(question, false),
+    hint: question.hint,
+    correctOptionIds: question.options
+      .filter(o => o.correct)
+      .map(o => o.id)
+      .sort((a, b) => a - b),
+    acceptedAnswers: [...(question.acceptedAnswers ?? [])].sort(),
+    correctOrder: question.correctOrder ?? [],
+    correctMatches: [...(question.correctMatches ?? [])].sort((a, b) => a.leftItemId.localeCompare(b.leftItemId)),
+  }
+}
+
+const ACCESS_LEVELS: readonly MockUser['access'][] = ['STANDARD', 'COURSE_MANAGER', 'ADMIN']
+const EMAIL = /^[^@\s]+@[^@\s]+\.[^@\s]+$/
+
+/** Why the backend would refuse these profile fields (400), or null. */
+function profileProblem(fields: { firstName?: unknown; lastName?: unknown; email?: unknown }, withEmail: boolean) {
+  const text = (value: unknown) => typeof value === 'string' && value.trim() !== '' && value.length <= 255
+  if (!text(fields.firstName) || !text(fields.lastName)) return 'Invalid profile details'
+  if (withEmail && !(text(fields.email) && EMAIL.test(String(fields.email).trim()))) return 'Invalid profile details'
+  return null
+}
+
+/** Splits one CSV line with "…" quoting, like the backend's UserCsvReader. */
+function csvFields(line: string, delimiter: string): string[] {
+  const fields: string[] = []
+  let field = ''
+  let quoted = false
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i]
+    if (quoted) {
+      if (char === '"' && line[i + 1] === '"') {
+        field += '"'
+        i++
+      } else if (char === '"') quoted = false
+      else field += char
+    } else if (char === '"') quoted = true
+    else if (char === delimiter) {
+      fields.push(field)
+      field = ''
+    } else field += char
+  }
+  fields.push(field)
+  return fields
+}
+
+/** Admin-only routes answer 403 to everyone else, like @IsAdmin. */
+const adminOnly = (user: MockUser) => (user.access === 'ADMIN' ? null : forbidden())
+
 const routes: MockHandler[] = [
   {
     method: 'GET',
     path: '/api/users/me',
     handle: ({ user }) => ok(user),
+  },
+  {
+    // Backend (exists): UpdateUserRequest → UserResponse; only the names change.
+    method: 'PUT',
+    path: '/api/users/me',
+    handle: ({ user, body }) => {
+      const request = body as { firstName?: string; lastName?: string }
+      const problem = profileProblem(request, false)
+      if (problem) return badRequest(problem)
+      user.firstName = request.firstName!.trim()
+      user.lastName = request.lastName!.trim()
+      return ok(user)
+    },
+  },
+  {
+    // Backend (exists): UserPageResponse, sorted by id, filtered by name or email.
+    method: 'GET',
+    path: '/api/admin/users',
+    handle: ({ user, query }) => {
+      const denied = adminOnly(user)
+      if (denied) return denied
+      const text = (query.get('search') ?? '').trim().toLowerCase()
+      const page = Number(query.get('page') ?? 0)
+      const size = Number(query.get('size') ?? 20)
+      if (!(page >= 0) || !(size >= 1 && size <= 100)) return badRequest('Invalid request parameters')
+      const found = users
+        .filter(u => `${u.firstName} ${u.lastName} ${u.email}`.toLowerCase().includes(text))
+        .sort((a, b) => a.userId - b.userId)
+      return ok({
+        users: found.slice(page * size, (page + 1) * size),
+        page,
+        size,
+        totalElements: found.length,
+        totalPages: Math.ceil(found.length / size),
+      })
+    },
+  },
+  {
+    // Backend (exists): CreateUserRequest → 201 UserResponse; 409 for a known email.
+    method: 'POST',
+    path: '/api/admin/users',
+    handle: ({ user, body }) => {
+      const denied = adminOnly(user)
+      if (denied) return denied
+      const request = body as { firstName?: string; lastName?: string; email?: string }
+      const problem = profileProblem(request, true)
+      if (problem) return badRequest(problem)
+      const email = request.email!.trim().toLowerCase()
+      if (users.some(u => u.email.toLowerCase() === email)) {
+        return conflict('Profile data conflicts with an existing user')
+      }
+      const added: MockUser = {
+        userId: Math.max(0, ...users.map(u => u.userId)) + 1,
+        email,
+        firstName: request.firstName!.trim(),
+        lastName: request.lastName!.trim(),
+        access: 'STANDARD',
+      }
+      users.push(added)
+      return created(added)
+    },
+  },
+  {
+    // Backend (exists): multipart "file" (CSV) → UserImportResponse with a row per line.
+    method: 'POST',
+    path: '/api/admin/users/import',
+    handle: ({ user, body }) => {
+      const denied = adminOnly(user)
+      if (denied) return denied
+      const file = (body as MockMultipart | undefined)?.files.find(f => f.field === 'file')
+      if (!file) return badRequest('A file part named file is required')
+      const lines = new TextDecoder()
+        .decode(file.content)
+        .replace(/^﻿/, '')
+        .split(/\r\n|\n|\r/)
+      const header = lines[0] ?? ''
+      if (!header.trim()) return badRequest('The file is empty; expected a header row: email,firstName,lastName,access')
+      const delimiter = header.includes(';') && !header.includes(',') ? ';' : ','
+      const columns = csvFields(header, delimiter).map(name => name.trim().toLowerCase())
+      for (const required of ['email', 'firstname', 'lastname']) {
+        if (!columns.includes(required)) {
+          return badRequest(`Missing column '${required}' in the header; expected: email,firstName,lastName,access`)
+        }
+      }
+      const seen = new Set<string>()
+      const rows: { line: number; email: string; status: string; userId: number | null; errors: string[] }[] = []
+      for (const [index, line] of lines.entries()) {
+        if (index === 0 || !line.trim()) continue
+        const fields = csvFields(line, delimiter)
+        const value = (column: string) => (fields[columns.indexOf(column)] ?? '').trim()
+        const email = value('email').toLowerCase()
+        const access = value('access').toUpperCase() || 'STANDARD'
+        const row = { line: index + 1, email, status: 'CREATED', userId: null as number | null, errors: [] as string[] }
+        const existing = users.find(u => u.email.toLowerCase() === email)
+        if (email && seen.has(email)) row.status = 'DUPLICATE_IN_FILE'
+        else if (existing) {
+          row.status = 'ALREADY_EXISTS'
+          row.userId = existing.userId
+        } else {
+          const problem = profileProblem({ firstName: value('firstname'), lastName: value('lastname'), email }, true)
+          if (problem) row.errors.push(problem)
+          if (!(ACCESS_LEVELS as readonly string[]).includes(access)) row.errors.push(`Unknown access: ${access}`)
+          if (row.errors.length > 0) row.status = 'INVALID'
+          else {
+            const added: MockUser = {
+              userId: Math.max(0, ...users.map(u => u.userId)) + 1,
+              email,
+              firstName: value('firstname'),
+              lastName: value('lastname'),
+              access: access as MockUser['access'],
+            }
+            users.push(added)
+            row.userId = added.userId
+          }
+        }
+        if (email) seen.add(email)
+        rows.push(row)
+      }
+      const count = (status: string) => rows.filter(r => r.status === status).length
+      return ok({
+        created: count('CREATED'),
+        skipped: count('ALREADY_EXISTS'),
+        failed: count('INVALID') + count('DUPLICATE_IN_FILE'),
+        rows,
+      })
+    },
+  },
+  {
+    // Backend (exists): UserResponse.
+    method: 'GET',
+    path: '/api/admin/users/:userId',
+    handle: ({ user, params }) => {
+      const denied = adminOnly(user)
+      if (denied) return denied
+      const found = users.find(u => String(u.userId) === params.userId)
+      return found ? ok(found) : notFound()
+    },
+  },
+  {
+    // Backend (exists): UpdateAccessRequest → UserResponse; 403 when an admin demotes themselves.
+    method: 'PATCH',
+    path: '/api/admin/users/:userId/access',
+    handle: ({ user, params, body }) => {
+      const denied = adminOnly(user)
+      if (denied) return denied
+      const { access } = body as { access?: MockUser['access'] }
+      if (!access || !ACCESS_LEVELS.includes(access)) return badRequest('Invalid request body')
+      if (String(user.userId) === params.userId && access !== 'ADMIN') {
+        return { status: 403, body: { detail: 'You cannot remove your own ADMIN access' } }
+      }
+      const found = users.find(u => String(u.userId) === params.userId)
+      if (!found) return notFound()
+      found.access = access
+      return ok(found)
+    },
   },
   {
     method: 'GET',
@@ -443,8 +668,8 @@ const routes: MockHandler[] = [
     },
   },
   {
-    // ModuleResponse: id, courseId, title, position, plus the proposed
-    // prerequisiteModuleIds (data/modules/README.md).
+    // ModuleResponse: id, courseId, title, position, dependencyIds, availableFrom,
+    // availableToAllFrom (LocalDateTime).
     method: 'GET',
     path: '/api/courses/:courseId/modules',
     handle: ({ user, params }) => {
@@ -454,16 +679,18 @@ const routes: MockHandler[] = [
         modules
           .filter(m => String(m.courseId) === params.courseId)
           .sort((a, b) => a.position - b.position)
-          .map(({ id, courseId, title, position, prerequisiteModuleIds, availableFrom, openToAllFrom }) => ({
-            id,
-            courseId,
-            title,
-            position,
-            prerequisiteModuleIds: prerequisiteModuleIds ?? [],
-            availableFrom: availableFrom ?? null,
-            openToAllFrom: openToAllFrom ?? null,
-          })),
+          .map(moduleResponse),
       )
+    },
+  },
+  {
+    method: 'GET',
+    path: '/api/courses/:courseId/modules/:moduleId',
+    handle: ({ user, params }) => {
+      const module = modules.find(m => String(m.id) === params.moduleId && String(m.courseId) === params.courseId)
+      if (!module) return notFound()
+      if (!canReadCourse(user, params.courseId)) return forbidden()
+      return ok(moduleResponse(module))
     },
   },
   {
@@ -734,7 +961,7 @@ const routes: MockHandler[] = [
     },
   },
   {
-    // GroupDTO[] (backend), with the proposed name and members.
+    // GroupDTO[] (backend): { id, groupNumber, memberIds }.
     method: 'GET',
     path: '/api/courses/:courseId/groups',
     handle: ({ user, params }) => {
@@ -742,13 +969,7 @@ const routes: MockHandler[] = [
       return ok(
         groups
           .filter(g => String(g.courseId) === params.courseId)
-          .map(group => ({
-            id: group.id,
-            groupNumber: group.groupNumber,
-            memberIds: group.memberIds,
-            name: group.name ?? null,
-            members: groupMembers(group),
-          })),
+          .map(group => ({ id: group.id, groupNumber: group.groupNumber, memberIds: group.memberIds })),
       )
     },
   },
@@ -766,7 +987,7 @@ const routes: MockHandler[] = [
       }
       const group = { id: nextId(groups), courseId: Number(params.courseId), groupNumber, memberIds: [] as number[] }
       groups.push(group)
-      return created({ id: group.id, groupNumber, memberIds: [], name: null, members: [] })
+      return created({ id: group.id, groupNumber, memberIds: [] })
     },
   },
   {
@@ -783,13 +1004,12 @@ const routes: MockHandler[] = [
     },
   },
   {
-    // Body: the bare user id → GroupDTO. Proposed: a student may add themselves (join);
-    // the backend lets only teachers do this today. Only active students; one group per course.
+    // Teachers (backend): the bare user id → GroupDTO. Only active students; one group per course.
     method: 'POST',
     path: '/api/courses/:courseId/groups/:groupId/members',
     handle: ({ user, params, body }) => {
       const userId = Number(body)
-      if (!isTeacher(user, params.courseId) && userId !== user.userId) return forbidden()
+      if (!isTeacher(user, params.courseId)) return forbidden()
       const group = groups.find(g => String(g.id) === params.groupId && String(g.courseId) === params.courseId)
       if (!group) return notFound()
       if (
@@ -802,22 +1022,16 @@ const routes: MockHandler[] = [
         return conflict('User already belongs to another group in this course')
       }
       group.memberIds.push(userId)
-      return ok({
-        id: group.id,
-        groupNumber: group.groupNumber,
-        memberIds: group.memberIds,
-        name: group.name ?? null,
-        members: groupMembers(group),
-      })
+      return ok({ id: group.id, groupNumber: group.groupNumber, memberIds: group.memberIds })
     },
   },
   {
-    // Proposed: a student may remove themselves (leave); today only teachers may.
+    // Teachers (backend): removes a member.
     method: 'DELETE',
     path: '/api/courses/:courseId/groups/:groupId/members/:userId',
     handle: ({ user, params }) => {
       const userId = Number(params.userId)
-      if (!isTeacher(user, params.courseId) && userId !== user.userId) return forbidden()
+      if (!isTeacher(user, params.courseId)) return forbidden()
       const group = groups.find(g => String(g.id) === params.groupId && String(g.courseId) === params.courseId)
       if (!group) return notFound()
       if (!group.memberIds.includes(userId)) return conflict('User is not a member of this group')
@@ -887,86 +1101,120 @@ const routes: MockHandler[] = [
         prerequisiteModuleIds: [],
       }
       modules.push(module)
-      return created(module)
+      return created(moduleResponse(module))
     },
   },
   {
-    // Proposed: { moduleIds } – every module of the course once, first to last. Sets the
-    // positions 0, 1, 2, … and answers with the modules in that order.
+    // Backend (exists): ReorderModulesRequest { moduleIds } -> ModuleResponse[] in the new
+    // order. Every module of the course exactly once (400 otherwise); teachers of the course.
+    // Before '/modules/:moduleId', which would also match '/modules/order'.
     method: 'PUT',
     path: '/api/courses/:courseId/modules/order',
     handle: ({ user, params, body }) => {
       if (!isTeacher(user, params.courseId)) return forbidden()
-      const ids = ((body as { moduleIds?: (number | string)[] } | undefined)?.moduleIds ?? []).map(Number)
-      const courseModules = modules.filter(m => String(m.courseId) === params.courseId)
-      const sameSet =
-        ids.length === courseModules.length &&
-        new Set(ids).size === ids.length &&
-        courseModules.every(m => ids.includes(Number(m.id)))
-      if (!sameSet) return badRequest('moduleIds must list every module of the course exactly once')
-      ids.forEach((id, position) => {
-        courseModules.find(m => Number(m.id) === id)!.position = position
-      })
-      return ok(
-        [...courseModules]
-          .sort((a, b) => a.position - b.position)
-          .map(({ id, courseId, title, position, prerequisiteModuleIds, availableFrom, openToAllFrom }) => ({
-            id,
-            courseId,
-            title,
-            position,
-            prerequisiteModuleIds: prerequisiteModuleIds ?? [],
-            availableFrom: availableFrom ?? null,
-            openToAllFrom: openToAllFrom ?? null,
-          })),
-      )
+      const { moduleIds } = (body ?? {}) as { moduleIds?: (number | string)[] }
+      const inCourse = modules.filter(m => String(m.courseId) === params.courseId)
+      const ids = (moduleIds ?? []).map(String)
+      if (
+        !Array.isArray(moduleIds) ||
+        ids.length !== inCourse.length ||
+        new Set(ids).size !== ids.length ||
+        !inCourse.every(m => ids.includes(String(m.id)))
+      ) {
+        return badRequest('Order must contain every module of the course exactly once')
+      }
+      const ordered = ids.map(id => inCourse.find(m => String(m.id) === id)!)
+      ordered.forEach((module, position) => (module.position = position))
+      return ok(ordered.map(moduleResponse))
     },
   },
   {
-    // Proposed (data/modules/README.md): title, position and/or prerequisiteModuleIds.
-    // Prerequisites must be other modules in the same course, without cycles.
-    method: 'PATCH',
+    // UpdateModuleRequest { title, position } (both required) -> ModuleResponse.
+    method: 'PUT',
     path: '/api/courses/:courseId/modules/:moduleId',
     handle: ({ user, params, body }) => {
-      const module = modules.find(m => String(m.id) === params.moduleId && String(m.courseId) === params.courseId)
-      if (!module) return notFound()
-      if (!isTeacher(user, params.courseId)) return forbidden()
-      const changes = body as Partial<{
-        title: string
-        position: number
-        prerequisiteModuleIds: (string | number)[]
-        availableFrom: string | null
-        openToAllFrom: string | null
-      }>
-      if (changes.title !== undefined && !changes.title.trim()) return badRequest('Title is required')
-      const availableFrom = changes.availableFrom !== undefined ? changes.availableFrom : (module.availableFrom ?? null)
-      const openToAllFrom = changes.openToAllFrom !== undefined ? changes.openToAllFrom : (module.openToAllFrom ?? null)
-      const dateProblem =
-        checkAvailabilityDates(availableFrom, openToAllFrom) ??
-        checkModuleStartAgainstContent(
-          availableFrom,
-          contents.filter(c => c.moduleId === module.id),
-        )
+      const module = teacherModule(user, params)
+      if (isResult(module)) return module
+      const { title, position } = (body ?? {}) as { title?: string; position?: number }
+      if (!title?.trim() || typeof position !== 'number' || position < 0) {
+        return badRequest('Title and a position of 0 or more are required')
+      }
+      module.title = title
+      module.position = position
+      return ok(moduleResponse(module))
+    },
+  },
+  {
+    // UpdateModuleAvailabilityRequest { availableFrom, availableToAllFrom } (LocalDateTime;
+    // both are set, a missing one becomes null) -> ModuleResponse.
+    method: 'PUT',
+    path: '/api/courses/:courseId/modules/:moduleId/availability',
+    handle: ({ user, params, body }) => {
+      const module = teacherModule(user, params)
+      if (isResult(module)) return module
+      const request = (body ?? {}) as { availableFrom?: string | null; availableToAllFrom?: string | null }
+      const availableFrom = fromLocalDateTime(request.availableFrom)
+      const openToAllFrom = fromLocalDateTime(request.availableToAllFrom)
+      const dateProblem = checkAvailabilityDates(availableFrom, openToAllFrom)
       if (dateProblem) return badRequest(dateProblem)
       module.availableFrom = availableFrom
       module.openToAllFrom = openToAllFrom
-      if (changes.prerequisiteModuleIds !== undefined) {
-        const courseModules = modules.filter(m => m.courseId === module.courseId)
-        const ids = changes.prerequisiteModuleIds.map(Number)
-        if (!ids.every(id => courseModules.some(m => m.id === id)))
-          return badRequest('Prerequisites must be in the same course')
-        if (!ids.every(id => canRequire(courseModules, module.id, id)))
-          return badRequest('Prerequisites cannot form a cycle')
-        module.prerequisiteModuleIds = ids
+      return ok(moduleResponse(module))
+    },
+  },
+  {
+    // Removes the module and the other modules' dependencies on it (204). Like the
+    // backend, its content is not deleted; the mock refuses a module with content.
+    method: 'DELETE',
+    path: '/api/courses/:courseId/modules/:moduleId',
+    handle: ({ user, params }) => {
+      const module = teacherModule(user, params)
+      if (isResult(module)) return module
+      if (contents.some(c => c.moduleId === module.id)) return conflict('The module still has content')
+      for (const other of modules) {
+        other.prerequisiteModuleIds = (other.prerequisiteModuleIds ?? []).filter(id => id !== module.id)
       }
-      if (changes.title !== undefined) module.title = changes.title
-      if (changes.position !== undefined) module.position = changes.position
-      return ok({
-        ...module,
-        prerequisiteModuleIds: module.prerequisiteModuleIds ?? [],
-        availableFrom: module.availableFrom ?? null,
-        openToAllFrom: module.openToAllFrom ?? null,
-      })
+      modules.splice(modules.indexOf(module), 1)
+      return noContent()
+    },
+  },
+  {
+    // The ids of the modules this one requires.
+    method: 'GET',
+    path: '/api/courses/:courseId/modules/:moduleId/dependencies',
+    handle: ({ user, params }) => {
+      const module = modules.find(m => String(m.id) === params.moduleId && String(m.courseId) === params.courseId)
+      if (!module) return notFound()
+      if (!canReadCourse(user, params.courseId)) return forbidden()
+      return ok(module.prerequisiteModuleIds ?? [])
+    },
+  },
+  {
+    // Adds a prerequisite in the same course, without cycles -> ModuleResponse.
+    method: 'POST',
+    path: '/api/courses/:courseId/modules/:moduleId/dependencies/:requiredModuleId',
+    handle: ({ user, params }) => {
+      const module = teacherModule(user, params)
+      if (isResult(module)) return module
+      const courseModules = modules.filter(m => m.courseId === module.courseId)
+      const requiredId = Number(params.requiredModuleId)
+      if (!courseModules.some(m => m.id === requiredId)) return notFound()
+      if (!canRequire(courseModules, module.id, requiredId)) return badRequest('Prerequisites cannot form a cycle')
+      const ids = module.prerequisiteModuleIds ?? []
+      if (!ids.includes(requiredId)) module.prerequisiteModuleIds = [...ids, requiredId]
+      return ok(moduleResponse(module))
+    },
+  },
+  {
+    method: 'DELETE',
+    path: '/api/courses/:courseId/modules/:moduleId/dependencies/:requiredModuleId',
+    handle: ({ user, params }) => {
+      const module = teacherModule(user, params)
+      if (isResult(module)) return module
+      const requiredId = Number(params.requiredModuleId)
+      if (!modules.some(m => m.id === requiredId && m.courseId === module.courseId)) return notFound()
+      module.prerequisiteModuleIds = (module.prerequisiteModuleIds ?? []).filter(id => id !== requiredId)
+      return noContent()
     },
   },
   ...(
@@ -1010,23 +1258,6 @@ const routes: MockHandler[] = [
       return created(detailResponse(content))
     },
   })),
-  {
-    // Proposed (data/content/README.md): { moduleId, position } -> the moved content.
-    // The content may only move to another module in the same course.
-    method: 'PATCH',
-    path: '/api/contents/:contentId/move',
-    handle: ({ user, params, body }) => {
-      const content = contents.find(c => String(c.id) === params.contentId)
-      if (!content) return notFound()
-      if (!isTeacher(user, content.courseId)) return forbidden()
-      const { moduleId, position } = body as { moduleId: string | number; position: number }
-      const target = modules.find(m => String(m.id) === String(moduleId) && m.courseId === content.courseId)
-      if (!target) return badRequest('The module is not in this course')
-      content.moduleId = target.id
-      content.position = position
-      return ok(detailResponse(content))
-    },
-  },
   {
     // Backend (exists, ContentCompletionController): { requiredForModuleCompletion,
     // passingPercentage } -> 204. passingPercentage (1–100) only for quizzes; null keeps it.
@@ -1100,48 +1331,90 @@ const routes: MockHandler[] = [
       return noContent()
     },
   },
+  // Backend (exists): one update endpoint per type, each with its own fields (all
+  // required). PUT /api/contents/{id} is for pages only.
+  ...(
+    [
+      ['/api/contents/:contentId', 'STATIC_PAGE', ['title', 'body']],
+      ['/api/assignments/:contentId', 'ASSIGNMENT', ['title', 'instructions']],
+      [
+        '/api/coding-exercises/:contentId',
+        'CODING_EXERCISE',
+        ['title', 'instructions', 'starterRepositoryUrl', 'starterCode'],
+      ],
+      ['/api/assignments/:contentId/submission-settings', 'ASSIGNMENT', ['deadline', 'allowLateSubmission']],
+      ['/api/coding-exercises/:contentId/submission-settings', 'CODING_EXERCISE', ['deadline', 'allowLateSubmission']],
+    ] as const
+  ).map(([path, type, fields]): MockHandler => ({
+    method: 'PUT',
+    path,
+    handle: ({ user, params, body }) => {
+      const content = contents.find(c => String(c.id) === params.contentId && c.type === type)
+      if (!content) return notFound()
+      if (!isTeacher(user, content.courseId)) return forbidden()
+      const changes = (body ?? {}) as Record<string, unknown>
+      const required = fields.filter(f => !['starterCode', 'deadline'].includes(f))
+      if (required.some(f => changes[f] === undefined || changes[f] === null || changes[f] === '')) {
+        return badRequest(`Required: ${required.join(', ')}`)
+      }
+      for (const field of fields) (content as unknown as Record<string, unknown>)[field] = changes[field] ?? null
+      return ok(detailResponse(content, true))
+    },
+  })),
   {
-    // Proposed (src/domain/content/README.md): position at any time; every
-    // other field (title, visibleFrom and the type's own) only until the content is
-    // published: 409 after.
-    method: 'PATCH',
-    path: '/api/contents/:contentId',
+    // UpdateContentVisibilityRequest { visibleFrom, visibleUntil? }: a missing
+    // visibleUntil keeps the saved one -> ContentVisibilityResponse.
+    method: 'PUT',
+    path: '/api/contents/:contentId/visibility',
     handle: ({ user, params, body }) => {
       const content = contents.find(c => String(c.id) === params.contentId)
       if (!content) return notFound()
       if (!isTeacher(user, content.courseId)) return forbidden()
-      const changes = body as Partial<{
-        title: string
-        position: number
-        body: string
-        visibleFrom: string | null
-      }> &
-        Record<string, unknown>
-      const contentChanges = Object.keys(changes).filter(key => key !== 'position')
-      if (contentChanges.length > 0 && publishedContent(content)) return conflict('Published content cannot be changed')
-      if (changes.title !== undefined && !changes.title.trim()) return badRequest('Title is required')
-      const typeFields = EDITABLE_FIELDS[content.type].filter(key => key in changes && key !== 'body')
-      for (const key of typeFields) (content as unknown as Record<string, unknown>)[key] = changes[key]
-      if (changes.visibleFrom !== undefined) {
-        const module = modules.find(m => String(m.id) === String(content.moduleId))
-        const visibleProblem = checkContentVisibleFrom(changes.visibleFrom, module?.availableFrom)
-        if (visibleProblem) return badRequest(visibleProblem)
-        content.visibleFrom = changes.visibleFrom
+      const request = (body ?? {}) as { visibleFrom?: string | null; visibleUntil?: string | null }
+      const visibleUntil = 'visibleUntil' in request ? (request.visibleUntil ?? null) : (content.visibleUntil ?? null)
+      if (request.visibleFrom && visibleUntil && Date.parse(visibleUntil) <= Date.parse(request.visibleFrom)) {
+        return badRequest('visibleUntil must be after visibleFrom')
       }
-      if (changes.title !== undefined) content.title = changes.title
-      if (changes.position !== undefined) content.position = changes.position
-      if (changes.body !== undefined && content.type === 'STATIC_PAGE') content.body = changes.body
-      return ok(detailResponse(content))
+      content.visibleFrom = request.visibleFrom ?? null
+      content.visibleUntil = visibleUntil
+      return ok({ contentId: content.id, visibleFrom: content.visibleFrom, visibleUntil: content.visibleUntil })
     },
   },
   {
-    // Proposed (data/content/README.md).
+    // ReorderContentRequest { contentIds }: every item of the module once (204).
+    method: 'PUT',
+    path: '/api/courses/:courseId/modules/:moduleId/contents/order',
+    handle: ({ user, params, body }) => {
+      const module = teacherModule(user, params)
+      if (isResult(module)) return module
+      const ids = ((body as { contentIds?: (number | string)[] } | undefined)?.contentIds ?? []).map(Number)
+      const moduleContents = contents.filter(c => c.moduleId === module.id)
+      const sameSet =
+        ids.length === moduleContents.length &&
+        new Set(ids).size === ids.length &&
+        moduleContents.every(c => ids.includes(Number(c.id)))
+      if (!sameSet) return badRequest('Order must contain every Content in this module exactly once')
+      ids.forEach((id, position) => {
+        moduleContents.find(c => Number(c.id) === id)!.position = position
+      })
+      return noContent()
+    },
+  },
+  {
+    // Backend (exists): 409 when students have work on it (submissions, quiz attempts,
+    // pages marked as done); such content is never deleted.
     method: 'DELETE',
     path: '/api/contents/:contentId',
     handle: ({ user, params }) => {
       const index = contents.findIndex(c => String(c.id) === params.contentId)
       if (index < 0) return notFound()
-      if (!isTeacher(user, contents[index].courseId)) return forbidden()
+      const content = contents[index]
+      if (!isTeacher(user, content.courseId)) return forbidden()
+      const used =
+        submissions.some(s => String(s.contentId) === String(content.id)) ||
+        quizAttempts.some(a => String(a.quizId) === String(content.id)) ||
+        completions.some(c => String(c.contentId) === String(content.id))
+      if (used) return conflict('Content with learning records cannot be deleted')
       contents.splice(index, 1)
       return noContent()
     },
@@ -1155,7 +1428,6 @@ const routes: MockHandler[] = [
       const quiz = contents.find(c => String(c.id) === params.quizId && c.type === 'QUIZ')
       if (!quiz || quiz.type !== 'QUIZ') return notFound()
       if (!canReadCourse(user, quiz.courseId)) return forbidden()
-      if (quiz.deadline && Date.now() > Date.parse(quiz.deadline)) return badRequest('The deadline has passed')
       const used = quizAttempts.filter(a => a.quizId === Number(quiz.id) && a.userId === user.userId).length
       if (used >= quiz.maxAttempts) return { status: 409, body: { error: 'No attempts left' } }
       const { answers } = body as { answers?: AnswerRequest[] }
@@ -1198,7 +1470,61 @@ const routes: MockHandler[] = [
     },
   },
   {
-    // Proposed (src/domain/content/README.md): the caller's attempts at a quiz.
+    // Backend (exists): QuizAttemptCountResponse, the caller's used attempts.
+    method: 'GET',
+    path: '/api/quizzes/:quizId/attempts/me/count',
+    handle: ({ user, params }) => {
+      const quiz = quizFor(params)
+      if ('status' in quiz) return quiz
+      if (!canReadCourse(user, quiz.courseId)) return forbidden()
+      const used = quizAttempts.filter(a => a.quizId === Number(quiz.id) && a.userId === user.userId).length
+      return ok({ usedAttempts: used })
+    },
+  },
+  {
+    // Backend (exists): teachers of the course, one student's attempts (QuizAttemptResponse[]).
+    method: 'GET',
+    path: '/api/quizzes/:quizId/attempts/students/:studentUserId',
+    handle: ({ user, params }) => {
+      const quiz = quizFor(params)
+      if ('status' in quiz) return quiz
+      if (!isTeacher(user, quiz.courseId)) return forbidden()
+      return ok(
+        quizAttempts
+          .filter(a => a.quizId === Number(quiz.id) && String(a.userId) === params.studentUserId)
+          .map(a => attemptResponse(a, false)),
+      )
+    },
+  },
+  {
+    // Backend (exists): teachers of the course, any attempt with its answers (QuizAttemptDetailResponse).
+    method: 'GET',
+    path: '/api/quizzes/:quizId/attempts/:attemptId/review',
+    handle: ({ user, params }) => {
+      const quiz = quizFor(params)
+      if ('status' in quiz) return quiz
+      if (!isTeacher(user, quiz.courseId)) return forbidden()
+      const attempt = quizAttempts.find(a => String(a.id) === params.attemptId && a.quizId === Number(quiz.id))
+      return attempt ? ok(attemptResponse(attempt, true)) : notFound()
+    },
+  },
+  {
+    // Backend (exists): teachers of the course, the correct answers (QuizAnswerKeyResponse).
+    method: 'GET',
+    path: '/api/quizzes/:quizId/answer-key',
+    handle: ({ user, params }) => {
+      const quiz = quizFor(params)
+      if ('status' in quiz) return quiz
+      if (!isTeacher(user, quiz.courseId)) return forbidden()
+      const questions = quizQuestions
+        .filter(q => q.quizId === Number(quiz.id))
+        .sort((a, b) => a.position - b.position)
+        .map(questionKey)
+      return ok({ quizId: Number(quiz.id), questions })
+    },
+  },
+  {
+    // Backend (exists): the caller's attempts at a quiz.
     method: 'GET',
     path: '/api/quizzes/:quizId/attempts/me',
     handle: ({ user, params }) => {
@@ -1213,7 +1539,7 @@ const routes: MockHandler[] = [
     },
   },
   {
-    // Proposed: one of the caller's own attempts with its answers (QuizAttemptResponse + answers).
+    // Backend (exists): one of the caller's own attempts with its answers (QuizAttemptDetailResponse).
     method: 'GET',
     path: '/api/quizzes/:quizId/attempts/:attemptId',
     handle: ({ user, params }) => {
@@ -1224,6 +1550,47 @@ const routes: MockHandler[] = [
       if (!attempt || attempt.userId !== user.userId) return notFound()
       const { userId: _userId, ...response } = attempt
       return ok(response)
+    },
+  },
+  {
+    // Backend (exists): UpdateQuizRequest { title, maxAttempts? }; a missing maxAttempts keeps it.
+    method: 'PUT',
+    path: '/api/quizzes/:quizId',
+    handle: ({ user, params, body }) => {
+      const quiz = quizFor(params)
+      if ('status' in quiz) return quiz
+      if (!isTeacher(user, quiz.courseId)) return forbidden()
+      const { title, maxAttempts } = (body ?? {}) as { title?: string; maxAttempts?: number | null }
+      if (!title?.trim() || title.length > 255) return badRequest('Title is required')
+      if (maxAttempts !== undefined && maxAttempts !== null && !(Number.isInteger(maxAttempts) && maxAttempts >= 1)) {
+        return badRequest('Max attempts must be at least 1')
+      }
+      quiz.title = title
+      if (typeof maxAttempts === 'number') quiz.maxAttempts = maxAttempts
+      return ok(detailResponse(quiz, true))
+    },
+  },
+  {
+    // Backend (exists): ReplaceQuizQuestionsRequest { questions }: replaces every question;
+    // 409 once a student has made an attempt. Answers like GET /api/quizzes/{id}.
+    method: 'PUT',
+    path: '/api/quizzes/:quizId/questions',
+    handle: ({ user, params, body }) => {
+      const quiz = quizFor(params)
+      if ('status' in quiz) return quiz
+      if (!isTeacher(user, quiz.courseId)) return forbidden()
+      const { questions } = (body ?? {}) as { questions?: CreateQuizQuestionRequest[] }
+      if (!Array.isArray(questions) || questions.length > 100) return badRequest('Questions are required')
+      const problem = questions.map(questionRequestProblem).find(Boolean)
+      if (problem) return badRequest(problem)
+      if (quizAttempts.some(a => a.quizId === Number(quiz.id))) {
+        return conflict('Questions cannot be changed after a student has made an attempt')
+      }
+      for (let i = quizQuestions.length - 1; i >= 0; i--) {
+        if (quizQuestions[i].quizId === Number(quiz.id)) quizQuestions.splice(i, 1)
+      }
+      for (const question of questions) storeQuestion(Number(quiz.id), question)
+      return ok(detailResponse(quiz, true))
     },
   },
   {
@@ -1248,26 +1615,6 @@ const routes: MockHandler[] = [
         hint: stored.hint,
         type: stored.type,
       })
-    },
-  },
-  {
-    // Proposed: replaces all of an unpublished quiz's questions (CreateQuizQuestionRequest[]).
-    method: 'PUT',
-    path: '/api/quizzes/:quizId/questions',
-    handle: ({ user, params, body }) => {
-      const quiz = contents.find(c => String(c.id) === params.quizId && c.type === 'QUIZ')
-      if (!quiz) return notFound()
-      if (!isTeacher(user, quiz.courseId)) return forbidden()
-      if (publishedContent(quiz)) return conflict('Published content cannot be changed')
-      const questions = body as CreateQuizQuestionRequest[]
-      if (!Array.isArray(questions)) return badRequest('A list of questions is required')
-      const problem = questions.map(questionRequestProblem).find(Boolean)
-      if (problem) return badRequest(problem)
-      for (let i = quizQuestions.length - 1; i >= 0; i--) {
-        if (quizQuestions[i].quizId === Number(quiz.id)) quizQuestions.splice(i, 1)
-      }
-      questions.forEach(question => storeQuestion(Number(quiz.id), question))
-      return ok(quizQuestionsResponse(quiz.id, true))
     },
   },
   {
@@ -1339,8 +1686,8 @@ const routes: MockHandler[] = [
     },
   },
   {
-    // SaveGradeRequest { score, feedback, passed, visibleFrom, version }: version null creates
-    // the grade. Proposed: `passed` (true, false or null) and `visibleFrom` (a future time or null).
+    // Backend (exists): SaveGradeRequest { score, feedback, passed, visibleFrom, version };
+    // version null creates the grade. `visibleFrom` needs `passed`; a past time releases at once.
     method: 'PUT',
     path: '/api/submissions/:submissionId/grade',
     handle: ({ user, params, body }) => {
@@ -1366,7 +1713,7 @@ const routes: MockHandler[] = [
         Math.round(score * 100) !== score * 100 ||
         (feedback?.length ?? 0) > 10000 ||
         (passed !== null && typeof passed !== 'boolean') ||
-        (visibleFrom !== null && !(Date.parse(visibleFrom) > Date.now()))
+        (visibleFrom !== null && (Number.isNaN(Date.parse(visibleFrom)) || passed === null))
       ) {
         return badRequest('Invalid grade request')
       }
@@ -1397,6 +1744,7 @@ const routes: MockHandler[] = [
           version: version + 1,
         }
       }
+      if (visibleFrom !== null && Date.parse(visibleFrom) <= Date.now()) publishGrade(submission, now)
       return ok(gradeReviewResponse(submission))
     },
   },
@@ -1416,7 +1764,8 @@ const routes: MockHandler[] = [
     },
   },
   {
-    // Proposed: publishes every saved, unpublished grade of the latest submissions now → { released }.
+    // Backend (exists): publishes every saved, unpublished grade of the latest submissions that
+    // has a passed / not passed decision → { released, undecided }.
     method: 'POST',
     path: '/api/contents/:contentId/grades/release',
     handle: ({ user, params }) => {
@@ -1424,9 +1773,10 @@ const routes: MockHandler[] = [
       if (!content) return notFound()
       if (!isTeacher(user, content.courseId)) return forbidden()
       const waiting = latestSubmissions(Number(content.id)).filter(s => s.grade && !s.grade.releasedAt)
+      const decided = waiting.filter(s => s.grade!.passed !== null)
       const now = new Date().toISOString()
-      waiting.forEach(s => publishGrade(s, now))
-      return ok({ released: waiting.length })
+      decided.forEach(s => publishGrade(s, now))
+      return ok({ released: decided.length, undecided: waiting.length - decided.length })
     },
   },
   { method: 'GET', path: '/api/contents/:contentId', handle: contentDetail('STATIC_PAGE') },

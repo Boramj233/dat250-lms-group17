@@ -92,6 +92,25 @@
   white-space: nowrap;
 }
 
+/* The place in the module, with ↑ / ↓. */
+.manage-content-order {
+  width: 1%;
+  white-space: nowrap;
+}
+
+.manage-content-rank {
+  display: inline-block;
+  min-width: 1.5em;
+  font-family: var(--font-ui);
+  font-weight: var(--font-weight-bold);
+}
+
+.manage-content-move {
+  min-width: var(--size-control-md);
+  margin-inline-start: var(--space-2);
+  padding-inline: var(--space-3);
+}
+
 .manage-content-check {
   width: 1.125rem;
   height: 1.125rem;

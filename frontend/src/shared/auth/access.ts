@@ -14,6 +14,16 @@ const RANK: Record<Access, number> = {
   ADMIN: 2,
 }
 
+/** Every access level, lowest first. */
+export const ACCESS_LEVELS: Access[] = ['STANDARD', 'COURSE_MANAGER', 'ADMIN']
+
+/** How an access level is shown to users. */
+export const ACCESS_LABEL: Record<Access, string> = {
+  STANDARD: 'Standard',
+  COURSE_MANAGER: 'Course manager',
+  ADMIN: 'Administrator',
+}
+
 /** True if `access` is `required` or higher. False when there is no user (undefined). */
 export function hasAccess(access: Access | undefined, required: Access): boolean {
   return access !== undefined && RANK[access] >= RANK[required]

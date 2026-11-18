@@ -213,7 +213,7 @@ export const submissions: {
     },
   },
   {
-    // Group assignment: Sam handed in for the group, so Siri sees it too.
+    // Handed in for the group: Sam handed in for Group 7, so Siri sees it too.
     id: 6,
     userId: 5,
     contentId: 103,
@@ -259,8 +259,8 @@ export const submissions: {
  * Groups in a course, like the backend's GroupDTO; `name` is proposed (see src/domain/groups).
  * A student is in at most one group per course.
  */
-export const groups: { id: number; courseId: number; groupNumber: number; name?: string; memberIds: number[] }[] = [
-  { id: 1, courseId: 1, groupNumber: 7, name: 'Rabbit Runners', memberIds: [1, 5] },
+export const groups: { id: number; courseId: number; groupNumber: number; memberIds: number[] }[] = [
+  { id: 1, courseId: 1, groupNumber: 7, memberIds: [1, 5] },
   { id: 2, courseId: 1, groupNumber: 2, memberIds: [] },
   { id: 3, courseId: 1, groupNumber: 3, memberIds: [] },
   { id: 4, courseId: 2, groupNumber: 1, memberIds: [1, 5] },
@@ -467,9 +467,6 @@ export const contents: (Content & { courseId: number })[] = [
     maxAttempts: 3,
     passingPercentage: 100,
     requiredForModuleCompletion: true,
-    description:
-      'Three short questions about HTTP methods and status codes. You get your score right after you submit.',
-    deadline: inDays(5, 23, 59),
   },
   {
     id: 101,
@@ -529,8 +526,6 @@ export const contents: (Content & { courseId: number })[] = [
     title: 'Containers quiz',
     maxAttempts: 1,
     passingPercentage: 60,
-    description: 'One question about Docker Compose. You have only one attempt.',
-    deadline: null,
   },
   // DAT250, module 3
   {
@@ -563,8 +558,6 @@ export const contents: (Content & { courseId: number })[] = [
     deadline: inDays(9),
     allowLateSubmission: false,
     mandatoryForExam: true,
-    groupAssignment: true,
-    acceptedFileTypes: ['.pdf', '.zip'],
   },
   // DAT251
   {

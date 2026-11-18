@@ -48,21 +48,22 @@ graded and released it. Rules (the backend answers 409 otherwise):
 The student sees the grade (`ReleasedGradeResponse`: `score, feedback, releasedAt`)
 once it is released.
 
-## Proposed: publishing grades (visible date and publish all)
+## Publishing grades (visible date and publish all)
 
 The UI says "publish" for what the backend calls "release". A saved grade is hidden
 from the student until it is published. **Each grade has its own visible date**; it
 has nothing to do with the assignment's dates.
 
-1. **Visible date** (proposed): `visibleFrom` (ISO instant or null) on
-   `SaveGradeRequest` and `GradeReviewResponse`. At that time the backend publishes
-   the grade by itself, with `visibleFrom` as `releasedAt` (e.g. a scheduled job).
-   Null: hidden until published. A time that is not in the future: 400.
+1. **Visible date**: `visibleFrom` (ISO instant or null) on `SaveGradeRequest` and
+   `GradeReviewResponse`. When it has passed, the backend publishes the grade by itself
+   (a scheduled job, at most a minute later). Null: hidden until published. It needs a
+   passed / not passed decision (400 otherwise); a time that has passed publishes at once.
 2. **Publish** one grade now: `POST /api/submissions/{id}/grade/release` (exists). Its
    `releasedAt` is the time it became visible.
-3. **Publish all** (proposed): `POST /api/contents/{contentId}/grades/release` publishes
-   every saved, unpublished grade of the assignment's latest submissions now (also those
-   with a later visible date) and answers `{ released }` (how many). Teachers only.
+3. **Publish all**: `POST /api/contents/{contentId}/grades/release` publishes every
+   saved, unpublished grade of the latest submissions now (also those with a later
+   visible date) and answers `{ released, undecided }`: grades without a passed / not
+   passed decision are not published. Teachers only.
 
 A published grade cannot be changed.
 

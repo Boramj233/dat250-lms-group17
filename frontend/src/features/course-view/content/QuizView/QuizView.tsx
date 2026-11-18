@@ -1,12 +1,13 @@
 import { useState } from 'react'
 import type { QuizContent } from '@domain/content/types'
-import { useMyQuizAttempts } from '@domain/quizzes/hooks'
+import { useMyQuizAttemptCount, useMyQuizAttempts } from '@domain/quizzes/hooks'
 import { attemptPassed, bestAttempt, passRequirementText, quizPassed } from '@domain/quizzes/passRule'
 import type { QuizAttemptScore } from '@domain/quizzes/types'
-import DetailLayout, { Card, DeadlineFact } from '../../components/DetailLayout'
+import DetailLayout, { Card } from '../../components/DetailLayout'
 import PassedBadge from '../../components/PassedBadge'
 import { AttemptList, AttemptReview } from './QuizAttempts'
 import QuizForm from './QuizForm'
+import { AnswerKey, StudentAttempts } from './TeacherQuizPanels'
 import { formatCount } from '@shared/lib/formatCount'
 import '@shared/styles/forms.css'
 import './QuizView.css'
@@ -23,22 +24,26 @@ type Mode =
   | { kind: 'result'; score: QuizAttemptScore }
   /** Looking at an earlier attempt's answers. */
   | { kind: 'review'; attemptId: QuizAttemptScore['id'] }
+  /** Teachers: the correct answers. */
+  | { kind: 'key' }
 
 /**
- * A quiz: its explanation with a Start button, and a panel with the deadline, attempts
- * best score and the passing percentage (with how many correct answers that is).
+ * A quiz: what it takes to pass with a Start button, and a panel with the attempts, best
+ * score and the passing percentage (with how many correct answers that is).
  * Starting shows one box per question, styled by its type; submitting grades it at once
  * and shows the score and whether the attempt passed. Students can look at each earlier
- * attempt's answers, with every question marked correct or wrong.
+ * attempt's answers, with every question marked correct or wrong. Teachers can preview
+ * it, see the answer key, and look at each student's attempts and answers.
  */
 export default function QuizView({ content, isTeacher }: QuizViewProps) {
-  const [now] = useState(() => new Date())
-  const attempts = useMyQuizAttempts(content.id)
+  // Teachers do not take the quiz, so their own attempts are not loaded.
+  const attempts = useMyQuizAttempts(content.id, { enabled: !isTeacher })
+  // The number of attempts used, as the backend counts them when it refuses one more.
+  const usedCount = useMyQuizAttemptCount(content.id, { enabled: !isTeacher })
   const [mode, setMode] = useState<Mode>({ kind: 'info' })
 
   const questions = [...(content.questions ?? [])].sort((a, b) => a.position - b.position)
-  const deadline = content.deadline ? new Date(content.deadline) : null
-  const used = attempts.data?.length ?? 0
+  const used = usedCount.data ?? attempts.data?.length ?? 0
   const best = attempts.data && bestAttempt(attempts.data)
   const required = content.passingPercentage
   const passed = attempts.data ? quizPassed(attempts.data, required) : null
@@ -46,23 +51,26 @@ export default function QuizView({ content, isTeacher }: QuizViewProps) {
 
   // Why the quiz cannot be started, if it cannot.
   const blocked =
-    deadline && deadline < now
-      ? 'The deadline has passed.'
-      : attempts.data && used >= content.maxAttempts
-        ? 'You have used all your attempts.'
-        : questions.length === 0
-          ? 'This quiz has no questions yet.'
-          : null
+    (usedCount.data !== undefined || attempts.data) && used >= content.maxAttempts
+      ? 'You have used all your attempts.'
+      : questions.length === 0
+        ? 'This quiz has no questions yet.'
+        : null
 
   const panel = (
     <dl className="submittable-facts">
-      <DeadlineFact deadline={deadline} now={now} />
       <dt>Attempts allowed</dt>
       <dd>{content.maxAttempts}</dd>
       {!isTeacher && (
         <>
           <dt>Attempts used</dt>
-          <dd>{attempts.isPending ? '…' : attempts.error ? '–' : `${used} of ${content.maxAttempts}`}</dd>
+          <dd>
+            {usedCount.isPending && attempts.isPending
+              ? '…'
+              : usedCount.error && attempts.error
+                ? '–'
+                : `${used} of ${content.maxAttempts}`}
+          </dd>
         </>
       )}
       <dt>Questions</dt>
@@ -111,7 +119,6 @@ export default function QuizView({ content, isTeacher }: QuizViewProps) {
   return (
     <DetailLayout panelLabel="Quiz details" panel={panel}>
       <Card id="quiz-about-title" title="About this quiz">
-        <div className="submittable-text">{content.description || 'No description.'}</div>
         <p className="quiz-pass-rule">
           To pass, at least <strong>{passRequirementText(required, questions.length)}</strong> of your answers in one
           attempt must be correct. It is checked automatically when you submit.
@@ -119,14 +126,24 @@ export default function QuizView({ content, isTeacher }: QuizViewProps) {
         {mode.kind === 'info' && (
           <div className="submittable-actions">
             {isTeacher ? (
-              <button
-                type="button"
-                className="button-secondary"
-                onClick={() => setMode({ kind: 'taking' })}
-                disabled={questions.length === 0}
-              >
-                Preview quiz
-              </button>
+              <>
+                <button
+                  type="button"
+                  className="button-secondary"
+                  onClick={() => setMode({ kind: 'taking' })}
+                  disabled={questions.length === 0}
+                >
+                  Preview quiz
+                </button>
+                <button
+                  type="button"
+                  className="button-secondary"
+                  onClick={() => setMode({ kind: 'key' })}
+                  disabled={questions.length === 0}
+                >
+                  Show answer key
+                </button>
+              </>
             ) : blocked ? (
               <p>{blocked}</p>
             ) : (
@@ -149,6 +166,12 @@ export default function QuizView({ content, isTeacher }: QuizViewProps) {
           required={required}
           onView={attemptId => setMode({ kind: 'review', attemptId })}
         />
+      )}
+
+      {mode.kind === 'info' && isTeacher && <StudentAttempts quiz={content} questions={questions} />}
+
+      {mode.kind === 'key' && (
+        <AnswerKey quizId={content.id} questions={questions} onBack={() => setMode({ kind: 'info' })} />
       )}
 
       {mode.kind === 'review' && attempts.data && (
