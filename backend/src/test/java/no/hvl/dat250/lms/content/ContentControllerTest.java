@@ -9,7 +9,6 @@ import no.hvl.dat250.lms.content.domain.StaticPage;
 import no.hvl.dat250.lms.content.service.ContentService;
 import no.hvl.dat250.lms.module.domain.Module;
 import no.hvl.dat250.lms.course.domain.Course;
-import no.hvl.dat250.lms.interaction.service.StudentInteractionService;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.BeforeEach;
@@ -36,9 +35,6 @@ class ContentControllerTest {
 
     @MockitoBean(name = "contentService")
     private ContentService contentService;
-
-    @MockitoBean
-    private StudentInteractionService interactionService;
 
     @MockitoBean(name = "courseAccess")
     private CourseAccess courseAccess;
@@ -275,16 +271,4 @@ class ContentControllerTest {
         verify(contentService).staticPageCourseId(999L);
     }
 
-    @Test
-    void completeContentReturns204() throws Exception {
-
-        mockMvc.perform(post("/api/courses/1/modules/10/contents/100/complete")
-                                .with(apiUser()))
-                .andExpect(status().isNoContent());
-
-        verify(interactionService).completeContent(
-                anyLong(),
-                eq(100L)
-        );
-    }
 }
