@@ -13,8 +13,6 @@ import no.hvl.dat250.lms.content.api.dto.ContentSummaryResponse;
 import no.hvl.dat250.lms.content.api.dto.StaticPageResponse;
 import no.hvl.dat250.lms.content.domain.StaticPage;
 import no.hvl.dat250.lms.content.service.ContentService;
-import no.hvl.dat250.lms.interaction.service.StudentInteractionService;
-import no.hvl.dat250.lms.security.AuthenticatedUser;
 import no.hvl.dat250.lms.security.auth.annotations.IsTeacherInCourse;
 import no.hvl.dat250.lms.security.auth.annotations.IsEnrolledInCourse;
 
@@ -22,7 +20,6 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -33,14 +30,10 @@ public class ContentController {
 
     private final ContentService contentService;
 
-    private final StudentInteractionService interactionService;
-
     public ContentController(
-            ContentService contentService,
-            StudentInteractionService interactionService) {
+            ContentService contentService) {
 
         this.contentService = contentService;
-        this.interactionService = interactionService;
     }
 
     @IsTeacherInCourse

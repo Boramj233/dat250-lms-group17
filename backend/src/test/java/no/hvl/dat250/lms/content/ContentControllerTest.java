@@ -9,7 +9,6 @@ import no.hvl.dat250.lms.content.domain.StaticPage;
 import no.hvl.dat250.lms.content.service.ContentService;
 import no.hvl.dat250.lms.module.domain.Module;
 import no.hvl.dat250.lms.course.domain.Course;
-import no.hvl.dat250.lms.interaction.service.StudentInteractionService;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.BeforeEach;
