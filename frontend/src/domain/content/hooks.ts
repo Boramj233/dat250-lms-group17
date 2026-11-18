@@ -10,7 +10,6 @@ import {
   getCompletion,
   getContent,
   getModuleContent,
-  moveContent,
   reorderContent,
   setPageCompletion,
   updateCompletionSettings,
@@ -85,16 +84,6 @@ export function useDeleteContent() {
       await queryClient.invalidateQueries({ queryKey: contentKeys.moduleContent(moduleId) })
     },
   })
-}
-
-// Moves or reorders content and refreshes its details and module lists.
-//only for teachers, not for students
-export function useMoveContent() {
-  return useInvalidatingMutation(moveContent, (_content, { contentId, sourceModuleId, targetModuleId }) => [
-    contentKeys.content(contentId),
-    contentKeys.moduleContent(sourceModuleId),
-    ...(String(sourceModuleId) !== String(targetModuleId) ? [contentKeys.moduleContent(targetModuleId)] : []),
-  ])
 }
 
 // One item changed: its details and its module's content list.

@@ -122,8 +122,8 @@ Each question has a `type` (backend `QuestionType`; default `MULTIPLE_CHOICE`):
 | `MATCHING`        | `leftItems`, `rightItems` | `matches: [{ leftItemId, rightItemId }]`, all |
 
 The backend answers **400** for the whole attempt when a fill-in, ordering or matching
-answer is missing. Still proposed on `QuizDetailResponse`: `description` (text shown
-before the quiz is started) and `deadline` (ISO 8601 instant or null).
+answer is missing. A quiz has no description or deadline in the backend; it can be
+taken until the student has used `maxAttempts`.
 
 ### Attempts (`QuizAttemptController`, `../quizzes/api.ts`)
 
@@ -196,9 +196,8 @@ never deleted: the module page then tells the teacher to hide it with "Visible f
 instead. Frontend: `deleteContent` / `useDeleteContent`, `reorderContent` /
 `useReorderContent`.
 
-Still proposed (not in the backend): `PATCH /api/contents/{contentId}/move`
-(`{ moduleId, position }`), used by "Move to" on the module page; it fails until the
-backend has it.
+Content cannot be moved to another module (the backend has no endpoint for it); make
+it again in the other module instead.
 
 Content is created with the backend's endpoint for its type
 (`POST /api/courses/{courseId}/modules/{moduleId}/contents/{pages|assignments|coding-exercises|quizzes}`)
@@ -206,9 +205,8 @@ through `useCreateContent`; a quiz is created first and its questions are then a
 with `POST /api/quizzes/{quizId}/questions`. Taking a quiz is described under
 "Taking a quiz" above.
 
-The backend returns module content sorted by position and maintains ordering after
-creation, deletion, position changes, and moves. Moves are within one course and
-may reorder content in the same module. Moving content preserves its ID.
+The backend returns module content sorted by position and keeps the order after
+creation, deletion and reordering.
 
 ```tsx
 const items = useModuleContent(courseId, moduleId)

@@ -263,7 +263,7 @@
   font-weight: var(--font-weight-bold);
 }
 
-/* "To pass, you need at least 3 of 5 correct answers": under the description. */
+/* "To pass, you need at least 3 of 5 correct answers", in "About this quiz". */
 .quiz-pass-rule {
   margin: var(--space-5) 0 0;
   padding: var(--space-3) var(--space-5);

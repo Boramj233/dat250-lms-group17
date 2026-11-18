@@ -4,14 +4,8 @@ import { ApiError } from '@shared/api/apiClient'
 import { fromDateTimeLocal } from '@shared/lib/dateFormat'
 import { moveItem } from '@shared/lib/moveItem'
 import { paths } from '@shared/paths'
-import type { ContentId, ModuleId } from '@shared/types'
-import {
-  useCourseContent,
-  useDeleteContent,
-  useMoveContent,
-  useReorderContent,
-  useUpdateCompletionSettings,
-} from '@domain/content/hooks'
+import type { ContentId } from '@shared/types'
+import { useDeleteContent, useReorderContent, useUpdateCompletionSettings } from '@domain/content/hooks'
 import type { ContentSummary } from '@domain/content/types'
 import type { ActionMenuItem } from '@shared/ui/ActionMenu'
 import { useConfirm } from '@shared/ui/ConfirmDialog'
@@ -23,15 +17,7 @@ import { checkAvailabilityDates } from '@domain/modules/prerequisites'
 import { useManageCourse } from '../../../manageCourseContext'
 import { useManageModule } from '../../manageModuleContext'
 import { availabilityChanges, savedAvailability, type AvailabilityDraft } from './availabilityDraft'
-import {
-  contentChanges,
-  EMPTY_DRAFT,
-  withDeleted,
-  withMove,
-  withoutSaved,
-  withRequired,
-  type ContentDraft,
-} from './contentDraft'
+import { contentChanges, EMPTY_DRAFT, withDeleted, withoutSaved, withRequired, type ContentDraft } from './contentDraft'
 import ModuleAvailability from './ModuleAvailability'
 import ModuleContentTable from './ModuleContentTable'
 import NewContentLinks from './NewContentLinks'
@@ -40,25 +26,20 @@ import './ManageModulePage.css'
 /**
  * One module: a button per content type to create new content, and a table of the
  * module's content (visible from, published or unpublished by that date, required for
- * module completion, ↑ / ↓ for its place in the module, and a "⋯" menu to edit, move or
- * delete it), and below it when students can open the module. Every change on the page is collected and marked first;
- * one Save changes applies them all (deleting asks once more), Cancel throws them away.
+ * module completion, ↑ / ↓ for its place in the module, and a "⋯" menu to edit or delete
+ * it), and below it when students can open the module. Every change on the page is
+ * collected and marked first; one Save changes applies them all (deleting asks once more),
+ * Cancel throws them away.
  */
 export default function ManageModulePage() {
   const { course, modules } = useManageCourse()
   const { module, number, content } = useManageModule()
   const navigate = useNavigate()
-  const moveContent = useMoveContent()
   const deleteContent = useDeleteContent()
   const updateCompletionSettings = useUpdateCompletionSettings()
   const updateModule = useUpdateModule()
   const reorderContent = useReorderContent()
   const deleteModule = useDeleteModule()
-  // Content counts of all modules, so moved content goes to the end of its new module.
-  const allContent = useCourseContent(
-    course.id,
-    modules.map(m => m.id),
-  )
   const [confirm, confirmDialog] = useConfirm()
   const [now] = useState(() => Date.now())
   const [draft, setDraft] = useState<ContentDraft>(EMPTY_DRAFT)
@@ -80,10 +61,6 @@ export default function ManageModulePage() {
   const orderChanges = order ? shownIds.filter((id, index) => savedIds[index] !== id).length : 0
 
   const changes = contentChanges(draft) + availabilityChanges(availability, savedDates) + orderChanges
-  const moduleLabel = (id: ModuleId) => {
-    const index = modules.findIndex(m => String(m.id) === String(id))
-    return index >= 0 ? `Module ${index + 1}: ${modules[index].title}` : 'another module'
-  }
 
   /** Changes the draft, and clears the last save's message. */
   function change(update: (draft: ContentDraft) => ContentDraft) {
@@ -183,23 +160,6 @@ export default function ManageModulePage() {
         })
         done('required', id)
       }
-      // Moved items go to the end of their new module, in the order they are moved.
-      const added = new Map<string, number>()
-      for (const [id, target] of Object.entries(draft.moves)) {
-        if (draft.deletes.includes(id)) {
-          done('moves', id)
-          continue
-        }
-        const already = added.get(String(target)) ?? 0
-        await moveContent.mutateAsync({
-          contentId: id,
-          sourceModuleId: module.id,
-          targetModuleId: target,
-          position: (allContent.byModule.get(String(target))?.length ?? 0) + already,
-        })
-        added.set(String(target), already + 1)
-        done('moves', id)
-      }
       // Content students have worked on (submissions, attempts, pages marked as done) is
       // never deleted: the backend answers 409 for it.
       const kept: string[] = []
@@ -250,11 +210,7 @@ export default function ManageModulePage() {
 
   function actionsFor(item: ContentSummary): ActionMenuItem[] {
     const id = String(item.id)
-    const movedTo = draft.moves[id]
     const deleted = draft.deletes.includes(id)
-    const otherModules = modules
-      .map((m, index) => ({ module: m, number: index + 1 }))
-      .filter(({ module: m }) => m.id !== module.id)
     return [
       {
         label: 'Edit',
@@ -273,21 +229,6 @@ export default function ManageModulePage() {
             return
           navigate(paths.manageContent(course.id, module.id, item.id))
         },
-      },
-      {
-        label: 'Move to',
-        disabled: otherModules.length === 0 || deleted,
-        items: [
-          ...(movedTo !== undefined
-            ? [{ label: 'Keep in this module', onSelect: () => change(d => withMove(d, item, null)) }]
-            : []),
-          ...otherModules
-            .filter(({ module: target }) => String(target.id) !== String(movedTo))
-            .map(({ module: target, number: targetNumber }) => ({
-              label: `${targetNumber}. ${target.title}`,
-              onSelect: () => change(d => withMove(d, item, target.id)),
-            })),
-        ],
       },
       deleted
         ? { label: 'Undo delete', onSelect: () => change(d => withDeleted(d, item, false)) }
@@ -317,7 +258,6 @@ export default function ManageModulePage() {
             draft={draft}
             now={now}
             saving={saving}
-            moduleLabel={moduleLabel}
             onRequiredChange={(item, required) => change(d => withRequired(d, item, required))}
             actionsFor={actionsFor}
           />
@@ -338,7 +278,7 @@ export default function ManageModulePage() {
           Delete module
         </h2>
         {content.length > 0 ? (
-          <p className="form-hint">Only an empty module can be deleted. Delete or move its content first.</p>
+          <p className="form-hint">Only an empty module can be deleted. Delete its content first.</p>
         ) : (
           <>
             {deleteModule.error && <p role="alert">Could not delete the module. Try again.</p>}

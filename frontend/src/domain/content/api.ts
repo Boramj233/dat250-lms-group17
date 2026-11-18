@@ -14,7 +14,6 @@ import type {
   DeleteContentInput,
   EditContentInput,
   ExamRequirementInput,
-  MoveContentInput,
   PageCompletionInput,
   QuizContent,
   ReorderContentInput,
@@ -255,12 +254,4 @@ export function setPageCompletion({ contentId, completed }: PageCompletionInput)
  */
 export function deleteContent({ contentId }: DeleteContentInput): Promise<void> {
   return apiClient<void>(apiPath`/api/contents/${contentId}`, { method: 'DELETE' })
-}
-
-/** Proposed, not in the backend yet: PATCH /api/contents/{id}/move. */
-export function moveContent({ contentId, targetModuleId, position }: MoveContentInput): Promise<Content> {
-  return apiClient<Content>(
-    apiPath`/api/contents/${contentId}/move`,
-    jsonBody('PATCH', { moduleId: targetModuleId, position }),
-  )
 }

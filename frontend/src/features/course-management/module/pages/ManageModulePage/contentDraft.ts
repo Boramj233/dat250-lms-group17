@@ -1,21 +1,20 @@
-import type { ContentId, ModuleId } from '@shared/types'
+import type { ContentId } from '@shared/types'
 import type { ContentSummary } from '@domain/content/types'
 
 /**
  * Changes to the module's content that are not saved yet, by content id (as a string):
- * "required for module completion" switched, moves to another module, and deletions.
+ * "required for module completion" switched, and deletions.
  */
 export type ContentDraft = {
   required: Record<string, boolean>
-  moves: Record<string, ModuleId>
   deletes: string[]
 }
 
-export const EMPTY_DRAFT: ContentDraft = { required: {}, moves: {}, deletes: [] }
+export const EMPTY_DRAFT: ContentDraft = { required: {}, deletes: [] }
 
 /** How many changes the draft holds. */
 export function contentChanges(draft: ContentDraft): number {
-  return Object.keys(draft.required).length + Object.keys(draft.moves).length + draft.deletes.length
+  return Object.keys(draft.required).length + draft.deletes.length
 }
 
 /** Switches "required"; switching back to the saved value is no longer a change. */
@@ -24,14 +23,6 @@ export function withRequired(draft: ContentDraft, item: ContentSummary, required
   if (required === (item.requiredForModuleCompletion ?? false)) delete next[String(item.id)]
   else next[String(item.id)] = required
   return { ...draft, required: next }
-}
-
-/** Moves the item to another module, or keeps it here (`null`). */
-export function withMove(draft: ContentDraft, item: ContentSummary, target: ModuleId | null): ContentDraft {
-  const next = { ...draft.moves }
-  if (target === null) delete next[String(item.id)]
-  else next[String(item.id)] = target
-  return { ...draft, moves: next }
 }
 
 /** Marks the item for deletion, or undoes that. */
@@ -53,7 +44,6 @@ export function itemDraft(draft: ContentDraft, item: ContentSummary) {
   const requiredChanged = id in draft.required
   return {
     deleted: draft.deletes.includes(id),
-    movedTo: draft.moves[id] as ModuleId | undefined,
     requiredChanged,
     required: requiredChanged ? draft.required[id] : (item.requiredForModuleCompletion ?? false),
   }

@@ -45,10 +45,6 @@ export interface QuizContent extends ContentDetailBase {
   maxAttempts: number
   /** In order; missing in older responses. */
   questions?: QuizContentQuestion[]
-  /** Proposed (see README): what the quiz is about, shown before it is started. */
-  description?: string | null
-  /** Proposed (see README): ISO 8601 instant after which it cannot be taken; null for none. */
-  deadline?: string | null
   /**
    * Percentage (1–100) of the questions that must be correct for an attempt to pass;
    * the backend's default is 60. Changed with PATCH /api/contents/{id}/completion-settings.
@@ -293,12 +289,4 @@ export interface ExamRequirementInput {
 export interface DeleteContentInput {
   moduleId: ModuleId
   contentId: ContentId
-}
-
-/** Proposed: the backend has no endpoint to move content to another module yet. */
-export interface MoveContentInput {
-  contentId: ContentId
-  sourceModuleId: ModuleId
-  targetModuleId: ModuleId
-  position: number
 }

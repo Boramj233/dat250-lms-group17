@@ -467,9 +467,6 @@ export const contents: (Content & { courseId: number })[] = [
     maxAttempts: 3,
     passingPercentage: 100,
     requiredForModuleCompletion: true,
-    description:
-      'Three short questions about HTTP methods and status codes. You get your score right after you submit.',
-    deadline: inDays(5, 23, 59),
   },
   {
     id: 101,
@@ -529,8 +526,6 @@ export const contents: (Content & { courseId: number })[] = [
     title: 'Containers quiz',
     maxAttempts: 1,
     passingPercentage: 60,
-    description: 'One question about Docker Compose. You have only one attempt.',
-    deadline: null,
   },
   // DAT250, module 3
   {

@@ -329,8 +329,6 @@ function detailResponse(content: Content & { courseId: number }, forTeacher = fa
         courseId: content.courseId,
         maxAttempts: content.maxAttempts,
         passingPercentage: content.passingPercentage,
-        description: content.description ?? null,
-        deadline: content.deadline ?? null,
         questions: quizQuestionsResponse(content.id, forTeacher),
       }
     case 'ASSIGNMENT':
@@ -1261,23 +1259,6 @@ const routes: MockHandler[] = [
     },
   })),
   {
-    // Proposed (data/content/README.md): { moduleId, position } -> the moved content.
-    // The content may only move to another module in the same course.
-    method: 'PATCH',
-    path: '/api/contents/:contentId/move',
-    handle: ({ user, params, body }) => {
-      const content = contents.find(c => String(c.id) === params.contentId)
-      if (!content) return notFound()
-      if (!isTeacher(user, content.courseId)) return forbidden()
-      const { moduleId, position } = body as { moduleId: string | number; position: number }
-      const target = modules.find(m => String(m.id) === String(moduleId) && m.courseId === content.courseId)
-      if (!target) return badRequest('The module is not in this course')
-      content.moduleId = target.id
-      content.position = position
-      return ok(detailResponse(content))
-    },
-  },
-  {
     // Backend (exists, ContentCompletionController): { requiredForModuleCompletion,
     // passingPercentage } -> 204. passingPercentage (1–100) only for quizzes; null keeps it.
     method: 'PATCH',
@@ -1447,7 +1428,6 @@ const routes: MockHandler[] = [
       const quiz = contents.find(c => String(c.id) === params.quizId && c.type === 'QUIZ')
       if (!quiz || quiz.type !== 'QUIZ') return notFound()
       if (!canReadCourse(user, quiz.courseId)) return forbidden()
-      if (quiz.deadline && Date.now() > Date.parse(quiz.deadline)) return badRequest('The deadline has passed')
       const used = quizAttempts.filter(a => a.quizId === Number(quiz.id) && a.userId === user.userId).length
       if (used >= quiz.maxAttempts) return { status: 409, body: { error: 'No attempts left' } }
       const { answers } = body as { answers?: AnswerRequest[] }

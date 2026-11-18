@@ -76,7 +76,7 @@
   font-weight: var(--font-weight-bold);
 }
 
-/* The "← Move to" line at the top of a submenu. */
+/* The "← Back" line at the top of a submenu. */
 .action-menu-back {
   font-weight: var(--font-weight-bold);
   border-bottom: var(--border-width-sm) solid var(--color-border);

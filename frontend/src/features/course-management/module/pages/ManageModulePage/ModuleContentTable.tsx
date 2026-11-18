@@ -1,7 +1,7 @@
 import { Link } from 'react-router'
 import { formatDateTime } from '@shared/lib/dateFormat'
 import { paths } from '@shared/paths'
-import type { CourseId, ModuleId } from '@shared/types'
+import type { CourseId } from '@shared/types'
 import ActionMenu, { type ActionMenuItem } from '@shared/ui/ActionMenu'
 import { contentTypeLabel } from '@domain/content/contentTypes'
 import type { ContentSummary } from '@domain/content/types'
@@ -23,8 +23,6 @@ type ModuleContentTableProps = {
   now: number
   /** While saving, nothing can be changed. */
   saving: boolean
-  /** "Module 2: Basics", for "Moves to …". */
-  moduleLabel: (id: ModuleId) => string
   onRequiredChange: (item: ContentSummary, required: boolean) => void
   /** The "⋯" menu of a row. */
   actionsFor: (item: ContentSummary) => ActionMenuItem[]
@@ -35,7 +33,7 @@ type ModuleContentTableProps = {
  * not, required for module completion and a "⋯" menu. Unsaved changes are marked on their rows.
  */
 export default function ModuleContentTable(props: ModuleContentTableProps) {
-  const { courseId, module, content, draft, now, saving, moduleLabel, onRequiredChange, actionsFor } = props
+  const { courseId, module, content, draft, now, saving, onRequiredChange, actionsFor } = props
   const { savedIndexOf, onMove } = props
   return (
     <div className="manage-content-table-wrap">
@@ -57,14 +55,10 @@ export default function ModuleContentTable(props: ModuleContentTableProps) {
         </thead>
         <tbody>
           {content.map((item, index) => {
-            const { deleted, movedTo, requiredChanged, required } = itemDraft(draft, item)
+            const { deleted, requiredChanged, required } = itemDraft(draft, item)
             const savedIndex = savedIndexOf(item)
             const reordered = savedIndex !== index
-            const rowClass = deleted
-              ? 'is-deleted'
-              : movedTo !== undefined || requiredChanged || reordered
-                ? 'is-changed'
-                : undefined
+            const rowClass = deleted ? 'is-deleted' : requiredChanged || reordered ? 'is-changed' : undefined
             return (
               <tr key={item.id} className={rowClass || undefined}>
                 <td className="manage-content-order">
@@ -96,9 +90,6 @@ export default function ModuleContentTable(props: ModuleContentTableProps) {
                   </Link>
                   {deleted && <span className="tag tag-strong tag-danger manage-change">Will be deleted</span>}
                   {reordered && <span className="tag tag-strong manage-change">Was {savedIndex + 1}</span>}
-                  {!deleted && movedTo !== undefined && (
-                    <span className="tag tag-strong manage-change">Moves to {moduleLabel(movedTo)}</span>
-                  )}
                 </th>
                 <td className="manage-content-type">{contentTypeLabel(item.type)}</td>
                 <td className="manage-content-type">
