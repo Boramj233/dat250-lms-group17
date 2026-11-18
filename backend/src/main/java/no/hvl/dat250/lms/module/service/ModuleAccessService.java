@@ -1,6 +1,7 @@
 package no.hvl.dat250.lms.module.service;
 
-import no.hvl.dat250.lms.interaction.service.StudentInteractionService;
+import no.hvl.dat250.lms.content.domain.Content;
+import no.hvl.dat250.lms.content.service.ContentService;
 import no.hvl.dat250.lms.module.repository.ModuleRepository;
 import no.hvl.dat250.lms.module.domain.Module;
 import org.springframework.stereotype.Service;
@@ -14,14 +15,14 @@ import java.util.NoSuchElementException;
 public class ModuleAccessService {
 
     private final ModuleRepository moduleRepository;
-    private final StudentInteractionService interactionService;
+    private final ContentService contentService;
 
     public ModuleAccessService(
             ModuleRepository moduleRepository,
-            StudentInteractionService interactionService) {
+            ContentService contentService) {
 
         this.moduleRepository = moduleRepository;
-        this.interactionService = interactionService;
+        this.contentService = contentService;
     }
 
     @Transactional(readOnly = true)
@@ -29,16 +30,19 @@ public class ModuleAccessService {
             Long moduleId,
             Long studentId) {
 
-        if (!moduleRepository.existsById(moduleId)) {
-            throw new NoSuchElementException(
-                    "Module not found" + moduleId
-            );
-        }
+        Module module = moduleRepository.findById(moduleId)
+                .orElseThrow(() -> new NoSuchElementException(
+                        "module not found" + moduleId
+                ));
 
-        return interactionService.areRequiredContentCompleted(
-                moduleId,
-                studentId
-        );
+        return module.getContents().stream()
+                .filter(Content::isRequiredForModuleCompletion)
+                .allMatch(content ->
+                        contentService.isCompleted(
+                                content.getId(),
+                                studentId
+                        )
+                );
     }
 
     @Transactional(readOnly = true)

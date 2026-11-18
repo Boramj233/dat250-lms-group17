@@ -18,8 +18,6 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import no.hvl.dat250.lms.content.domain.StaticPage;
 import no.hvl.dat250.lms.content.domain.Content;
 import no.hvl.dat250.lms.content.service.ContentService;
-import no.hvl.dat250.lms.interaction.service.StudentInteractionService;
-import no.hvl.dat250.lms.security.AuthenticatedUser;
 import no.hvl.dat250.lms.security.auth.annotations.IsTeacherInCourse;
 import no.hvl.dat250.lms.security.auth.annotations.IsEnrolledInCourse;
 
@@ -27,7 +25,6 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -38,14 +35,10 @@ public class ContentController {
 
     private final ContentService contentService;
 
-    private final StudentInteractionService interactionService;
-
     public ContentController(
-            ContentService contentService,
-            StudentInteractionService interactionService) {
+            ContentService contentService) {
 
         this.contentService = contentService;
-        this.interactionService = interactionService;
     }
 
     @PutMapping("/api/contents/{contentId}/visibility")
@@ -126,28 +119,6 @@ public class ContentController {
                 .toList();
 
         return ResponseEntity.ok(contents);
-    }
-
-    // Temporary fix for completing content
-    @PostMapping(MODULE_CONTENTS_PATH + "/{contentId}/complete")
-    public ResponseEntity<Void> completeContent(
-            @PathVariable Long courseId,
-            @PathVariable Long moduleId,
-            @PathVariable Long contentId,
-            @AuthenticationPrincipal AuthenticatedUser user
-    ) {
-
-        // TODO: BEFORE calling interactionService.completeContent(), verify:
-        // 1. is the student enrolled at this course?
-        // 2. is the content accessible?
-        // 3. have the content-specific requirements been met?
-
-        interactionService.completeContent(
-                user.userId(),
-                contentId
-        );
-
-        return ResponseEntity.noContent().build();
     }
 
     @ExceptionHandler(NoSuchElementException.class)
