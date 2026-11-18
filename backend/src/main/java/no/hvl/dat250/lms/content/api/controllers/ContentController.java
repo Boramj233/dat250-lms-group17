@@ -107,28 +107,6 @@ public class ContentController {
         return ResponseEntity.ok(contents);
     }
 
-    // Temporary fix for completing content
-    @PostMapping(MODULE_CONTENTS_PATH + "/{contentId}/complete")
-    public ResponseEntity<Void> completeContent(
-            @PathVariable Long courseId,
-            @PathVariable Long moduleId,
-            @PathVariable Long contentId,
-            @AuthenticationPrincipal AuthenticatedUser user
-    ) {
-
-        // TODO: BEFORE calling interactionService.completeContent(), verify:
-        // 1. is the student enrolled at this course?
-        // 2. is the content accessible?
-        // 3. have the content-specific requirements been met?
-
-        interactionService.completeContent(
-                user.userId(),
-                contentId
-        );
-
-        return ResponseEntity.noContent().build();
-    }
-
     @ExceptionHandler(NoSuchElementException.class)
     public ResponseEntity<Void> handleNotFound(
             NoSuchElementException exception) {
