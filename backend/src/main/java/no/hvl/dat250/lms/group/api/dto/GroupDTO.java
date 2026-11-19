@@ -8,15 +8,17 @@ import java.util.stream.Collectors;
 
 public record GroupDTO(
         Long id,
-        int groupNumber,
-//        Long courseId,
+        Integer groupNumber,
+        Long courseId,
+        Integer maxGroupSize,
         Set<Long> memberIds
 ) {
     public static GroupDTO from(Group group) {
         return new GroupDTO(
                 group.getGroupId(),
                 group.getGroupNumber(),
-//                group.getCourse().getId(),
+                group.getCourse().getId(),
+                group.getMaxGroupSize(),
                 group.getGroupMembers()
                         .stream()
                         .map(User::getUserId)

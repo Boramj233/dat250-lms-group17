@@ -36,7 +36,7 @@ public class GroupController {
     @IsTeacherInCourse
     @PostMapping()
     public ResponseEntity<GroupDTO> createGroup(@PathVariable Long courseId, @RequestBody Group group) {
-        GroupDTO createdGroup = groupService.createGroup(courseId, group.getGroupNumber());
+        GroupDTO createdGroup = groupService.createGroup(courseId, group.getGroupNumber(), group.getMaxGroupSize());
         URI location = ServletUriComponentsBuilder
                 .fromCurrentRequest()
                 .path("/{id}")

@@ -78,7 +78,7 @@ public class GroupService {
         return GroupDTO.from(group);
     }
 
-    public GroupDTO createGroup(Long courseId, Integer groupNumber) {
+    public GroupDTO createGroup(Long courseId, Integer groupNumber, Integer maxGroupSize) {
         Course course = courseService.findCourseById(courseId)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "Course not found"
@@ -98,7 +98,7 @@ public class GroupService {
             );
         }
 
-        Group group = new Group(groupNumber, course);
+        Group group = new Group(groupNumber, course, maxGroupSize);
 
         return GroupDTO.from(groupRepository.save(group));
     }
@@ -125,7 +125,7 @@ public class GroupService {
             );
         }
 
-        if (groupRepository.existsUserInCourseGroup(courseId, user.getUserId())) {
+        if (groupRepository.existsUserInCourseGroup(courseId, userId)) {
             throw new ResponseStatusException(
                     HttpStatus.CONFLICT,
                     "User already belongs to another group in this course"

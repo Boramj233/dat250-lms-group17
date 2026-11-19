@@ -23,6 +23,9 @@ public class Group {
     @Column(name = "group_number", nullable = false)
     private Integer groupNumber;
 
+    @Column(name = "max_group_size")
+    private Integer maxGroupSize;
+
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "course_id", nullable = false)
     private Course course;
@@ -37,9 +40,17 @@ public class Group {
 
     protected Group() {} // JPA needs this
 
-    public Group(int groupNumber, Course course) {
+    public Group(int groupNumber, Course course, Integer maxGroupSize) {
         this.groupNumber = groupNumber;
         this.course = course;
+
+        if (maxGroupSize != null && maxGroupSize < 1) {
+            throw new IllegalArgumentException(
+                    "Maximum group size must be positive"
+            );
+        }
+
+        this.maxGroupSize = maxGroupSize;
     }
 
     public Long getGroupId() {
@@ -52,11 +63,25 @@ public class Group {
         return this.course;
     }
 
+    public Integer getMaxGroupSize() { return this.maxGroupSize; }
+
     public Set<User> getGroupMembers() {
         return this.members;
     }
 
     public void addGroupMember(User user) {
+
+        if (members.contains(user)) {
+            return;
+        }
+
+        if (maxGroupSize != null
+                && members.size() >= maxGroupSize) {
+            throw new IllegalStateException(
+                    "Group has reached maximum capacity"
+            );
+        }
+
         members.add(user);
     }
 
