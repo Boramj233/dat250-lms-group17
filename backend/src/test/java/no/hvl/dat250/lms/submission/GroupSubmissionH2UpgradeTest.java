@@ -70,7 +70,7 @@ class GroupSubmissionH2UpgradeTest {
             var grader = new Enrollment(teacher, course, CourseRole.TEACHER); session.persist(grader);
             var module = new Module(course, "Week", 0); session.persist(module);
             var assignment = new Assignment(module, "Report", 0, "Write", null, false); session.persist(assignment);
-            var group = new no.hvl.dat250.lms.group.domain.Group(1, course);
+            var group = new no.hvl.dat250.lms.group.domain.Group(1, course, null);
             group.addGroupMember(student); session.persist(group);
             var submission = new Submission(assignment, owner, SubmissionType.TEXT, "Legacy", now, false);
             session.persist(submission);

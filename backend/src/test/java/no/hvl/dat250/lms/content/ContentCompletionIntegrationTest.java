@@ -133,7 +133,7 @@ class ContentCompletionIntegrationTest {
         var f=fixture(); User former=user(), newcomer=user();
         Enrollment formerEnrollment=save(new Enrollment(former,f.module().getCourse(),CourseRole.STUDENT));
         save(new Enrollment(newcomer,f.module().getCourse(),CourseRole.STUDENT));
-        Group group=save(new Group(1,f.module().getCourse()));
+        Group group=save(new Group(1, f.module().getCourse(), null));
         group.addGroupMember(f.student()); group.addGroupMember(newcomer);
         var a=gradedContent(f,coding);
         var submission=new Submission(a,f.enrollment(),SubmissionType.TEXT,"Answer",Instant.now(),false);

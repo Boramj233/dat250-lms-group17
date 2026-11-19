@@ -16,6 +16,9 @@ import no.hvl.dat250.lms.user.service.UserService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.NullSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -63,7 +66,7 @@ class GroupServiceTest {
     @BeforeEach
     void setUp() {
         course = mock(Course.class);
-        when(course.getId()).thenReturn(courseId);
+        lenient().when(course.getId()).thenReturn(courseId);
 
         group = new Group(1, course, 3);
 
@@ -132,8 +135,10 @@ class GroupServiceTest {
     // CREATE GROUP
     // --------------------------------------------------
 
-    @Test
-    void createGroupSuccessfully() {
+    @ParameterizedTest
+    @NullSource
+    @ValueSource(ints = 3)
+    void createGroupPreservesOptionalCapacity(Integer maxGroupSize) {
         when(courseService.findCourseById(courseId))
                 .thenReturn(Optional.of(course));
 
@@ -144,10 +149,10 @@ class GroupServiceTest {
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
         GroupDTO result =
-                groupService.createGroup(courseId, 1, 3);
+                groupService.createGroup(courseId, 1, maxGroupSize);
 
         assertEquals(1, result.groupNumber());
-        assertEquals(3, result.maxGroupSize());
+        assertEquals(maxGroupSize, result.maxGroupSize());
         assertEquals(courseId, result.courseId());
 
         verify(groupRepository).save(any(Group.class));
@@ -311,12 +316,13 @@ class GroupServiceTest {
         when(groupRepository.existsUserInCourseGroup(courseId, userId))
                 .thenReturn(false);
 
-        assertThrows(
-                IllegalStateException.class,
-                () -> groupService.addGroupMember(
-                        courseId, groupId, userId
-                )
+        var exception = assertThrows(
+                ResponseStatusException.class,
+                () -> groupService.addGroupMember(courseId, groupId, userId)
         );
+
+        assertEquals(HttpStatus.CONFLICT, exception.getStatusCode());
+        assertEquals("Group has reached maximum capacity", exception.getReason());
 
         assertEquals(1, fullGroup.getGroupMembers().size());
     }

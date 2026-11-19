@@ -97,7 +97,7 @@ class UserDashboardApiTest {
         Submission reportSubmission = save(new Submission(report, siriIn, SubmissionType.TEXT, "R", inDays(-1), false));
         save(new Grade(reportSubmission, new BigDecimal("40"), "Draft", teacher, now));
         // Compose: handed in by the teammate for a group Siri is in.
-        Group group = save(new Group(1, course));
+        Group group = save(new Group(1, course, null));
         Submission groupSubmission = new Submission(compose, teammateIn, SubmissionType.GIT_URL,
             "https://example.com/ours", inDays(-4), false);
         groupSubmission.assignGroup(group, List.of(

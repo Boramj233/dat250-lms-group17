@@ -105,7 +105,7 @@ class ContentDeletionIntegrationTest {
             ChoiceOption correct = save(new ChoiceOption(question, "Correct", 0, true));
             ChoiceOption wrong = save(new ChoiceOption(question, "Wrong", 1, false));
             for (Content content : List.of(page, assignment, coding, quiz)) content.setRequiredForModuleCompletion(true);
-            Group group = new Group(1, course);
+            Group group = new Group(1, course, null);
             group.addGroupMember(student);
             group.addGroupMember(member);
             save(group);

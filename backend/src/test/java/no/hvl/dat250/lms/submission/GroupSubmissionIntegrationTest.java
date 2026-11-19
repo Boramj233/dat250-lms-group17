@@ -64,7 +64,7 @@ class GroupSubmissionIntegrationTest {
                 ? new CodingExercise(module, "Code", 0, "Implement", "https://example.com/starter.git", null, false)
                 : new Assignment(module, "Report", 0, "Write", null, false);
             save(content);
-            var group = new Group(1, course);
+            var group = new Group(1, course, null);
             group.addGroupMember(a); group.addGroupMember(b); save(group);
             return new Fixture(course.getId(), content.getId(), group.getGroupId(), a.getUserId(),
                 b.getUserId(), c.getUserId(), teacher.getUserId(), eb.getId());
@@ -279,7 +279,7 @@ class GroupSubmissionIntegrationTest {
 
     @Test void concurrentAddsCannotPlaceStudentInTwoGroups() throws Exception {
         var f = fixture();
-        Long otherGroup = groups.createGroup(f.course, 2).id();
+        Long otherGroup = groups.createGroup(f.course, 2, null).id();
         var gate = new java.util.concurrent.CountDownLatch(1);
         try (var pool = java.util.concurrent.Executors.newFixedThreadPool(2)) {
             java.util.function.Function<Long, java.util.concurrent.Callable<Boolean>> add = groupId -> () -> {

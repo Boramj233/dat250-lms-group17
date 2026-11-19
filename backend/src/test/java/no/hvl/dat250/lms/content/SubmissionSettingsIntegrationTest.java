@@ -98,7 +98,7 @@ class SubmissionSettingsIntegrationTest {
             if (content instanceof Assignment assignment) assignment.setMandatoryForExam(true);
             save(content);
             StaticPage page = save(new StaticPage(module, "Page", 1, "Body"));
-            Group group = new Group(1, course);
+            Group group = new Group(1, course, null);
             group.addGroupMember(student); group.addGroupMember(member); save(group);
             return new Fixture(coding, course.getId(), content.getId(), page.getId(), group.getGroupId(), teacher, student, member);
         });

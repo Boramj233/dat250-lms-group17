@@ -1,56 +1,161 @@
 package no.hvl.dat250.lms.group;
 
-import org.junit.jupiter.api.Disabled;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
+import java.util.Set;
+import no.hvl.dat250.lms.course.domain.Course;
+import no.hvl.dat250.lms.course.domain.Term;
+import no.hvl.dat250.lms.course.repository.CourseRepository;
+import no.hvl.dat250.lms.enrollment.domain.CourseRole;
+import no.hvl.dat250.lms.enrollment.domain.Enrollment;
+import no.hvl.dat250.lms.group.domain.Group;
+import no.hvl.dat250.lms.group.repository.GroupRepository;
+import no.hvl.dat250.lms.security.TestTokens;
+import no.hvl.dat250.lms.user.domain.User;
+import org.hibernate.exception.ConstraintViolationException;
 import org.junit.jupiter.api.Test;
-import static org.junit.jupiter.api.Assertions.fail;
-
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
+import static java.util.stream.Collectors.toSet;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
 @SpringBootTest
+@AutoConfigureMockMvc
 @ActiveProfiles("test")
 @Transactional
 class GroupIntegrationTest {
+
+    @Autowired
+    private CourseRepository courseRepository;
+
+    @Autowired
+    private GroupRepository groupRepository;
+
+    @Autowired
+    private MockMvc mvc;
+
+    @PersistenceContext
+    private EntityManager entityManager;
+
     @Test
-    @Disabled("Not implemented yet")
     void groupAndMembershipCanBePersisted() {
-        // Persist a course, group, student, and membership. Flush/clear, then verify
-        // the group references the course and contains the student exactly once.
-        fail("Not implemented yet");
+        Course course = createCourse();
+        User student = enroll(course, "student", CourseRole.STUDENT);
+        Group group = new Group(1, course, 3);
+        group.addGroupMember(student);
+        groupRepository.saveAndFlush(group);
+        entityManager.clear();
+
+        Group reloaded = groupRepository.findById(group.getGroupId()).orElseThrow();
+
+        assertEquals(course.getId(), reloaded.getCourse().getId());
+        assertEquals(1, reloaded.getGroupNumber());
+        assertEquals(3, reloaded.getMaxGroupSize());
+        assertEquals(Set.of(student.getUserId()), memberIds(reloaded));
     }
 
     @Test
-    @Disabled("Not implemented yet")
     void databaseRejectsDuplicateGroupMembership() {
-        // Add a unique constraint on (student_id, group_id), or the equivalent
-        // membership keys. Attempt a duplicate insert and flush to verify rejection.
-        fail("Not implemented yet");
+        Course course = createCourse();
+        User student = enroll(course, "student", CourseRole.STUDENT);
+        Group group = new Group(1, course, null);
+        group.addGroupMember(student);
+        groupRepository.saveAndFlush(group);
+
+        // Insert directly because the domain set already prevents duplicates.
+        assertThrows(ConstraintViolationException.class, () -> entityManager.createNativeQuery(
+                "insert into group_members (group_id, user_id) values (:groupId, :userId)")
+                .setParameter("groupId", group.getGroupId())
+                .setParameter("userId", student.getUserId())
+                .executeUpdate());
     }
 
     @Test
-    @Disabled("Not implemented yet")
     void databaseRejectsGroupWithoutCourse() {
-        // Make the group's course foreign key non-nullable. Persist a group without
-        // a course and flush to verify rejection.
-        fail("Not implemented yet");
+        assertThrows(DataIntegrityViolationException.class,
+                () -> groupRepository.saveAndFlush(new Group(1, null, null)));
     }
 
     @Test
-    @Disabled("Not implemented yet")
     void databaseRejectsGroupWithUnknownCourse() {
-        // Verify the course foreign key rejects a reference to a nonexistent course.
-        // Use a separate test for each constraint failure; a failed flush can leave
-        // the transaction unusable.
-        fail("Not implemented yet");
+        Course unknownCourse = entityManager.getReference(Course.class, -1L);
+
+        assertThrows(DataIntegrityViolationException.class,
+                () -> groupRepository.saveAndFlush(new Group(1, unknownCourse, null)));
     }
 
     @Test
-    @Disabled("Not implemented yet")
-    void groupApiRejectsInvalidMembershipAndCourse() {
-        // When endpoints exist, use MockMvc to verify duplicate membership
-        // and missing/unknown course requests return the agreed HTTP errors without
-        // changing existing groups or memberships.
-        fail("Not implemented yet");
+    void groupApiRejectsDuplicateMembership() throws Exception {
+        Course course = createCourse();
+        User teacher = enroll(course, "teacher", CourseRole.TEACHER);
+        User student = enroll(course, "student", CourseRole.STUDENT);
+        Group group = groupRepository.saveAndFlush(new Group(1, course, 2));
+
+        String membersPath = "/api/courses/{courseId}/groups/{groupId}/members";
+        mvc.perform(post(membersPath, course.getId(), group.getGroupId())
+                        .header("Authorization", TestTokens.bearer(teacher))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(student.getUserId().toString()))
+                .andExpect(status().isOk());
+        entityManager.flush();
+        entityManager.clear();
+        mvc.perform(post(membersPath, course.getId(), group.getGroupId())
+                        .header("Authorization", TestTokens.bearer(teacher))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(student.getUserId().toString()))
+                .andExpect(status().isConflict());
+
+        entityManager.flush();
+        entityManager.clear();
+        Group reloaded = groupRepository.findById(group.getGroupId()).orElseThrow();
+        assertEquals(Set.of(student.getUserId()), memberIds(reloaded));
+    }
+
+    @Test
+    void groupApiRejectsMissingOrUnknownCourse() throws Exception {
+        Course course = createCourse();
+        User teacher = enroll(course, "teacher", CourseRole.TEACHER);
+        User student = enroll(course, "student", CourseRole.STUDENT);
+        Group group = groupRepository.saveAndFlush(new Group(1, course, 2));
+
+        mvc.perform(post("/api/courses/groups/{groupId}/members", group.getGroupId())
+                        .header("Authorization", TestTokens.bearer(teacher))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(student.getUserId().toString()))
+                .andExpect(status().isNotFound());
+        mvc.perform(post("/api/courses/{courseId}/groups/{groupId}/members", -1L, group.getGroupId())
+                        .header("Authorization", TestTokens.bearer(teacher))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(student.getUserId().toString()))
+                .andExpect(status().isForbidden());
+
+        entityManager.clear();
+        assertTrue(groupRepository.findById(group.getGroupId()).orElseThrow().getGroupMembers().isEmpty());
+    }
+
+    private Course createCourse() {
+        return courseRepository.saveAndFlush(new Course("DAT250", "Groups", Term.AUTUMN, 2026));
+    }
+
+    private User enroll(Course course, String name, CourseRole role) {
+        User user = new User(name + "@group-integration.example.com", "Test", name);
+        entityManager.persist(user);
+        entityManager.persist(new Enrollment(user, course, role));
+        return user;
+    }
+
+    private Set<Long> memberIds(Group group) {
+        return group.getGroupMembers().stream()
+                .map(User::getUserId)
+                .collect(toSet());
     }
 }

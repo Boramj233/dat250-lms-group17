@@ -2,6 +2,7 @@ package no.hvl.dat250.lms.group;
 
 import no.hvl.dat250.lms.course.domain.Course;
 import no.hvl.dat250.lms.group.domain.Group;
+import no.hvl.dat250.lms.group.domain.GroupFullException;
 import no.hvl.dat250.lms.user.domain.User;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -75,6 +76,14 @@ class GroupTest {
     }
 
     @Test
+    void membersCannotBeAddedThroughTheGetter() {
+        User user = mock(User.class);
+
+        assertThrows(UnsupportedOperationException.class, () -> group.getGroupMembers().add(user));
+        assertTrue(group.getGroupMembers().isEmpty());
+    }
+
+    @Test
     void groupCannotExceedMaximumSize() {
         User user1 = mock(User.class);
         User user2 = mock(User.class);
@@ -86,7 +95,7 @@ class GroupTest {
         group.addGroupMember(user3);
 
         assertThrows(
-                IllegalStateException.class,
+                GroupFullException.class,
                 () -> group.addGroupMember(user4)
         );
 

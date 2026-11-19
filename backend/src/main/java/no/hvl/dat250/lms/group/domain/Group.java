@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import no.hvl.dat250.lms.course.domain.Course;
 import no.hvl.dat250.lms.user.domain.User;
 
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -75,7 +76,7 @@ public class Group {
     public Integer getMaxGroupSize() { return this.maxGroupSize; }
 
     public Set<User> getGroupMembers() {
-        return this.members;
+        return Collections.unmodifiableSet(members);
     }
 
     public void addGroupMember(User user) {
@@ -86,15 +87,13 @@ public class Group {
 
         if (maxGroupSize != null
                 && members.size() >= maxGroupSize) {
-            throw new IllegalStateException(
-                    "Group has reached maximum capacity"
-            );
+            throw new GroupFullException();
         }
 
         members.add(user);
     }
 
-    public void removeGroupMember(User user) {
-        members.remove(user);
+    public boolean removeGroupMember(User user) {
+        return members.remove(user);
     }
 }

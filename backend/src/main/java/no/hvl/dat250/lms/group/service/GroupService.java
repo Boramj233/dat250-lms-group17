@@ -8,6 +8,7 @@ import no.hvl.dat250.lms.course.service.CourseService;
 import no.hvl.dat250.lms.enrollment.service.EnrollmentService;
 import no.hvl.dat250.lms.group.api.dto.GroupDTO;
 import no.hvl.dat250.lms.group.domain.Group;
+import no.hvl.dat250.lms.group.domain.GroupFullException;
 import no.hvl.dat250.lms.group.repository.GroupRepository;
 import no.hvl.dat250.lms.user.domain.User;
 import no.hvl.dat250.lms.user.service.UserService;
@@ -31,8 +32,8 @@ public class GroupService {
     public Group lockGroup(Long courseId, Long groupId) {
         Group group = findGroupByGroupIdAndCourseId(groupId, courseId);
         entities.refresh(group, LockModeType.PESSIMISTIC_WRITE);
-        // Refresh the collection as well, including when preflight loaded it.
-        org.hibernate.Hibernate.initialize(group.getGroupMembers());
+        // Load membership under the lock after refreshing the group.
+        group.getGroupMembers().iterator();
         return group;
     }
 
@@ -132,7 +133,11 @@ public class GroupService {
             );
         }
 
-        group.addGroupMember(user);
+        try {
+            group.addGroupMember(user);
+        } catch (GroupFullException ex) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, ex.getMessage(), ex);
+        }
 
         return GroupDTO.from(group);
     }
@@ -142,7 +147,7 @@ public class GroupService {
         Group group = lockGroup(courseId, groupId);
         User user = findByUserId(userId);
 
-        if (!group.getGroupMembers().remove(user)) { // <- .remove depends on User.equals() + User.hashCode()
+        if (!group.removeGroupMember(user)) {
             throw new ResponseStatusException(
                     HttpStatus.CONFLICT,
                     "User is not a member of this group"
