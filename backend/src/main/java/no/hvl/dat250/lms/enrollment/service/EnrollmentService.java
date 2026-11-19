@@ -4,6 +4,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import jakarta.persistence.EntityManager;
@@ -121,13 +122,17 @@ public class EnrollmentService {
 
     @Transactional(propagation = Propagation.MANDATORY)
     public Enrollment lockActiveStudent(Long userId, Long courseId) {
-        Enrollment enrollment = enrollmentRepository.findByUser_UserIdAndCourse_Id(userId, courseId)
+        return findLockedActiveStudent(userId, courseId)
             .orElseThrow(() -> new AccessDeniedException("Active student enrollment required"));
-        entityManager.refresh(enrollment, LockModeType.PESSIMISTIC_WRITE);
-        if (!enrollment.isActive() || enrollment.getRole() != CourseRole.STUDENT) {
-            throw new AccessDeniedException("Active student enrollment required");
-        }
-        return enrollment;
+    }
+
+    @Transactional(propagation = Propagation.MANDATORY)
+    public Optional<Enrollment> findLockedActiveStudent(Long userId, Long courseId) {
+        return enrollmentRepository.findByUser_UserIdAndCourse_Id(userId, courseId)
+            .filter(enrollment -> {
+                entityManager.refresh(enrollment, LockModeType.PESSIMISTIC_WRITE);
+                return enrollment.isActive() && enrollment.getRole() == CourseRole.STUDENT;
+            });
     }
 
 }
