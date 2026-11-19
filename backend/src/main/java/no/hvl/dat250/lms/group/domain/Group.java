@@ -33,8 +33,17 @@ public class Group {
     @ManyToMany
     @JoinTable(
             name = "group_members",
-            joinColumns = @JoinColumn(name = "group_id"),
-            inverseJoinColumns = @JoinColumn(name = "user_id")
+            joinColumns = @JoinColumn(
+                    name = "group_id",
+                    nullable = false
+            ),
+            inverseJoinColumns = @JoinColumn(
+                    name = "user_id",
+                    nullable = false
+            ),
+            uniqueConstraints = @UniqueConstraint(
+                    columnNames = {"group_id", "user_id"}
+            )
     )
     private final Set<User> members = new HashSet<>();
 

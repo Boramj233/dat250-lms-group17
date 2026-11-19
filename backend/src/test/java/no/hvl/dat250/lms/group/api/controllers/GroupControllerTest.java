@@ -1,7 +1,8 @@
 package no.hvl.dat250.lms.group.api.controllers;
 
+import no.hvl.dat250.lms.group.api.dto.AddGroupMemberRequest;
+import no.hvl.dat250.lms.group.api.dto.CreateGroupRequest;
 import no.hvl.dat250.lms.group.api.dto.GroupDTO;
-import no.hvl.dat250.lms.group.domain.Group;
 import no.hvl.dat250.lms.group.service.GroupService;
 
 import org.junit.jupiter.api.Test;
@@ -40,7 +41,7 @@ class GroupControllerTest {
 
     @Test
     void getAllGroupsDelegatesToService() {
-        GroupDTO dto = new GroupDTO(GROUP_ID, 2, Set.of());
+        GroupDTO dto = new GroupDTO(GROUP_ID, 2, COURSE_ID, 4, Set.of());
 
         when(service.getAllGroups(COURSE_ID))
                 .thenReturn(List.of(dto));
@@ -58,7 +59,7 @@ class GroupControllerTest {
 
     @Test
     void getGroupDelegatesToService() {
-        GroupDTO dto = new GroupDTO(GROUP_ID, 2, Set.of());
+        GroupDTO dto = new GroupDTO(GROUP_ID, 2, COURSE_ID, 4, Set.of());
 
         when(service.getGroupById(COURSE_ID, GROUP_ID))
                 .thenReturn(dto);
@@ -86,15 +87,17 @@ class GroupControllerTest {
         );
 
         try {
-            Group input = new Group(2, null);
+            var input = new CreateGroupRequest(2, 4);
 
             GroupDTO dto = new GroupDTO(
                     GROUP_ID,
                     2,
+                    COURSE_ID,
+                    4,
                     Set.of()
             );
 
-            when(service.createGroup(COURSE_ID, 2))
+            when(service.createGroup(COURSE_ID, 2, 4))
                     .thenReturn(dto);
 
             var response = controller.createGroup(COURSE_ID, input);
@@ -113,7 +116,7 @@ class GroupControllerTest {
                     response.getHeaders().getLocation().getPath()
             );
 
-            verify(service).createGroup(COURSE_ID, 2);
+            verify(service).createGroup(COURSE_ID, 2, 4);
 
         } finally {
             RequestContextHolder.resetRequestAttributes();
@@ -129,6 +132,8 @@ class GroupControllerTest {
         GroupDTO dto = new GroupDTO(
                 GROUP_ID,
                 2,
+                COURSE_ID,
+                4,
                 Set.of(USER_ID)
         );
 
@@ -138,7 +143,7 @@ class GroupControllerTest {
         var response = controller.addGroupMember(
                 COURSE_ID,
                 GROUP_ID,
-                USER_ID
+                new AddGroupMemberRequest(USER_ID)
         );
 
         assertEquals(

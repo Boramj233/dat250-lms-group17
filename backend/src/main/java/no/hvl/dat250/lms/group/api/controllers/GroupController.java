@@ -1,9 +1,11 @@
 package no.hvl.dat250.lms.group.api.controllers;
 
+import jakarta.validation.Valid;
 import java.net.URI;
 import java.util.List;
+import no.hvl.dat250.lms.group.api.dto.AddGroupMemberRequest;
+import no.hvl.dat250.lms.group.api.dto.CreateGroupRequest;
 import no.hvl.dat250.lms.group.api.dto.GroupDTO;
-import no.hvl.dat250.lms.group.domain.Group;
 import no.hvl.dat250.lms.group.service.GroupService;
 import no.hvl.dat250.lms.security.auth.annotations.IsEnrolledInCourse;
 import no.hvl.dat250.lms.security.auth.annotations.IsTeacherInCourse;
@@ -35,8 +37,11 @@ public class GroupController {
 
     @IsTeacherInCourse
     @PostMapping()
-    public ResponseEntity<GroupDTO> createGroup(@PathVariable Long courseId, @RequestBody Group group) {
-        GroupDTO createdGroup = groupService.createGroup(courseId, group.getGroupNumber(), group.getMaxGroupSize());
+    public ResponseEntity<GroupDTO> createGroup(
+            @PathVariable Long courseId,
+            @Valid @RequestBody CreateGroupRequest request
+    ) {
+        GroupDTO createdGroup = groupService.createGroup(courseId, request.groupNumber(), request.maxGroupSize());
         URI location = ServletUriComponentsBuilder
                 .fromCurrentRequest()
                 .path("/{id}")
@@ -47,7 +52,6 @@ public class GroupController {
         return ResponseEntity.created(location).body(createdGroup);
     }
 
-    // If more groups are created than needed, it should be able to remove said groups
     @IsTeacherInCourse
     @DeleteMapping("/{groupId}")
     public ResponseEntity<Void> deleteGroup(@PathVariable Long courseId, @PathVariable Long groupId) {
@@ -60,10 +64,10 @@ public class GroupController {
     public ResponseEntity<GroupDTO> addGroupMember(
             @PathVariable Long courseId,
             @PathVariable Long groupId,
-            @RequestBody Long userId
+            @Valid @RequestBody AddGroupMemberRequest request
     ) {
         GroupDTO updatedGroup = groupService.addGroupMember(
-                courseId, groupId, userId);
+                courseId, groupId, request.userId());
         return ResponseEntity.ok(updatedGroup);
     }
 
