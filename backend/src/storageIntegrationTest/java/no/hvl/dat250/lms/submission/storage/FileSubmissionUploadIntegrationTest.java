@@ -541,7 +541,7 @@ class FileSubmissionUploadIntegrationTest {
             var member = new User("group_" + UUID.randomUUID() + "@example.com", "Test", "Member");
             entities.persist(member);
             entities.persist(new Enrollment(member, course, CourseRole.STUDENT));
-            var entity = new no.hvl.dat250.lms.group.domain.Group(1, course);
+            var entity = new no.hvl.dat250.lms.group.domain.Group(1, course, null);
             entity.addGroupMember(entities.find(User.class, f.user().getUserId()));
             entity.addGroupMember(member);
             entities.persist(entity); entities.flush();

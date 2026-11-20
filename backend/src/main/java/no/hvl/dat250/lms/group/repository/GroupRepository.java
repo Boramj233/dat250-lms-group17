@@ -23,7 +23,7 @@ public interface GroupRepository extends JpaRepository<Group, Long> {
         FROM Group g
         JOIN g.members m
         WHERE g.course.id = :courseId
-        AND m.id = :userId
+        AND m.userId = :userId
     """)
     boolean existsUserInCourseGroup(
             @Param("courseId") Long courseId,

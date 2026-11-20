@@ -209,7 +209,7 @@ class SubmissionMessagingIntegrationTest {
         var f = fixture(false);
         Long groupId = new TransactionTemplate(transactions).execute(status -> {
             var content = entities.find(Assignment.class, f.contentId());
-            var group = new no.hvl.dat250.lms.group.domain.Group(1, content.getModule().getCourse());
+            var group = new no.hvl.dat250.lms.group.domain.Group(1, content.getModule().getCourse(), null);
             group.addGroupMember(entities.find(User.class, f.userId()));
             entities.persist(group); entities.flush();
             return group.getGroupId();
